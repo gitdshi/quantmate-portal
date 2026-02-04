@@ -1,0 +1,192 @@
+import { useQuery } from '@tanstack/react-query'
+import { CheckCircle, Clock, Eye, Loader, XCircle } from 'lucide-react'
+import { useState } from 'react'
+import { queueAPI } from '../lib/api'
+
+interface BacktestJobListProps {
+  onViewResults: (jobId: string) => void
+}
+
+export default function BacktestJobList({ onViewResults }: BacktestJobListProps) {
+  const [filter, setFilter] = useState<string>('all')
+
+  const { data: jobsData, isLoading } = useQuery({
+    queryKey: ['backtest-jobs', filter],
+    queryFn: () => queueAPI.listJobs(filter === 'all' ? undefined : filter, 50),
+    refetchInterval: 5000, // Refresh every 5 seconds
+  })
+
+  const jobs = jobsData?.data || []
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'queued':
+        return <Clock className="h-4 w-4 text-yellow-500" />
+      case 'started':
+        return <Loader className="h-4 w-4 text-blue-500 animate-spin" />
+      case 'finished':
+        return <CheckCircle className="h-4 w-4 text-green-500" />
+      case 'failed':
+        return <XCircle className="h-4 w-4 text-red-500" />
+      default:
+        return <Clock className="h-4 w-4 text-gray-500" />
+    }
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'queued':
+        return 'bg-yellow-500/10 text-yellow-500'
+      case 'started':
+        return 'bg-blue-500/10 text-blue-500'
+      case 'finished':
+        return 'bg-green-500/10 text-green-500'
+      case 'failed':
+        return 'bg-red-500/10 text-red-500'
+      default:
+        return 'bg-gray-500/10 text-gray-500'
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => setFilter('all')}
+          className={`px-3 py-1 rounded text-sm transition-colors ${
+            filter === 'all'
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-muted hover:bg-muted/80'
+          }`}
+        >
+          All
+        </button>
+        <button
+          onClick={() => setFilter('queued')}
+          className={`px-3 py-1 rounded text-sm transition-colors ${
+            filter === 'queued'
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-muted hover:bg-muted/80'
+          }`}
+        >
+          Queued
+        </button>
+        <button
+          onClick={() => setFilter('started')}
+          className={`px-3 py-1 rounded text-sm transition-colors ${
+            filter === 'started'
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-muted hover:bg-muted/80'
+          }`}
+        >
+          Running
+        </button>
+        <button
+          onClick={() => setFilter('finished')}
+          className={`px-3 py-1 rounded text-sm transition-colors ${
+            filter === 'finished'
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-muted hover:bg-muted/80'
+          }`}
+        >
+          Finished
+        </button>
+        <button
+          onClick={() => setFilter('failed')}
+          className={`px-3 py-1 rounded text-sm transition-colors ${
+            filter === 'failed'
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-muted hover:bg-muted/80'
+          }`}
+        >
+          Failed
+        </button>
+      </div>
+
+      {jobs.length === 0 ? (
+        <div className="text-center py-12 bg-card border border-border rounded-lg">
+          <p className="text-muted-foreground">No backtest jobs found</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {jobs.map((job: {
+            job_id: string
+            status: string
+            created_at: string
+            progress?: number
+            progress_message?: string
+            error?: string
+          }) => (
+            <div
+              key={job.job_id}
+              className="bg-card border border-border rounded-lg p-4 hover:shadow-md transition-shadow"
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    {getStatusIcon(job.status)}
+                    <span
+                      className={`px-2 py-1 rounded text-xs font-medium capitalize ${getStatusColor(
+                        job.status
+                      )}`}
+                    >
+                      {job.status}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(job.created_at).toLocaleString()}
+                    </span>
+                  </div>
+
+                  <div className="text-sm text-muted-foreground mb-2">
+                    Job ID: <span className="font-mono text-xs">{job.job_id}</span>
+                  </div>
+
+                  {job.progress !== undefined && job.progress > 0 && (
+                    <div className="mb-2">
+                      <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                        <span>{job.progress_message || 'Processing...'}</span>
+                        <span>{job.progress}%</span>
+                      </div>
+                      <div className="w-full bg-muted rounded-full h-2">
+                        <div
+                          className="bg-primary h-2 rounded-full transition-all"
+                          style={{ width: `${job.progress}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {job.error && (
+                    <div className="text-sm text-destructive mt-2">
+                      Error: {job.error}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 ml-4">
+                  {job.status === 'finished' && (
+                    <button
+                      onClick={() => onViewResults(job.job_id)}
+                      className="p-2 hover:bg-primary/10 text-primary rounded-md transition-colors"
+                      title="View results"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
