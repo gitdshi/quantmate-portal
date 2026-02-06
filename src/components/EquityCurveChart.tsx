@@ -162,7 +162,7 @@ export default function EquityCurveChart({
                 return [`$${value.toLocaleString()}`, 'Strategy Equity']
               }
               if (name === 'benchmark') {
-                return [`$${value.toLocaleString()}`, `${benchmarkSymbol} (Normalized)`]
+                return [`$${value.toLocaleString()}`, `Buy & Hold ${benchmarkSymbol}`]
               }
               if (name === 'stockPriceNormalized') {
                 return [`$${value.toLocaleString()}`, `${stockSymbol} Price (Normalized)`]
@@ -224,7 +224,7 @@ export default function EquityCurveChart({
             <Line
               type="monotone"
               dataKey="benchmark"
-              name={`${benchmarkSymbol} (Normalized)`}
+              name={`Buy & Hold ${benchmarkSymbol}`}
               stroke="#f59e0b"
               strokeWidth={2}
               dot={false}
