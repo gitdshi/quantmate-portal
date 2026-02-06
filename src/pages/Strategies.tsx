@@ -39,20 +39,98 @@ export default function Strategies() {
   const [isEditing, setIsEditing] = useState(false)
   const [editContent, setEditContent] = useState('')
   const [editName, setEditName] = useState('')
+  const [editClassName, setEditClassName] = useState('')
   const [editDescription, setEditDescription] = useState('')
   const [isCreating, setIsCreating] = useState(false)
   const [showDbForm, setShowDbForm] = useState(false)
   const [newStrategyName, setNewStrategyName] = useState('')
-  const [newStrategyContent, setNewStrategyContent] = useState(`"""Strategy template."""
+  const [newStrategyContent, setNewStrategyContent] = useState(`"""VNPy CTA Strategy Template."""
 
-class MyStrategy:
-    """Custom trading strategy."""
+from vnpy_ctastrategy import (
+    CtaTemplate,
+    StopOrder,
+    Direction,
+    TickData,
+    BarData,
+    TradeData,
+    OrderData,
+    BarGenerator,
+    ArrayManager,
+)
+
+
+class MyStrategy(CtaTemplate):
+    """Custom trading strategy following VNPy CTA format."""
     
-    def __init__(self):
-        self.name = "My Strategy"
+    author = "TraderMate"
     
-    def on_bar(self, bar):
+    # Strategy parameters
+    fast_window = 10
+    slow_window = 20
+    fixed_size = 1
+    
+    # Strategy variables (for display)
+    fast_ma = 0.0
+    slow_ma = 0.0
+    
+    parameters = ["fast_window", "slow_window", "fixed_size"]
+    variables = ["fast_ma", "slow_ma"]
+    
+    def __init__(self, cta_engine, strategy_name, vt_symbol, setting):
+        """Initialize strategy."""
+        super().__init__(cta_engine, strategy_name, vt_symbol, setting)
+        
+        self.bg = BarGenerator(self.on_bar)
+        self.am = ArrayManager()
+    
+    def on_init(self):
+        """Called when strategy is initialized."""
+        self.write_log("Strategy initialized")
+        self.load_bar(10)
+    
+    def on_start(self):
+        """Called when strategy is started."""
+        self.write_log("Strategy started")
+    
+    def on_stop(self):
+        """Called when strategy is stopped."""
+        self.write_log("Strategy stopped")
+    
+    def on_tick(self, tick: TickData):
+        """Called on every tick."""
+        self.bg.update_tick(tick)
+    
+    def on_bar(self, bar: BarData):
         """Called on every bar."""
+        self.am.update_bar(bar)
+        if not self.am.inited:
+            return
+        
+        # Calculate indicators
+        self.fast_ma = self.am.sma(self.fast_window)
+        self.slow_ma = self.am.sma(self.slow_window)
+        
+        # Update variables for display
+        self.put_event()
+        
+        # Trading logic example
+        if self.pos == 0:
+            if self.fast_ma > self.slow_ma:
+                self.buy(bar.close_price, self.fixed_size)
+        elif self.pos > 0:
+            if self.fast_ma < self.slow_ma:
+                self.sell(bar.close_price, abs(self.pos))
+    
+    def on_order(self, order: OrderData):
+        """Called when order status updates."""
+        pass
+    
+    def on_trade(self, trade: TradeData):
+        """Called when trade is executed."""
+        self.put_event()
+    
+    def on_stop_order(self, stop_order: StopOrder):
+        """Called when stop order is triggered."""
         pass
 `)
   const [syncing, setSyncing] = useState(false)
@@ -555,6 +633,7 @@ class MyStrategy:
                               setIsEditing(true)
                               setEditContent(selectedDbStrategy.code || '')
                               setEditName(selectedDbStrategy.name)
+                              setEditClassName(selectedDbStrategy.class_name)
                               setEditDescription(selectedDbStrategy.description || '')
                               setEditorFullScreen(true)
                             }}
@@ -574,6 +653,9 @@ class MyStrategy:
                                 // Only send fields that have changed and are not empty
                                 if (editName.trim() && editName !== selectedDbStrategy.name) {
                                   updatePayload.name = editName.trim()
+                                }
+                                if (editClassName.trim() && editClassName !== selectedDbStrategy.class_name) {
+                                  updatePayload.class_name = editClassName.trim()
                                 }
                                 if (editDescription.trim() !== (selectedDbStrategy.description || '')) {
                                   updatePayload.description = editDescription.trim()
@@ -634,6 +716,7 @@ class MyStrategy:
                               setIsEditing(false)
                               setEditContent('')
                               setEditName('')
+                              setEditClassName('')
                               setEditDescription('')
                               setEditorFullScreen(false)
                             }}
@@ -713,6 +796,7 @@ class MyStrategy:
                                 setIsEditing(true)
                                 setEditContent('')
                                 setEditName(selectedDbStrategy.name)
+                                setEditClassName(selectedDbStrategy.class_name)
                                 setEditDescription(selectedDbStrategy.description || '')
                               }}
                               className="mt-3 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
@@ -749,6 +833,17 @@ class MyStrategy:
                         </div>
                         
                         <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Class Name</label>
+                          <input
+                            type="text"
+                            value={editClassName}
+                            onChange={(e) => setEditClassName(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="e.g., MyStrategy"
+                          />
+                        </div>
+                        
+                        <div className="md:col-span-2">
                           <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                           <input
                             type="text"
