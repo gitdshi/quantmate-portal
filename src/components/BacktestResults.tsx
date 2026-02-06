@@ -1,17 +1,20 @@
 import { useQuery } from '@tanstack/react-query'
 import {
-    Activity,
-    BarChart3,
-    Calendar,
-    Loader,
-    Percent,
-    Target,
-    TrendingDown,
-    TrendingUp,
-    X,
+  Activity,
+  BarChart3,
+  Calendar,
+  List,
+  Loader,
+  Percent,
+  Target,
+  TrendingDown,
+  TrendingUp,
+  X,
 } from 'lucide-react'
+import { useState } from 'react'
 import { queueAPI } from '../lib/api'
 import EquityCurveChart from './EquityCurveChart'
+import TradingChart from './TradingChart'
 
 interface BacktestResultsProps {
   jobId: string
@@ -19,6 +22,8 @@ interface BacktestResultsProps {
 }
 
 export default function BacktestResults({ jobId, onClose }: BacktestResultsProps) {
+  const [activeTab, setActiveTab] = useState<'performance' | 'trades'>('performance')
+  
   const { data: resultData, isLoading } = useQuery({
     queryKey: ['backtest-result', jobId],
     queryFn: () => queueAPI.getJob(jobId),
@@ -28,6 +33,10 @@ export default function BacktestResults({ jobId, onClose }: BacktestResultsProps
   const jobData = resultData?.data
   const result = jobData?.result
   const stats = result?.statistics || {}
+  
+  const symbolDisplay = result?.symbol_name 
+    ? `${result.symbol} (${result.symbol_name})`
+    : result?.symbol || ''
 
   if (isLoading) {
     return (
@@ -50,7 +59,7 @@ export default function BacktestResults({ jobId, onClose }: BacktestResultsProps
           <div>
             <h2 className="text-xl font-semibold">Backtest Results</h2>
             <p className="text-sm text-muted-foreground mt-1">
-              {result.symbol} • {result.start_date} to {result.end_date}
+              {symbolDisplay} • {result.start_date} to {result.end_date}
             </p>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-muted rounded-md transition-colors">
@@ -58,8 +67,36 @@ export default function BacktestResults({ jobId, onClose }: BacktestResultsProps
           </button>
         </div>
 
+        {/* Tabs */}
+        <div className="flex border-b border-border shrink-0">
+          <button
+            onClick={() => setActiveTab('performance')}
+            className={`flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors ${
+              activeTab === 'performance'
+                ? 'border-b-2 border-primary text-primary'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <BarChart3 className="h-4 w-4" />
+            Performance
+          </button>
+          <button
+            onClick={() => setActiveTab('trades')}
+            className={`flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors ${
+              activeTab === 'trades'
+                ? 'border-b-2 border-primary text-primary'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <List className="h-4 w-4" />
+            Trades ({result?.trades?.length || 0})
+          </button>
+        </div>
+
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-6">
+          {activeTab === 'performance' ? (
+            <div className="space-y-6">
           {/* Primary Metrics */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <StatCard
@@ -184,7 +221,7 @@ export default function BacktestResults({ jobId, onClose }: BacktestResultsProps
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
               <div>
                 <span className="text-muted-foreground">Symbol:</span>
-                <span className="ml-2 font-medium">{result.symbol}</span>
+                <span className="ml-2 font-medium">{symbolDisplay}</span>
               </div>
               <div>
                 <span className="text-muted-foreground">Initial Capital:</span>
@@ -202,13 +239,54 @@ export default function BacktestResults({ jobId, onClose }: BacktestResultsProps
               </div>
             </div>
           </div>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Trade Summary */}
+              <div className="bg-muted/30 rounded-lg p-4">
+                <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
+                  <List className="h-4 w-4" />
+                  Trade Summary
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Symbol:</span>
+                    <span className="ml-2 font-medium">{symbolDisplay}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Total Trades:</span>
+                    <span className="ml-2 font-medium">{result?.trades?.length || 0}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Period:</span>
+                    <span className="ml-2 font-medium">{result?.start_date} to {result?.end_date}</span>
+                  </div>
+                </div>
+              </div>
 
-          {/* Trade List */}
-          {result.trades && result.trades.length > 0 && (
-            <div>
-              <h3 className="text-sm font-medium mb-3">Trade History ({result.trades.length} trades)</h3>
-              <div className="bg-muted/50 rounded-lg overflow-hidden">
-                <div className="max-h-64 overflow-y-auto">
+              {/* Price Chart with Trades */}
+              {(result?.stock_price_curve || result?.benchmark_curve) && (
+                <div className="bg-muted/30 rounded-lg p-4">
+                  <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
+                    <Activity className="h-4 w-4" />
+                    Price Chart with Trade Signals
+                  </h3>
+                  <TradingChart
+                    stockPriceData={result.stock_price_curve}
+                    benchmarkData={result.benchmark_curve}
+                    trades={result.trades}
+                    stockSymbol={symbolDisplay}
+                    benchmarkSymbol={stats.benchmark_symbol || 'HS300'}
+                  />
+                </div>
+              )}
+
+              {/* Trade List */}
+              {result?.trades && result.trades.length > 0 ? (
+                <div>
+                  <h3 className="text-sm font-medium mb-3">Trade History ({result.trades.length} trades)</h3>
+                  <div className="bg-muted/50 rounded-lg overflow-hidden">
+                    <div className="max-h-[calc(95vh-300px)] overflow-y-auto">
                   <table className="w-full text-sm">
                     <thead className="bg-muted sticky top-0">
                       <tr>
@@ -241,6 +319,12 @@ export default function BacktestResults({ jobId, onClose }: BacktestResultsProps
                   </table>
                 </div>
               </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-64 bg-muted/30 rounded-lg">
+              <p className="text-muted-foreground">No trades available</p>
+            </div>
+          )}
             </div>
           )}
         </div>

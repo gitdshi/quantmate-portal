@@ -1,5 +1,5 @@
-import { useQuery } from '@tanstack/react-query'
-import { CheckCircle, Clock, Eye, Loader, XCircle } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { CheckCircle, Clock, Eye, Loader, Trash2, XCircle } from 'lucide-react'
 import { useState } from 'react'
 import { queueAPI } from '../lib/api'
 
@@ -9,12 +9,28 @@ interface BacktestJobListProps {
 
 export default function BacktestJobList({ onViewResults }: BacktestJobListProps) {
   const [filter, setFilter] = useState<string>('all')
+  const queryClient = useQueryClient()
 
   const { data: jobsData, isLoading } = useQuery({
     queryKey: ['backtest-jobs', filter],
     queryFn: () => queueAPI.listJobs(filter === 'all' ? undefined : filter, 50),
     refetchInterval: 5000, // Refresh every 5 seconds
   })
+
+  const deleteMutation = useMutation({
+    mutationFn: (jobId: string) => queueAPI.deleteJob(jobId),
+    onSuccess: () => {
+      // Refetch the jobs list after successful deletion
+      queryClient.invalidateQueries({ queryKey: ['backtest-jobs'] })
+    },
+  })
+
+  const handleDelete = async (jobId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (confirm('Are you sure you want to delete this backtest job?')) {
+      deleteMutation.mutate(jobId)
+    }
+  }
 
   const jobs = jobsData?.data || []
 
@@ -25,6 +41,7 @@ export default function BacktestJobList({ onViewResults }: BacktestJobListProps)
       case 'started':
         return <Loader className="h-4 w-4 text-blue-500 animate-spin" />
       case 'finished':
+      case 'completed':
         return <CheckCircle className="h-4 w-4 text-green-500" />
       case 'failed':
         return <XCircle className="h-4 w-4 text-red-500" />
@@ -40,6 +57,7 @@ export default function BacktestJobList({ onViewResults }: BacktestJobListProps)
       case 'started':
         return 'bg-blue-500/10 text-blue-500'
       case 'finished':
+      case 'completed':
         return 'bg-green-500/10 text-green-500'
       case 'failed':
         return 'bg-red-500/10 text-red-500'
@@ -172,7 +190,7 @@ export default function BacktestJobList({ onViewResults }: BacktestJobListProps)
                 </div>
 
                 <div className="flex items-center gap-2 ml-4">
-                  {job.status === 'finished' && (
+                  {(job.status === 'finished' || job.status === 'completed') && (
                     <button
                       onClick={() => onViewResults(job.job_id)}
                       className="p-2 hover:bg-primary/10 text-primary rounded-md transition-colors"
@@ -181,6 +199,14 @@ export default function BacktestJobList({ onViewResults }: BacktestJobListProps)
                       <Eye className="h-4 w-4" />
                     </button>
                   )}
+                  <button
+                    onClick={(e) => handleDelete(job.job_id, e)}
+                    disabled={deleteMutation.isPending}
+                    className="p-2 hover:bg-destructive/10 text-destructive rounded-md transition-colors disabled:opacity-50"
+                    title="Delete job"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
                 </div>
               </div>
             </div>
