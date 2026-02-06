@@ -95,7 +95,7 @@ export default function PerformanceComparison() {
               <div className="flex-1">
                 <div className="flex items-center justify-between">
                   <span className="font-medium text-gray-900">
-                    {backtest.symbol} - {backtest.start_date} to {backtest.end_date}
+                    {backtest.symbol_name ? `${backtest.symbol} (${backtest.symbol_name})` : backtest.symbol} - {backtest.start_date} to {backtest.end_date}
                   </span>
                   {backtest.statistics && (
                     <span className={`text-sm font-medium ${

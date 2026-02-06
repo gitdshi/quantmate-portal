@@ -22,6 +22,8 @@ export interface BacktestRequest {
   strategy_id?: number
   strategy_class?: string
   symbol: string
+  symbol_name?: string
+  strategy_name?: string
   start_date: string
   end_date: string
   initial_capital: number
@@ -36,6 +38,8 @@ export interface BacktestResult {
   job_id: string
   status: 'queued' | 'started' | 'finished' | 'failed' | 'cancelled'
   symbol: string
+  symbol_name?: string
+  strategy_name?: string
   start_date: string
   end_date: string
   initial_capital: number
@@ -63,6 +67,8 @@ export interface Job {
   created_at: string
   updated_at: string
   result?: unknown
+  symbol_name?: string
+  strategy_name?: string
 }
 
 export interface QueueStats {

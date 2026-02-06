@@ -50,8 +50,10 @@ export default function BacktestResults({ jobId, onClose }: BacktestResultsProps
     }
   }
   
-  const symbolName = result?.symbol_name || jobData?.symbol_name || ''
-  const symbolCode = result?.symbol || jobData?.symbol || ''
+  // Prefer job metadata `symbol_name` when available (job metadata is authoritative)
+  const symbolName = jobData?.symbol_name || result?.symbol_name || ''
+  const symbolCode = jobData?.symbol || result?.symbol || ''
+  const strategyName = jobData?.strategy_name || result?.strategy_name || ''
   const symbolDisplay = symbolName
     ? `${symbolCode} (${symbolName})`
     : symbolCode
@@ -88,8 +90,8 @@ export default function BacktestResults({ jobId, onClose }: BacktestResultsProps
         <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
           <div>
             <h2 className="text-xl font-semibold">Backtest Results</h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              {symbolDisplay} • {result.start_date} to {result.end_date}
+            <p className="text-sm text-muted-foreground mt-1 font-medium">
+              {strategyName ? `${strategyName} • ${symbolDisplay} • ${result.start_date} to ${result.end_date}` : `${symbolDisplay} • ${result.start_date} to ${result.end_date}`}
             </p>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-muted rounded-md transition-colors">
