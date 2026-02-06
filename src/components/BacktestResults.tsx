@@ -1,15 +1,15 @@
 import { useQuery } from '@tanstack/react-query'
 import {
-  Activity,
-  BarChart3,
-  Calendar,
-  List,
-  Loader,
-  Percent,
-  Target,
-  TrendingDown,
-  TrendingUp,
-  X,
+    Activity,
+    BarChart3,
+    Calendar,
+    List,
+    Loader,
+    Percent,
+    Target,
+    TrendingDown,
+    TrendingUp,
+    X,
 } from 'lucide-react'
 import { useState } from 'react'
 import { queueAPI } from '../lib/api'
@@ -101,10 +101,7 @@ export default function BacktestResults({ jobId, onClose }: BacktestResultsProps
           <div>
             <h2 className="text-xl font-semibold">Backtest Results</h2>
             <p className="text-sm text-muted-foreground mt-1 font-medium">
-              {strategyName ? `${strategyName} • ${symbolDisplay} • ${result.start_date} to ${result.end_date}` : `${symbolDisplay} • ${result.start_date} to ${result.end_date}`}
-            </p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Benchmark: {getBenchmarkLabel(benchmark)}
+              {strategyName ? `${strategyName} • ${symbolDisplay} • ${result.start_date} to ${result.end_date} • ${getBenchmarkLabel(benchmark)}` : `${symbolDisplay} • ${result.start_date} to ${result.end_date} • ${getBenchmarkLabel(benchmark)}`}
             </p>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-muted rounded-md transition-colors">

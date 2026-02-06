@@ -1,19 +1,22 @@
 import { ArrowDown, ArrowUp } from 'lucide-react'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import {
+    Brush,
     CartesianGrid,
     Legend,
     Line,
-    LineChart,
     ReferenceDot,
     ResponsiveContainer,
     Tooltip,
     XAxis,
-    YAxis,
+    YAxis
 } from 'recharts'
 
 interface StockPriceDataPoint {
   datetime: string
+  open?: number
+  high?: number
+  low?: number
   close: number
 }
 
@@ -38,7 +41,53 @@ interface TradingChartProps {
   benchmarkSymbol?: string
 }
 
-// Shape renderers for ReferenceDot — receives cx, cy as pixel coordinates
+// Custom candlestick renderer
+const Candlestick = (props: any) => {
+  const { x, y, width, payload, yAxis } = props
+  if (!payload || !yAxis || payload.open == null || payload.high == null || payload.low == null || payload.close == null) {
+    return null
+  }
+
+  const { open, high, low, close } = payload
+  const isUp = close >= open
+  const color = isUp ? '#10b981' : '#ef4444'
+  const fill = isUp ? '#10b981' : '#ef4444'
+
+  // Convert prices to y coordinates using yAxis scale
+  const yOpen = yAxis.scale(open)
+  const yClose = yAxis.scale(close)
+  const yHigh = yAxis.scale(high)
+  const yLow = yAxis.scale(low)
+
+  const bodyHeight = Math.abs(yClose - yOpen)
+  const bodyY = Math.min(yOpen, yClose)
+  const wickX = x + width / 2
+
+  return (
+    <g>
+      {/* Wick (high-low line) */}
+      <line
+        x1={wickX}
+        y1={yHigh}
+        x2={wickX}
+        y2={yLow}
+        stroke={color}
+        strokeWidth={1}
+      />
+      {/* Body (open-close rectangle) */}
+      <rect
+        x={x + width * 0.2}
+        y={bodyY}
+        width={width * 0.6}
+        height={bodyHeight || 1}
+        fill={fill}
+        stroke={color}
+        strokeWidth={1}
+      />
+    </g>
+  )
+}
+
 function LongEntryShape(props: any) {
   const { cx, cy } = props
   if (cx == null || cy == null) return null
@@ -92,6 +141,8 @@ export default function TradingChart({
   stockSymbol = 'Stock',
   benchmarkSymbol = 'Benchmark',
 }: TradingChartProps) {
+  const [brushStartIndex, setBrushStartIndex] = useState<number | undefined>(undefined)
+  const [brushEndIndex, setBrushEndIndex] = useState<number | undefined>(undefined)
   
   const { chartData, tradeMarkers } = useMemo(() => {
     if (!stockPriceData || stockPriceData.length === 0) {
@@ -123,6 +174,10 @@ export default function TradingChart({
         date: dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         fullDate: point.datetime,
         dateKey: dateKey,
+        open: point.open,
+        high: point.high,
+        low: point.low,
+        close: point.close,
         stockPrice: point.close,
         benchmarkPrice: benchmarkValue,
       }
@@ -196,39 +251,54 @@ export default function TradingChart({
   const benchMax = benchmarkPricesArr.length > 0 ? Math.max(...benchmarkPricesArr) : 100
   const benchPadding = (benchMax - benchMin) * 0.1 || 1
 
+  const handleResetZoom = () => {
+    setBrushStartIndex(undefined)
+    setBrushEndIndex(undefined)
+  }
+
   return (
     <div className="w-full">
-      {/* Legend for trade markers */}
-      <div className="flex items-center gap-4 mb-2 text-xs">
-        <div className="flex items-center gap-1">
-          <div className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center">
-            <ArrowUp className="w-2 h-2 text-white" />
+      {/* Legend for trade markers and zoom controls */}
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-4 text-xs">
+          <div className="flex items-center gap-1">
+            <div className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center">
+              <ArrowUp className="w-2 h-2 text-white" />
+            </div>
+            <span>Long Entry</span>
           </div>
-          <span>Long Entry</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <div className="w-4 h-4 rounded-full bg-red-500 flex items-center justify-center">
-            <ArrowDown className="w-2 h-2 text-white" />
+          <div className="flex items-center gap-1">
+            <div className="w-4 h-4 rounded-full bg-red-500 flex items-center justify-center">
+              <ArrowDown className="w-2 h-2 text-white" />
+            </div>
+            <span>Short Entry</span>
           </div>
-          <span>Short Entry</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <div className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center">
-            <span className="text-white text-[8px]">✕</span>
+          <div className="flex items-center gap-1">
+            <div className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center">
+              <span className="text-white text-[8px]">✕</span>
+            </div>
+            <span>Long Exit</span>
           </div>
-          <span>Long Exit</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <div className="w-4 h-4 rounded-full bg-red-500 flex items-center justify-center">
-            <span className="text-white text-[8px]">✕</span>
+          <div className="flex items-center gap-1">
+            <div className="w-4 h-4 rounded-full bg-red-500 flex items-center justify-center">
+              <span className="text-white text-[8px]">✕</span>
+            </div>
+            <span>Short Exit</span>
           </div>
-          <span>Short Exit</span>
         </div>
+        {(brushStartIndex !== undefined || brushEndIndex !== undefined) && (
+          <button
+            onClick={handleResetZoom}
+            className="px-3 py-1 text-xs border border-input rounded-md hover:bg-muted transition-colors"
+          >
+            Reset Zoom
+          </button>
+        )}
       </div>
 
       <div className="h-80">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart
+          <ComposedChart
             data={chartData}
             margin={{ top: 10, right: 60, left: 10, bottom: 10 }}
           >
@@ -281,22 +351,42 @@ export default function TradingChart({
               }}
               labelFormatter={(_label, payload) => {
                 if (payload && payload[0]) {
-                  return payload[0].payload.fullDate?.split('T')[0] || _label
+                  const p = payload[0].payload
+                  return p.fullDate?.split('T')[0] || _label
                 }
                 return _label
               }}
+              content={(props: any) => {
+                if (!props.active || !props.payload || !props.payload.length) return null
+                const data = props.payload[0].payload
+                return (
+                  <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
+                    <div className="text-xs text-muted-foreground mb-1">{data.fullDate?.split('T')[0]}</div>
+                    {data.open != null && (
+                      <div className="text-xs space-y-0.5">
+                        <div>Open: <span className="font-medium">{data.open.toFixed(2)}</span></div>
+                        <div>High: <span className="font-medium">{data.high.toFixed(2)}</span></div>
+                        <div>Low: <span className="font-medium">{data.low.toFixed(2)}</span></div>
+                        <div>Close: <span className="font-medium">{data.close.toFixed(2)}</span></div>
+                      </div>
+                    )}
+                    {data.benchmarkPrice != null && (
+                      <div className="text-xs mt-1 pt-1 border-t border-border">
+                        <div>{benchmarkSymbol}: <span className="font-medium">{data.benchmarkPrice.toFixed(2)}</span></div>
+                      </div>
+                    )}
+                  </div>
+                )
+              }}
             />
             <Legend wrapperStyle={{ paddingTop: '10px' }} iconType="line" />
-            {/* Stock price line (left axis) */}
-            <Line
+            {/* Candlestick chart for stock price (left axis) */}
+            <Bar
               yAxisId="left"
-              type="monotone"
-              dataKey="stockPrice"
+              dataKey="close"
               name={stockSymbol}
-              stroke="#10b981"
-              strokeWidth={2}
-              dot={false}
-              activeDot={{ r: 4, strokeWidth: 2 }}
+              shape={(props: any) => <Candlestick {...props} yAxis={props.yAxis} />}
+              isAnimationActive={false}
             />
             {/* Benchmark price line (right axis) */}
             {hasBenchmark && (
@@ -330,7 +420,22 @@ export default function TradingChart({
                 />
               )
             })}
-          </LineChart>
+            {/* Brush for zoom functionality */}
+            <Brush
+              dataKey="date"
+              height={30}
+              stroke="hsl(var(--primary))"
+              fill="hsl(var(--muted))"
+              startIndex={brushStartIndex}
+              endIndex={brushEndIndex}
+              onChange={(e: any) => {
+                if (e && e.startIndex !== undefined && e.endIndex !== undefined) {
+                  setBrushStartIndex(e.startIndex)
+                  setBrushEndIndex(e.endIndex)
+                }
+              }}
+            />
+          </ComposedChart>
         </ResponsiveContainer>
       </div>
     </div>
