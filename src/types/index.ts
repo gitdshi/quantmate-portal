@@ -75,6 +75,50 @@ export interface Job {
   strategy_version?: number
 }
 
+export interface BulkBacktestRequest {
+  strategy_id?: number
+  strategy_class?: string
+  strategy_name?: string
+  symbols: string[]
+  start_date: string
+  end_date: string
+  initial_capital?: number
+  rate?: number
+  slippage?: number
+  size?: number
+  pricetick?: number
+  benchmark?: string
+  parameters?: Record<string, unknown>
+}
+
+export interface BulkJobChildResult {
+  job_id: string
+  symbol: string
+  symbol_name?: string
+  status: string
+  error?: string
+  created_at?: string
+  completed_at?: string
+  statistics?: {
+    total_return: number
+    annual_return: number
+    max_drawdown: number
+    max_drawdown_percent?: number
+    sharpe_ratio: number
+    total_trades: number
+    winning_rate: number
+    profit_factor: number
+  }
+}
+
+export interface BulkJobResultsPage {
+  results: BulkJobChildResult[]
+  total: number
+  page: number
+  page_size: number
+  sort_order: 'asc' | 'desc'
+}
+
 export interface QueueStats {
   queues: Record<string, {
     queued: number

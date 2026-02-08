@@ -123,6 +123,23 @@ export const queueAPI = {
     slippage?: number
     parameters?: Record<string, unknown>
   }) => api.post('/api/queue/backtest', data),
+
+  submitBulkBacktest: (data: {
+    strategy_id?: number
+    strategy_class?: string
+    strategy_name?: string
+    symbols: string[]
+    start_date: string
+    end_date: string
+    initial_capital?: number
+    rate?: number
+    slippage?: number
+    benchmark?: string
+    parameters?: Record<string, unknown>
+  }) => api.post('/api/queue/bulk-backtest', data),
+
+  getBulkJobResults: (jobId: string, page = 1, pageSize = 10, sortOrder: 'asc' | 'desc' = 'desc') =>
+    api.get(`/api/queue/bulk-jobs/${jobId}/results`, { params: { page, page_size: pageSize, sort_order: sortOrder } }),
 }
 
 // Market Data API
@@ -139,6 +156,11 @@ export const marketDataAPI = {
   overview: () => api.get('/api/data/overview'),
   
   sectors: () => api.get('/api/data/sectors'),
+
+  exchanges: () => api.get('/api/data/exchanges'),
+
+  symbolsByFilter: (params: { industry?: string; exchange?: string; limit?: number }) =>
+    api.get('/api/data/symbols-by-filter', { params }),
 }
 
 // Analytics API

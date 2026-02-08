@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Calendar, CheckCircle, Clock, DollarSign, Eye, Loader, Trash2, TrendingUp, XCircle } from 'lucide-react'
+import { ArrowDown, ArrowUp, Calendar, CheckCircle, ChevronDown, ChevronRight, Clock, DollarSign, Eye, Layers, Loader, Trash2, TrendingUp, XCircle } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { queueAPI } from '../lib/api'
+import type { BulkJobChildResult, BulkJobResultsPage } from '../types'
 
 interface BacktestJobListProps {
   onViewResults: (jobId: string) => void
@@ -10,6 +11,7 @@ interface BacktestJobListProps {
 export default function BacktestJobList({ onViewResults }: BacktestJobListProps) {
   const [filter, setFilter] = useState<string>('all')
   const [jobDetails, setJobDetails] = useState<Record<string, any>>({})
+  const [expandedBulk, setExpandedBulk] = useState<Record<string, boolean>>({})
   const queryClient = useQueryClient()
 
   const { data: jobsData, isLoading } = useQuery({
@@ -164,12 +166,15 @@ export default function BacktestJobList({ onViewResults }: BacktestJobListProps)
           {jobs.map((job: {
             job_id: string
             status: string
+            type?: string
             created_at: string
             progress?: number
             progress_message?: string
             error?: string
             symbol?: string
             symbol_name?: string
+            symbols?: string[]
+            total_symbols?: number
             strategy_class?: string
             strategy_name?: string
             strategy_version?: number
@@ -179,6 +184,8 @@ export default function BacktestJobList({ onViewResults }: BacktestJobListProps)
             rate?: number
             slippage?: number
             result?: {
+              best_return?: number
+              best_symbol?: string
               statistics?: {
                 total_return?: number
                 annual_return?: number
@@ -188,6 +195,25 @@ export default function BacktestJobList({ onViewResults }: BacktestJobListProps)
               }
             }
           }) => {
+            const isBulk = job.job_id.startsWith('bulk_') || job.type === 'bulk_backtest'
+
+            if (isBulk) {
+              return (
+                <BulkJobCard
+                  key={job.job_id}
+                  job={job}
+                  expanded={!!expandedBulk[job.job_id]}
+                  onToggle={() => setExpandedBulk(prev => ({ ...prev, [job.job_id]: !prev[job.job_id] }))}
+                  onDelete={(e) => handleDelete(job.job_id, e)}
+                  deleteIsPending={deleteMutation.isPending}
+                  onViewResults={onViewResults}
+                  getStatusIcon={getStatusIcon}
+                  getStatusColor={getStatusColor}
+                />
+              )
+            }
+
+            // -------- Single backtest card (unchanged) --------
             const symbolDisplay = job.symbol_name 
               ? `${job.symbol || ''} (${job.symbol_name})`
               : job.symbol || ''
@@ -361,6 +387,273 @@ export default function BacktestJobList({ onViewResults }: BacktestJobListProps)
               </div>
             )
           })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+
+/* ========== Bulk Job Card with expandable child results ========== */
+
+function BulkJobCard({
+  job,
+  expanded,
+  onToggle,
+  onDelete,
+  deleteIsPending,
+  onViewResults,
+  getStatusIcon,
+  getStatusColor,
+}: {
+  job: any
+  expanded: boolean
+  onToggle: () => void
+  onDelete: (e: React.MouseEvent) => void
+  deleteIsPending: boolean
+  onViewResults: (jobId: string) => void
+  getStatusIcon: (s: string) => React.ReactNode
+  getStatusColor: (s: string) => string
+}) {
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+  const [page, setPage] = useState(1)
+  const [allResults, setAllResults] = useState<BulkJobChildResult[]>([])
+  const [total, setTotal] = useState(0)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const PAGE_SIZE = 10
+
+  const strategyDisplay = job.strategy_name || job.strategy_class || ''
+  const strategyVersion = job.strategy_version
+  const totalSymbols = job.total_symbols || job.symbols?.length || 0
+  const hasFinished = job.status === 'finished' || job.status === 'completed'
+  const bestReturn = job.result?.best_return
+  const bestSymbol = job.result?.best_symbol
+
+  // Fetch first page when expanded
+  useEffect(() => {
+    if (expanded && allResults.length === 0 && hasFinished) {
+      loadPage(1)
+    }
+  }, [expanded])
+
+  // Reset when sort order changes
+  useEffect(() => {
+    if (expanded && hasFinished) {
+      setAllResults([])
+      setPage(1)
+      loadPage(1)
+    }
+  }, [sortOrder])
+
+  const loadPage = async (p: number) => {
+    setLoadingMore(true)
+    try {
+      const res = await queueAPI.getBulkJobResults(job.job_id, p, PAGE_SIZE, sortOrder)
+      const data: BulkJobResultsPage = res.data
+      if (p === 1) {
+        setAllResults(data.results)
+      } else {
+        setAllResults(prev => [...prev, ...data.results])
+      }
+      setTotal(data.total)
+      setPage(p)
+    } catch (err) {
+      console.error('Failed to load bulk results', err)
+    } finally {
+      setLoadingMore(false)
+    }
+  }
+
+  const hasMore = allResults.length < total
+
+  return (
+    <div className="bg-card border border-border rounded-lg hover:shadow-md transition-shadow">
+      <div className="p-4">
+        {/* Line 1: status + timestamp + job ID */}
+        <div className="flex items-center gap-3 mb-1.5 flex-wrap">
+          {getStatusIcon(job.status)}
+          <span className={`px-2 py-0.5 rounded text-xs font-medium capitalize ${getStatusColor(job.status)}`}>
+            {job.status}
+          </span>
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-orange-500/10 text-orange-600 dark:text-orange-400 text-xs font-semibold">
+            <Layers className="h-3 w-3" />
+            Bulk
+          </span>
+          <span className="text-xs text-muted-foreground">
+            {new Date(job.created_at).toLocaleString()}
+          </span>
+          <span className="text-xs text-muted-foreground/60 font-mono">{job.job_id}</span>
+        </div>
+
+        {/* Line 2-3: strategy + params + metrics */}
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              {strategyDisplay && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-medium">
+                  <TrendingUp className="h-3 w-3" />
+                  {strategyDisplay}
+                  {strategyVersion && (
+                    <span className="ml-1 px-1 py-0 rounded bg-purple-500/10 text-purple-600 dark:text-purple-400 text-[10px] font-semibold">
+                      v{strategyVersion}
+                    </span>
+                  )}
+                </span>
+              )}
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-orange-500/10 text-orange-600 dark:text-orange-400 text-xs font-medium">
+                {totalSymbols} symbols
+              </span>
+            </div>
+            <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+              {job.start_date && job.end_date && (
+                <span className="inline-flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  {job.start_date} ~ {job.end_date}
+                </span>
+              )}
+              {job.initial_capital && (
+                <span className="inline-flex items-center gap-1">
+                  <DollarSign className="h-3 w-3" />
+                  {Number(job.initial_capital).toLocaleString()}
+                </span>
+              )}
+              {job.rate !== undefined && <span>Rate: {job.rate}</span>}
+              {job.slippage !== undefined && <span>Slip: {job.slippage}</span>}
+            </div>
+          </div>
+
+          {/* Right: best return + expand/delete */}
+          <div className="flex-shrink-0 flex items-center gap-3">
+            {hasFinished && bestReturn !== undefined && bestReturn !== null && (
+              <div>
+                <div className={`text-lg font-extrabold ${bestReturn >= 0 ? 'text-red-500' : 'text-green-500'}`}>
+                  <span className="text-sm text-muted-foreground font-normal mr-1">Best</span>
+                  {bestReturn.toFixed(2)}%
+                </div>
+                {bestSymbol && (
+                  <div className="text-[10px] text-muted-foreground text-right">{bestSymbol}</div>
+                )}
+              </div>
+            )}
+
+            <div className="flex items-center gap-1 border-l border-border pl-3">
+              {hasFinished && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onToggle() }}
+                  className="px-3 py-2 hover:bg-primary/10 text-primary rounded-md transition-colors text-sm font-medium"
+                  title={expanded ? 'Collapse results' : 'Expand results'}
+                >
+                  {expanded ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+                </button>
+              )}
+              <button
+                onClick={onDelete}
+                disabled={deleteIsPending}
+                className="px-3 py-2 hover:bg-destructive/10 text-destructive rounded-md transition-colors disabled:opacity-50 text-sm font-medium"
+                title="Delete bulk job"
+              >
+                <Trash2 className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Progress bar (while running) */}
+        {job.progress !== undefined && job.progress > 0 && job.progress < 100 && (
+          <div className="mt-2">
+            <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+              <span>{job.progress_message || 'Processing...'}</span>
+              <span>{job.progress}%</span>
+            </div>
+            <div className="w-full bg-muted rounded-full h-2">
+              <div className="bg-primary h-2 rounded-full transition-all" style={{ width: `${job.progress}%` }} />
+            </div>
+          </div>
+        )}
+
+        {job.error && (
+          <div className="text-sm text-destructive mt-2">Error: {job.error}</div>
+        )}
+      </div>
+
+      {/* Expanded child results */}
+      {expanded && hasFinished && (
+        <div className="border-t border-border">
+          {/* Sort control */}
+          <div className="flex items-center justify-between px-4 py-2 bg-muted/20">
+            <span className="text-xs text-muted-foreground">{total} results</span>
+            <button
+              onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
+              className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+            >
+              Return {sortOrder === 'desc' ? <ArrowDown className="h-3 w-3" /> : <ArrowUp className="h-3 w-3" />}
+            </button>
+          </div>
+
+          {/* Table header */}
+          <div className="grid grid-cols-[1fr_80px_80px_80px_80px_60px] gap-2 px-4 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase border-b border-border bg-muted/10">
+            <span>Symbol</span>
+            <span className="text-right">Return</span>
+            <span className="text-right">Annual</span>
+            <span className="text-right">Sharpe</span>
+            <span className="text-right">MaxDD</span>
+            <span className="text-right">Status</span>
+          </div>
+
+          {/* Rows */}
+          {allResults.map((child) => {
+            const ret = child.statistics?.total_return
+            return (
+              <button
+                key={child.job_id}
+                onClick={() => onViewResults(child.job_id)}
+                className="grid grid-cols-[1fr_80px_80px_80px_80px_60px] gap-2 px-4 py-2 text-xs w-full text-left hover:bg-muted/30 transition-colors border-b border-border last:border-0"
+              >
+                <span className="truncate font-medium">
+                  {child.symbol}
+                  {child.symbol_name && <span className="text-muted-foreground ml-1">({child.symbol_name})</span>}
+                </span>
+                <span className={`text-right font-semibold ${ret !== undefined ? (ret >= 0 ? 'text-red-500' : 'text-green-500') : ''}`}>
+                  {ret !== undefined ? `${ret.toFixed(2)}%` : '-'}
+                </span>
+                <span className="text-right">
+                  {child.statistics?.annual_return !== undefined ? `${child.statistics.annual_return.toFixed(2)}%` : '-'}
+                </span>
+                <span className="text-right">
+                  {child.statistics?.sharpe_ratio !== undefined ? child.statistics.sharpe_ratio.toFixed(2) : '-'}
+                </span>
+                <span className="text-right text-green-500">
+                  {child.statistics?.max_drawdown_percent !== undefined
+                    ? `${child.statistics.max_drawdown_percent.toFixed(2)}%`
+                    : child.statistics?.max_drawdown !== undefined
+                    ? `${child.statistics.max_drawdown.toFixed(2)}%`
+                    : '-'}
+                </span>
+                <span className={`text-right capitalize ${child.status === 'completed' || child.status === 'finished' ? 'text-green-500' : child.status === 'failed' ? 'text-red-500' : 'text-muted-foreground'}`}>
+                  {child.status === 'completed' || child.status === 'finished' ? '✓' : child.status === 'failed' ? '✗' : child.status}
+                </span>
+              </button>
+            )
+          })}
+
+          {/* Load more */}
+          {hasMore && (
+            <div className="px-4 py-2 text-center border-t border-border">
+              <button
+                onClick={() => loadPage(page + 1)}
+                disabled={loadingMore}
+                className="text-sm text-primary hover:underline disabled:opacity-50"
+              >
+                {loadingMore ? 'Loading...' : `... load more (${allResults.length}/${total})`}
+              </button>
+            </div>
+          )}
+
+          {loadingMore && allResults.length === 0 && (
+            <div className="px-4 py-4 text-center">
+              <Loader className="h-5 w-5 animate-spin text-muted-foreground mx-auto" />
+            </div>
+          )}
         </div>
       )}
     </div>
