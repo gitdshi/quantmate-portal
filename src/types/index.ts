@@ -139,7 +139,7 @@ export interface BulkBacktestSummary {
   top10: BulkSummarySymbol[]
   bottom10: BulkSummarySymbol[]
   return_distribution: Record<string, number>
-  failed_symbols: { symbol: string; error: string }[]
+  failed_symbols: { symbol: string; symbol_name?: string; error: string }[]
 }
 
 export interface BulkSummarySymbol {

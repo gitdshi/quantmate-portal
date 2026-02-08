@@ -161,11 +161,16 @@ function SummaryContent({ data, jobId, onViewChildResult }: { data: BulkSummaryT
           </div>
           <div className="divide-y divide-border">
             {data.failed_symbols.map((f) => (
-              <div key={f.symbol} className="px-4 py-2 text-xs flex items-center justify-between">
-                <span className="font-medium">{f.symbol}</span>
-                <span className="text-destructive truncate max-w-[60%]">{f.error}</span>
-              </div>
-            ))}
+                <div key={f.symbol} className="px-4 py-2 text-xs flex items-center justify-between">
+                  <div>
+                    <span className="font-medium">{f.symbol}</span>
+                    {f.symbol_name ? (
+                      <span className="text-muted-foreground ml-2">({f.symbol_name})</span>
+                    ) : null}
+                  </div>
+                  <span className="text-destructive truncate max-w-[60%]">{f.error}</span>
+                </div>
+              ))}
           </div>
         </div>
       )}
