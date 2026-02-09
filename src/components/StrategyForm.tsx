@@ -215,8 +215,10 @@ export default function StrategyForm({ strategy, onClose }: StrategyFormProps) {
               value={code}
               onChange={(e) => setCode(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm flex-1"
-              onFocus={() => setEditorFullScreen(true)}
-              onClick={() => setEditorFullScreen(true)}
+              onFocusCapture={() => setEditorFullScreen(true)}
+              onMouseDown={() => setEditorFullScreen(true)}
+              onDoubleClick={() => setEditorFullScreen(true)}
+              onKeyDown={(e) => { if (e.key === 'Escape') setEditorFullScreen(false) }}
               placeholder="from vnpy.trader.app.cta_strategy import CtaTemplate..."
               rows={editorFullScreen ? 30 : 12}
               style={editorFullScreen ? { height: 'calc(100vh - 240px)' } : undefined}
