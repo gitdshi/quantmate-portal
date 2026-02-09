@@ -142,65 +142,69 @@ export default function StrategyForm({ strategy, onClose }: StrategyFormProps) {
             </div>
           )}
 
-          <div>
-            <label htmlFor="name" className="block text-sm font-medium mb-2">
-              Strategy Name *
-            </label>
-            <input
-              id="name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="My Trading Strategy"
-              required
-            />
-          </div>
+          {!editorFullScreen && (
+            <>
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium mb-2">
+                  Strategy Name *
+                </label>
+                <input
+                  id="name"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="My Trading Strategy"
+                  required
+                />
+              </div>
 
-          <div>
-            <label htmlFor="description" className="block text-sm font-medium mb-2">
-              Description
-            </label>
-            <textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Strategy description..."
-              rows={3}
-            />
-          </div>
+              <div>
+                <label htmlFor="description" className="block text-sm font-medium mb-2">
+                  Description
+                </label>
+                <textarea
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Strategy description..."
+                  rows={3}
+                />
+              </div>
 
-          <div>
-            <label htmlFor="className" className="block text-sm font-medium mb-2">
-              Class Name *
-            </label>
-            <input
-              id="className"
-              type="text"
-              value={className}
-              onChange={(e) => setClassName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="MyStrategyClass"
-              required
-            />
-            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Enter the Python class name defined in the strategy code.</p>
-          </div>
+              <div>
+                <label htmlFor="className" className="block text-sm font-medium mb-2">
+                  Class Name *
+                </label>
+                <input
+                  id="className"
+                  type="text"
+                  value={className}
+                  onChange={(e) => setClassName(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="MyStrategyClass"
+                  required
+                />
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Enter the Python class name defined in the strategy code.</p>
+              </div>
 
-          <div>
-            <label htmlFor="parameters" className="block text-sm font-medium mb-2">
-              Parameters (JSON)
-            </label>
-            <textarea
-              id="parameters"
-              value={parameters}
-              onChange={(e) => setParameters(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
-              rows={6}
-              placeholder='{"param1": 10, "flag": true}'
-            />
-            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Optional JSON object defining strategy parameters.</p>
-          </div>
+              <div>
+                <label htmlFor="parameters" className="block text-sm font-medium mb-2">
+                  Parameters (JSON)
+                </label>
+                <textarea
+                  id="parameters"
+                  value={parameters}
+                  onChange={(e) => setParameters(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                  rows={6}
+                  placeholder='{"param1": 10, "flag": true}'
+                />
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Optional JSON object defining strategy parameters.</p>
+              </div>
+            </>
+          )}
 
           <div className="flex-1 flex flex-col">
             <label htmlFor="code" className="block text-sm font-medium mb-2">
@@ -222,7 +226,7 @@ export default function StrategyForm({ strategy, onClose }: StrategyFormProps) {
             </p>
           </div>
 
-          {isEdit && (
+          {isEdit && !editorFullScreen && (
             <div className="flex items-center gap-2">
               <input
                 id="isActive"
