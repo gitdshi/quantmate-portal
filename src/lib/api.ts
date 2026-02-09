@@ -232,6 +232,7 @@ export const strategyFilesAPI = {
 // Linting endpoint for strategy code
 // Note: server implements POST /api/strategy-files/lint
 strategyFilesAPI.lint = (payload: { content: string }) => api.post('/api/strategy-files/lint', payload)
+strategyFilesAPI.lintPyright = (payload: { content: string }) => api.post('/api/strategy-files/lint/pyright', payload)
 
 // DB-backed strategy file endpoints
 export const strategyFilesDbAPI = {

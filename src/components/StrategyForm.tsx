@@ -1,7 +1,7 @@
+import Editor from '@monaco-editor/react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Maximize2, Minimize2, Save, X } from 'lucide-react'
-import { useState, useRef, useEffect } from 'react'
-import Editor, { OnMount } from '@monaco-editor/react'
+import { useEffect, useRef, useState } from 'react'
 import { strategiesAPI, strategyFilesAPI } from '../lib/api'
 import type { Strategy } from '../types'
 
@@ -34,20 +34,39 @@ export default function StrategyForm({ strategy, onClose }: StrategyFormProps) {
     if (lintTimer.current) window.clearTimeout(lintTimer.current)
     lintTimer.current = window.setTimeout(async () => {
       try {
-        const res = await strategyFilesAPI.list ? null : null
-        // call lint endpoint
-        const { data } = await strategyFilesAPI.lint({ content: code })
-        const diagnostics = data.diagnostics || []
-        const markers = (diagnostics || []).map((d: any) => ({
-          startLineNumber: d.line || 1,
-          startColumn: d.col || 1,
-          endLineNumber: d.line || 1,
-          endColumn: (d.col || 1) + 1,
-          message: d.message,
-          severity: d.severity === 'error' ? monacoRef.current.MarkerSeverity.Error : monacoRef.current.MarkerSeverity.Warning,
-        }))
+        // Try Pyright first
+        let data: any = null
+        try {
+          const resp = await (strategyFilesAPI as any).lintPyright({ content: code })
+          data = resp.data
+        } catch (pyErr: any) {
+          // if pyright not available (501) or other error, fallback to simple AST lint
+          try {
+            const resp2 = await strategyFilesAPI.lint({ content: code })
+            data = resp2.data
+          } catch (e) {
+            data = { diagnostics: [] }
+          }
+        }
+
+        const diagnostics = data?.diagnostics || []
+        const markers = diagnostics.map((d: any) => {
+          const line0 = d.line != null ? (typeof d.line === 'number' ? d.line + 1 : d.line) : 1
+          const col = d.col != null ? d.col : 1
+          const severity = d.severity === 'error' || d.severity === 'Error' ? monacoRef.current.MarkerSeverity.Error : monacoRef.current.MarkerSeverity.Warning
+          return {
+            startLineNumber: line0,
+            startColumn: col,
+            endLineNumber: line0,
+            endColumn: col + 1,
+            message: d.message,
+            severity,
+          }
+        })
         const model = editorRef.current.getModel()
-        monacoRef.current.editor.setModelMarkers(model, 'python', markers)
+        if (monacoRef.current && model) {
+          monacoRef.current.editor.setModelMarkers(model, 'python', markers)
+        }
       } catch (e) {
         // ignore lint errors
       }
