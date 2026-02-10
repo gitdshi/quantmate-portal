@@ -41,10 +41,31 @@ export default function BacktestForm({ onClose, onSubmitSuccess }: BacktestFormP
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   // Benchmark options (can be extended later)
-  const benchmarkOptions = [
+  const [benchmarkOptions, setBenchmarkOptions] = useState<{value:string,label:string}[]>([
     { value: '399300.SZ', label: 'HS300 (沪深300)' },
-    // Add more benchmarks here as needed
-  ]
+    { value: '000016.SH', label: 'SSE50 (上证50)' },
+    { value: '000905.SH', label: 'CSI500 (中证500)' },
+    { value: '399006.SZ', label: 'ChiNext (创业板指)' },
+    { value: '000001.SH', label: 'SSE Composite (上证综指)' },
+  ])
+
+  // Load benchmark index options from backend
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      try {
+        const resp = await marketDataAPI.indexes()
+        if (!mounted) return
+        const data = resp?.data || []
+        if (Array.isArray(data) && data.length > 0) {
+          setBenchmarkOptions(data)
+        }
+      } catch (e) {
+        // fallback: keep default list
+      }
+    })()
+    return () => { mounted = false }
+  }, [])
 
   // Set default dates (recent one year)
   useEffect(() => {

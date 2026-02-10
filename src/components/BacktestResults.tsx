@@ -11,8 +11,8 @@ import {
     TrendingUp,
     X,
 } from 'lucide-react'
-import { useState } from 'react'
-import { queueAPI } from '../lib/api'
+import { useMemo, useState } from 'react'
+import { marketDataAPI, queueAPI } from '../lib/api'
 import EquityCurveChart from './EquityCurveChart'
 import TradingChart from './TradingChart'
 
@@ -62,12 +62,32 @@ export default function BacktestResults({ jobId, onClose }: BacktestResultsProps
 
   // Benchmark display mapping
   const getBenchmarkLabel = (code: string): string => {
+    // Prefer lookup from backend-provided indexes when available
+    const idx = indexMapRef[code]
+    if (idx) return idx
+
     const benchmarkMap: Record<string, string> = {
       '399300.SZ': 'HS300 (沪深300)',
-      // Add more benchmarks here
     }
     return benchmarkMap[code] || code
   }
+
+  // Load index list from backend to map codes to friendly labels
+  const { data: indexesResp } = useQuery({
+    queryKey: ['market-indexes'],
+    queryFn: () => marketDataAPI.indexes(),
+    staleTime: 1000 * 60 * 60,
+  })
+
+  const indexes: Array<{ value: string; label: string }> = indexesResp?.data || []
+
+  const indexMapRef = useMemo(() => {
+    const m: Record<string, string> = {}
+    for (const it of indexes) {
+      if (it && it.value) m[it.value] = it.label || it.value
+    }
+    return m
+  }, [indexes])
 
   if (isLoading) {
     return (

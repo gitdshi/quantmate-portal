@@ -135,6 +135,7 @@ export const queueAPI = {
     initial_capital?: number
     rate?: number
     slippage?: number
+    benchmark?: string
     parameters?: Record<string, unknown>
   }) => api.post('/api/queue/backtest', data),
 
@@ -178,6 +179,7 @@ export const marketDataAPI = {
 
   symbolsByFilter: (params: { industry?: string; exchange?: string; limit?: number }) =>
     api.get('/api/data/symbols-by-filter', { params }),
+  indexes: () => api.get('/api/data/indexes'),
 }
 
 // Analytics API

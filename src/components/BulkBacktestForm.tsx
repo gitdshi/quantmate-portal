@@ -42,7 +42,30 @@ export default function BulkBacktestForm({ onClose, onSubmitSuccess }: BulkBackt
 
   const benchmarkOptions = [
     { value: '399300.SZ', label: 'HS300 (沪深300)' },
+    { value: '000016.SH', label: 'SSE50 (上证50)' },
+    { value: '000905.SH', label: 'CSI500 (中证500)' },
+    { value: '399006.SZ', label: 'ChiNext (创业板指)' },
+    { value: '000001.SH', label: 'SSE Composite (上证综指)' },
   ]
+
+  const [dynamicBenchmarkOptions, setDynamicBenchmarkOptions] = useState<{value:string,label:string}[]>(benchmarkOptions)
+
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      try {
+        const resp = await marketDataAPI.indexes()
+        if (!mounted) return
+        const data = resp?.data || []
+        if (Array.isArray(data) && data.length > 0) {
+          setDynamicBenchmarkOptions(data)
+        }
+      } catch (e) {
+        // keep defaults
+      }
+    })()
+    return () => { mounted = false }
+  }, [])
 
   // Default dates
   useEffect(() => {
@@ -348,9 +371,9 @@ export default function BulkBacktestForm({ onClose, onSubmitSuccess }: BulkBackt
           {/* Benchmark */}
           <div>
             <label className="block text-sm font-medium mb-2">Benchmark *</label>
-            <select value={benchmark} onChange={(e) => setBenchmark(e.target.value)}
+              <select value={benchmark} onChange={(e) => setBenchmark(e.target.value)}
               className="w-full px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring" required>
-              {benchmarkOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                {dynamicBenchmarkOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </div>
             </div>
