@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query'
 import { LogIn } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { authAPI } from '../../lib/api'
 import { useAuthStore } from '../../stores/auth'
@@ -11,6 +11,13 @@ export default function Login() {
   const [error, setError] = useState('')
   const navigate = useNavigate()
   const { setAuth } = useAuthStore()
+  const { isAuthenticated } = useAuthStore()
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/')
+    }
+  }, [isAuthenticated, navigate])
 
   const loginMutation = useMutation({
     mutationFn: () => authAPI.login(username, password),

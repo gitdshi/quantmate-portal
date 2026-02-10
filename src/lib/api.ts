@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { useAuthStore } from '../stores/auth'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -43,6 +44,12 @@ api.interceptors.response.use(
           return api(originalRequest)
         }
       } catch (refreshError) {
+        // Clear auth state and tokens, then redirect to login
+        try {
+          useAuthStore.getState().logout()
+        } catch (e) {
+          // ignore errors during logout
+        }
         localStorage.removeItem('access_token')
         localStorage.removeItem('refresh_token')
         window.location.href = '/login'

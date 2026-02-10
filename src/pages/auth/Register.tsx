@@ -1,8 +1,9 @@
 import { useMutation } from '@tanstack/react-query'
 import { UserPlus } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { authAPI } from '../../lib/api'
+import { useAuthStore } from '../../stores/auth'
 
 export default function Register() {
   const [username, setUsername] = useState('')
@@ -12,6 +13,11 @@ export default function Register() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const navigate = useNavigate()
+  const { isAuthenticated } = useAuthStore()
+
+  useEffect(() => {
+    if (isAuthenticated) navigate('/')
+  }, [isAuthenticated, navigate])
 
   const registerMutation = useMutation({
     mutationFn: () => authAPI.register(username, email, password),
