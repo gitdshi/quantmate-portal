@@ -10,11 +10,13 @@ import {
     X
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import StrategyForm from '../components/StrategyForm'
 import StrategyOptimization from '../components/StrategyOptimization'
 import { strategiesAPI, strategyCodeAPI, strategyFilesAPI } from '../lib/api'
+import { useAuthStore } from '../stores/auth'
 import type { Strategy, StrategyComparison, StrategyFile, StrategyFileContent, SyncResult } from '../types'
 
 type TabType = 'files' | 'optimize'
@@ -137,7 +139,7 @@ class MyStrategy(CtaTemplate):
   const [success, setSuccess] = useState<string | null>(null)
   const [editorFullScreen, setEditorFullScreen] = useState(false)
   const [showHistoryModal, setShowHistoryModal] = useState(false)
-  const [historyModalContent, setHistoryModalContent] = useState<{name: string, versionName: string, content: string} | null>(null)
+  const [historyModalContent, setHistoryModalContent] = useState<{name: string, versionName: string, content: string, strategyName?: string | null, className?: string | null, historyVersion?: string | null, parameters?: any} | null>(null)
   const [showDiff, setShowDiff] = useState(true)
 
   useEffect(() => {
@@ -146,6 +148,9 @@ class MyStrategy(CtaTemplate):
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab])
+
+  const navigate = useNavigate()
+  const { logout } = useAuthStore()
 
   const loadDbStrategies = async () => {
     try {
@@ -164,8 +169,13 @@ class MyStrategy(CtaTemplate):
         await loadDbStrategyHistory(data[0].id)
       }
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { detail?: string } } }
+      const error = err as { response?: { data?: { detail?: string }, status?: number } }
       console.error('[Strategies] Failed to load strategies:', err)
+      if (error.response?.status === 401) {
+        try { logout() } catch (e) {}
+        navigate('/login')
+        return
+      }
       setError(error.response?.data?.detail || 'Failed to load strategies')
     } finally {
       setLoading(false)
@@ -217,7 +227,7 @@ class MyStrategy(CtaTemplate):
   }
 
   const [historyVersions, setHistoryVersions] = useState<Array<{name:string,path:string,mtime:string,size:string}>>([])
-  const [dbStrategyHistory, setDbStrategyHistory] = useState<Array<{id:number,code:string,created_at:string}>>([])
+  const [dbStrategyHistory, setDbStrategyHistory] = useState<Array<{id:number, code?:string, created_at:string, strategy_name?: string | null, class_name?: string | null, version?: number | null, parameters?: any, size?: number}>>([])
 
   const loadHistory = async (name: string, source: 'data' | 'project' = 'data') => {
     try {
@@ -246,7 +256,7 @@ class MyStrategy(CtaTemplate):
   const viewHistoryVersion = async (name: string, versionName: string, source: 'data' | 'project' = 'data') => {
     try {
       const { data } = await strategyFilesAPI.getHistoryContent(name, versionName, source)
-      setHistoryModalContent({ name, versionName, content: data.content })
+      setHistoryModalContent({ name, versionName, content: data.content, strategyName: data.strategy_name ?? null, className: data.class_name ?? null, historyVersion: data.version ?? null, parameters: data.parameters ?? null })
       setShowHistoryModal(true)
     } catch (err) {
       setError('Failed to load history version')
@@ -256,7 +266,20 @@ class MyStrategy(CtaTemplate):
   const viewDbHistoryVersion = async (strategyId: number, name: string, historyId: number) => {
     try {
       const { data } = await strategyCodeAPI.getCodeHistory(strategyId, historyId)
-      setHistoryModalContent({ name, versionName: `Version #${historyId}`, content: data.code })
+      // Prefer metadata returned from history row; fallback to strategies.version or history id
+      let versionLabel = `Version #${historyId}`
+      if (data?.version) {
+        versionLabel = `v${data.version}`
+      } else {
+        try {
+          const sresp = await strategiesAPI.get(strategyId)
+          const strat = sresp?.data
+          if (strat && strat.version !== undefined) versionLabel = `v${strat.version}`
+        } catch (e) {
+          // ignore and fallback to history id
+        }
+      }
+      setHistoryModalContent({ name, versionName: versionLabel, content: data.code, strategyName: data.strategy_name ?? null, className: data.class_name ?? null, historyVersion: data.version ?? null, parameters: data.parameters ?? null })
       setShowHistoryModal(true)
     } catch (err) {
       setError('Failed to load history version')
@@ -264,7 +287,16 @@ class MyStrategy(CtaTemplate):
   }
 
   const restoreDbHistoryVersion = async (strategyId: number, historyId: number, strategyName: string) => {
-    if (!confirm(`Restore version #${historyId} to '${strategyName}'?`)) return
+    // Resolve a human-friendly version label from the strategies table if available
+    let versionLabel = `#${historyId}`
+    try {
+      const r = await strategiesAPI.get(strategyId)
+      const s = r?.data
+      if (s && s.version !== undefined) versionLabel = `v${s.version}`
+    } catch (e) {
+      // fallback
+    }
+    if (!confirm(`Restore version ${versionLabel} to '${strategyName}'?`)) return
     try {
       await strategyCodeAPI.restoreCodeHistory(strategyId, historyId)
       setSuccess('Version restored successfully')
@@ -591,7 +623,7 @@ class MyStrategy(CtaTemplate):
                                     {dbStrategyHistory.map((v) => (
                                       <div key={v.id} className="flex items-center justify-between">
                                         <div>
-                                          <div className="font-mono text-xs">Version #{v.id}</div>
+                                          <div className="font-mono text-xs">{v.version !== null && v.version !== undefined ? `v${v.version}` : `Version #${v.id}`}</div>
                                           <div className="text-xs text-gray-500">{new Date(v.created_at).toLocaleString()}</div>
                                         </div>
                                         <div className="flex items-center gap-2">
@@ -960,6 +992,17 @@ class MyStrategy(CtaTemplate):
               <div>
                 <h2 className="text-xl font-semibold">{historyModalContent.name}</h2>
                 <p className="text-sm text-gray-500">Version: {historyModalContent.versionName}</p>
+                <div className="text-sm text-gray-500 mt-1">
+                  {historyModalContent.strategyName && <div>Strategy: {historyModalContent.strategyName}</div>}
+                  {historyModalContent.className && <div>Class: {historyModalContent.className}</div>}
+                  {historyModalContent.historyVersion && <div>History: {historyModalContent.historyVersion}</div>}
+                </div>
+                {historyModalContent.parameters && (
+                  <div className="mt-2">
+                    <div className="text-xs font-medium text-gray-700">Parameters</div>
+                    <pre className="text-xs font-mono whitespace-pre-wrap bg-gray-50 p-2 rounded mt-1">{JSON.stringify(historyModalContent.parameters, null, 2)}</pre>
+                  </div>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 <button

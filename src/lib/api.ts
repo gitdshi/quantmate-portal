@@ -42,6 +42,13 @@ api.interceptors.response.use(
           originalRequest.headers.Authorization = `Bearer ${data.access_token}`
 
           return api(originalRequest)
+        } else {
+          // No refresh token: clear auth state and redirect immediately
+          try { useAuthStore.getState().logout() } catch (e) { /* ignore */ }
+          localStorage.removeItem('access_token')
+          localStorage.removeItem('refresh_token')
+          window.location.href = '/login'
+          return Promise.reject(error)
         }
       } catch (refreshError) {
         // Clear auth state and tokens, then redirect to login
