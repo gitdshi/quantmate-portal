@@ -540,12 +540,6 @@ export default function BulkBacktestForm({ onClose, onSubmitSuccess }: BulkBackt
             Cancel
           </button>
           <div className="flex items-center gap-3">
-            <span className="text-sm text-muted-foreground">params: {(() => {
-              try {
-                const p = parameters && parameters.trim() ? JSON.parse(parameters) : {}
-                return Object.keys(p).length
-              } catch (e) { return 0 }
-            })()}</span>
             <button onClick={handleSubmit} disabled={submitMutation.isPending}
               className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 transition-colors flex items-center gap-2">
               <Play className="h-4 w-4" />
