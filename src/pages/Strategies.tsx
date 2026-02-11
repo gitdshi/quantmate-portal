@@ -9,7 +9,7 @@ import {
     TrendingUp,
     X
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
@@ -138,6 +138,10 @@ class MyStrategy(CtaTemplate):
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [editorFullScreen, setEditorFullScreen] = useState(false)
+  const editFileInputRef = useRef<HTMLInputElement | null>(null)
+  const [classOptionsEdit, setClassOptionsEdit] = useState<string[] | null>(null)
+  const [pendingEditFileContent, setPendingEditFileContent] = useState<string | null>(null)
+  const [pendingEditFileName, setPendingEditFileName] = useState<string | null>(null)
   const [showHistoryModal, setShowHistoryModal] = useState(false)
   const [historyModalContent, setHistoryModalContent] = useState<{name: string, versionName: string, content: string, strategyName?: string | null, className?: string | null, historyVersion?: string | null, parameters?: any} | null>(null)
   const [showDiff, setShowDiff] = useState(true)
@@ -210,6 +214,58 @@ class MyStrategy(CtaTemplate):
     }
   }
 
+  const handleEditLoadFromFileClick = () => {
+    if (editFileInputRef.current) editFileInputRef.current.click()
+  }
+
+  const handleEditFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    setError(null)
+    const f = e.target.files && e.target.files[0]
+    if (!f) return
+    if (!f.name.endsWith('.py')) {
+      setError('Please select a .py file')
+      return
+    }
+    try {
+      const text = await f.text()
+      const resp = await (strategyFilesAPI as any).parse({ content: text })
+      const data = resp.data || {}
+      const classes = data.classes || []
+      if (classes.length === 0) {
+        setError('No classes found in file')
+        return
+      }
+      if (classes.length > 1) {
+        setClassOptionsEdit(classes.map((c: any) => c.name))
+        setPendingEditFileContent(text)
+        setPendingEditFileName(f.name)
+        return
+      }
+
+      const chosen = classes[0]
+
+      // populate edit fields
+      setEditClassName(chosen.name || '')
+      try {
+        setEditParameters(JSON.stringify(chosen.defaults || {}, null, 2))
+      } catch (e) {
+        setEditParameters('{}')
+      }
+      setEditContent(text)
+      // If edit name is blank, use filename (without extension)
+      try {
+        const baseName = f.name.replace(/\.py$/i, '')
+        setEditName((prev) => (prev && prev.trim() ? prev : baseName))
+      } catch (e) {
+        // ignore
+      }
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || String(err))
+    } finally {
+      if (editFileInputRef.current) editFileInputRef.current.value = ''
+    }
+  }
+
   const viewFileStrategy = async (name: string, source: 'data' | 'project' = 'data') => {
     try {
       setError(null)
@@ -223,6 +279,47 @@ class MyStrategy(CtaTemplate):
     } catch (err: unknown) {
       const error = err as { response?: { data?: { detail?: string } } }
       setError(error.response?.data?.detail || 'Failed to load strategy content')
+    }
+  }
+
+  const handleEditClassPick = async (classNamePicked: string | null) => {
+    if (!classNamePicked) {
+      setClassOptionsEdit(null)
+      setPendingEditFileContent(null)
+      setPendingEditFileName(null)
+      return
+    }
+    try {
+      const text = pendingEditFileContent || ''
+      const resp = await (strategyFilesAPI as any).parse({ content: text })
+      const data = resp.data || {}
+      const classes = data.classes || []
+      const chosen = classes.find((c: any) => c.name === classNamePicked)
+      if (!chosen) {
+        setError('Selected class not found')
+        setClassOptionsEdit(null)
+        return
+      }
+      setEditClassName(chosen.name || '')
+      try {
+        setEditParameters(JSON.stringify(chosen.defaults || {}, null, 2))
+      } catch (e) {
+        setEditParameters('{}')
+      }
+      setEditContent(text)
+      if (pendingEditFileName) {
+        try {
+          const baseName = pendingEditFileName.replace(/\.py$/i, '')
+          setEditName((prev) => (prev && prev.trim() ? prev : baseName))
+        } catch (e) {}
+      }
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || String(err))
+    } finally {
+      setClassOptionsEdit(null)
+      setPendingEditFileContent(null)
+      setPendingEditFileName(null)
+      if (editFileInputRef.current) editFileInputRef.current.value = ''
     }
   }
 
@@ -499,6 +596,23 @@ class MyStrategy(CtaTemplate):
       {success && (
         <div className="mb-4 p-4 bg-green-50 border border-green-200 text-green-800 rounded">
           {success}
+        </div>
+      )}
+      {classOptionsEdit && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-40" role="dialog">
+          <div className="bg-white dark:bg-gray-800 rounded shadow-lg w-full max-w-md p-4">
+            <div className="mb-3 font-semibold">Multiple classes found — choose one</div>
+            <div className="space-y-2 max-h-60 overflow-auto">
+              {classOptionsEdit.map((n) => (
+                <button key={n} onClick={() => handleEditClassPick(n)} className="w-full text-left px-3 py-2 border rounded hover:bg-gray-100 dark:hover:bg-gray-700">
+                  {n}
+                </button>
+              ))}
+            </div>
+            <div className="mt-3 text-right">
+              <button onClick={() => handleEditClassPick(null)} className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200">Cancel</button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -901,12 +1015,22 @@ class MyStrategy(CtaTemplate):
                         <div className="flex-1 overflow-y-auto p-4 space-y-4">
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">Strategy Name</label>
-                              <input
-                                type="text"
-                                value={editName}
-                                onChange={(e) => setEditName(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              />
+                              <div className="flex gap-2">
+                                <input
+                                  type="text"
+                                  value={editName}
+                                  onChange={(e) => setEditName(e.target.value)}
+                                  className="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={handleEditLoadFromFileClick}
+                                  className="px-3 py-2 border border-gray-300 rounded bg-white hover:bg-gray-100 text-sm whitespace-nowrap"
+                                >
+                                  Load from file
+                                </button>
+                                <input ref={editFileInputRef} type="file" accept=".py" className="hidden" onChange={handleEditFileSelected} />
+                              </div>
                             </div>
 
                             <div>

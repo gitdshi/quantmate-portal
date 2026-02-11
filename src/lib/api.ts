@@ -216,53 +216,35 @@ export const optimizationAPI = {
   cancel: (jobId: string) => api.post(`/api/optimization/${jobId}/cancel`),
 }
 
-// Strategy Files API
+// Legacy aliases for backward compatibility (deprecated - use strategiesAPI instead)
 export const strategyFilesAPI = {
-  list: (source: 'data' | 'project' | 'both' = 'data') =>
-    api.get('/api/strategy-files', { params: { source } }),
+  lint: (payload: { content: string }) => api.post('/api/strategy-code/lint', payload),
+  lintPyright: (payload: { content: string }) => api.post('/api/strategy-code/lint/pyright', payload),
+  parse: (payload: { content: string }) => api.post('/api/strategy-code/parse', payload),
   
-  get: (name: string, source: 'data' | 'project' = 'data') =>
-    api.get(`/api/strategy-files/${name}`, { params: { source } }),
-  
-  create: (data: { name: string; content: string; source?: string }) =>
-    api.post('/api/strategy-files', data),
-  
-  update: (name: string, data: { content: string; source?: string }) =>
-    api.put(`/api/strategy-files/${name}`, data),
-  
-  delete: (name: string, source: 'data' | 'project' = 'data') =>
-    api.delete(`/api/strategy-files/${name}`, { params: { source } }),
-  
-  sync: (direction: 'bidirectional' | 'data_to_project' | 'project_to_data' = 'bidirectional') =>
-    api.post('/api/strategy-files/sync', { direction }),
-  
-  compare: () =>
-    api.get('/api/strategy-files/compare/all'),
-  
-  // history endpoints
-  listHistory: (name: string, source: 'data' | 'project' = 'data') =>
-    api.get(`/api/strategy-files/${name}/history`, { params: { source } }),
-
-  getHistoryContent: (name: string, versionName: string, source: 'data' | 'project' = 'data') =>
-    api.get(`/api/strategy-files/${name}/history/${versionName}`, { params: { source } }),
-
-  recoverHistory: (name: string, versionName: string, source: 'data' | 'project' = 'data') =>
-    api.post(`/api/strategy-files/${name}/history/recover`, { version_name: versionName, source }),
-
-  // lint endpoints
-  lint: (payload: { content: string }) => api.post('/api/strategy-files/lint', payload),
-  lintPyright: (payload: { content: string }) => api.post('/api/strategy-files/lint/pyright', payload),
+  // Removed file-based methods - return empty/default responses to prevent crashes
+  list: () => Promise.resolve({ data: [] }),
+  get: () => Promise.reject(new Error('File-based strategies removed. Use database strategies instead.')),
+  create: () => Promise.reject(new Error('File-based strategies removed. Use database strategies instead.')),
+  update: () => Promise.reject(new Error('File-based strategies removed. Use database strategies instead.')),
+  delete: () => Promise.reject(new Error('File-based strategies removed. Use database strategies instead.')),
+  sync: () => Promise.reject(new Error('File sync removed. Use database strategies instead.')),
+  compare: () => Promise.resolve({ data: [] }),
+  listHistory: () => Promise.resolve({ data: [] }),
+  getHistoryContent: () => Promise.reject(new Error('File history removed. Use database strategy history instead.')),
+  recoverHistory: () => Promise.reject(new Error('File history removed. Use database strategy history instead.')),
 }
 
-// DB-backed strategy file endpoints
-export const strategyFilesDbAPI = {
-  list: (source: 'data' | 'project' | 'both' = 'data') => api.get('/api/strategy-files/db', { params: { source } }),
-  listHistory: (name: string, source: 'data' | 'project' = 'data') => api.get(`/api/strategy-files/db/${name}/history`, { params: { source } }),
-  getHistoryContent: (name: string, historyId: number, source: 'data' | 'project' = 'data') => api.get(`/api/strategy-files/db/${name}/history/${historyId}`, { params: { source } }),
-}
+// Removed: strategyFilesDbAPI - use strategiesAPI.listCodeHistory() instead
 
-// Strategy code history API
+// Strategy code utilities and history API
 export const strategyCodeAPI = {
+  // Code parsing and linting utilities
+  parse: (payload: { content: string }) => api.post('/api/strategy-code/parse', payload),
+  lint: (payload: { content: string }) => api.post('/api/strategy-code/lint', payload),
+  lintPyright: (payload: { content: string }) => api.post('/api/strategy-code/lint/pyright', payload),
+  
+  // Code history management (DB-backed strategies)
   listCodeHistory: (strategyId: number) => api.get(`/api/strategies/${strategyId}/code-history`),
   getCodeHistory: (strategyId: number, historyId: number) => api.get(`/api/strategies/${strategyId}/code-history/${historyId}`),
   restoreCodeHistory: (strategyId: number, historyId: number) => api.post(`/api/strategies/${strategyId}/code-history/${historyId}/restore`),

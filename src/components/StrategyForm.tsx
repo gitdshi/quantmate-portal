@@ -24,6 +24,10 @@ export default function StrategyForm({ strategy, onClose }: StrategyFormProps) {
     strategy?.parameters ? JSON.stringify(strategy.parameters, null, 2) : '{}'
   )
   const [error, setError] = useState('')
+  const [classOptions, setClassOptions] = useState<string[] | null>(null)
+  const [pendingFileContent, setPendingFileContent] = useState<string | null>(null)
+  const [pendingFileName, setPendingFileName] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
   const monacoRef = useRef<any>(null)
   const editorRef = useRef<any>(null)
   const lintTimer = useRef<number | null>(null)
@@ -152,6 +156,105 @@ export default function StrategyForm({ strategy, onClose }: StrategyFormProps) {
     saveMutation.mutate(payload)
   }
 
+  const handleLoadFromFileClick = () => {
+    if (fileInputRef.current) fileInputRef.current.click()
+  }
+
+  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    setError('')
+    const f = e.target.files && e.target.files[0]
+    if (!f) return
+    if (!f.name.endsWith('.py')) {
+      setError('Please select a .py file')
+      return
+    }
+    try {
+      const text = await f.text()
+      // send to parse endpoint
+      const resp = await (strategyFilesAPI as any).parse({ content: text })
+      const data = resp.data || {}
+      const classes = data.classes || []
+      if (classes.length === 0) {
+        setError('No classes found in file')
+        return
+      }
+      if (classes.length > 1) {
+        setClassOptions(classes.map((c: any) => c.name))
+        setPendingFileContent(text)
+        setPendingFileName(f.name)
+        return
+      }
+
+      const chosen = classes[0]
+
+      // populate form fields
+      setClassName(chosen.name || '')
+      const defaults = chosen.defaults || {}
+      try {
+        setParameters(JSON.stringify(defaults, null, 2))
+      } catch (e) {
+        setParameters('{}')
+      }
+      setCode(text)
+      // If strategy name is blank, use filename (without extension)
+      try {
+        const baseName = f.name.replace(/\.py$/i, '')
+        setName((prev) => (prev && prev.trim() ? prev : baseName))
+      } catch (e) {
+        // ignore
+      }
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || String(err))
+    } finally {
+      // clear file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }
+
+  const handleClassPick = async (classNamePicked: string | null) => {
+    if (!classNamePicked) {
+      setClassOptions(null)
+      setPendingFileContent(null)
+      setPendingFileName(null)
+      return
+    }
+    try {
+      const text = pendingFileContent || ''
+      const resp = await (strategyFilesAPI as any).parse({ content: text })
+      const data = resp.data || {}
+      const classes = data.classes || []
+      const chosen = classes.find((c: any) => c.name === classNamePicked)
+      if (!chosen) {
+        setError('Selected class not found')
+        setClassOptions(null)
+        return
+      }
+      setClassName(chosen.name || '')
+      try {
+        setParameters(JSON.stringify(chosen.defaults || {}, null, 2))
+      } catch (e) {
+        setParameters('{}')
+      }
+      setCode(text)
+      // use filename as strategy name if blank
+      if (pendingFileName) {
+        try {
+          const baseName = pendingFileName.replace(/\.py$/i, '')
+          setName((prev) => (prev && prev.trim() ? prev : baseName))
+        } catch (e) {}
+      }
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || String(err))
+    } finally {
+      setClassOptions(null)
+      setPendingFileContent(null)
+      setPendingFileName(null)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
   const containerClass = editorFullScreen
     ? 'fixed inset-0 z-[100] bg-white dark:bg-gray-900 flex items-stretch justify-center p-0'
     : 'fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4'
@@ -251,19 +354,51 @@ export default function StrategyForm({ strategy, onClose }: StrategyFormProps) {
                   </div>
                 )}
 
+                {classOptions && (
+                  <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-40" role="dialog">
+                    <div className="bg-white dark:bg-gray-800 rounded shadow-lg w-full max-w-md p-4">
+                      <div className="mb-3 font-semibold">Multiple classes found — choose one</div>
+                      <div className="space-y-2 max-h-60 overflow-auto">
+                        {classOptions.map((n) => (
+                          <button
+                            key={n}
+                            onClick={() => handleClassPick(n)}
+                            className="w-full text-left px-3 py-2 border rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                          >
+                            {n}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="mt-3 text-right">
+                        <button onClick={() => handleClassPick(null)} className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200">Cancel</button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium mb-2">
                     Strategy Name *
                   </label>
-                  <input
-                    id="name"
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="My Trading Strategy"
-                    required
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      id="name"
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="My Trading Strategy"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={handleLoadFromFileClick}
+                      className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-800 text-sm whitespace-nowrap"
+                    >
+                      Load from file
+                    </button>
+                    <input ref={fileInputRef} type="file" accept=".py" className="hidden" onChange={handleFileSelected} />
+                  </div>
                 </div>
 
                 <div>
