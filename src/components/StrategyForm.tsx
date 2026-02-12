@@ -180,19 +180,27 @@ export default function StrategyForm({ strategy, onClose }: StrategyFormProps) {
       return
     }
 
-    // Code is required only when editing an existing strategy.
-    if (isEdit && !code.trim()) {
-      setError('Strategy code is required')
-      return
-    }
+    // Do not require code when editing existing strategies; allow updating metadata/parameters only.
 
-    // Send parameters textarea content verbatim as a string (store raw editor content)
-    const paramsPayload = parameters && parameters.trim() ? parameters : undefined
+    // Parse parameters textarea as JSON and validate it's an object
+    let parsedParams: any = undefined
+    if (parameters && parameters.trim()) {
+      try {
+        parsedParams = JSON.parse(parameters)
+        if (typeof parsedParams !== 'object' || Array.isArray(parsedParams)) {
+          setError('Parameters must be a JSON object')
+          return
+        }
+      } catch (err: any) {
+        setError('Parameters JSON invalid: ' + (err?.message || String(err)))
+        return
+      }
+    }
 
     const payload: Partial<Strategy> = {
       name: name.trim(),
       description: description.trim() || undefined,
-      parameters: paramsPayload as any,
+      parameters: parsedParams,
     }
 
     // Only include class_name if not empty (required for create, optional for update)

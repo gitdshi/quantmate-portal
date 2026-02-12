@@ -1,13 +1,13 @@
 import { diffLines } from 'diff'
 import {
-    Edit2,
-    GitCompare,
-    Plus,
-    RefreshCw,
-    Save,
-    Trash2,
-    TrendingUp,
-    X
+  Edit2,
+  GitCompare,
+  Plus,
+  RefreshCw,
+  Save,
+  Trash2,
+  TrendingUp,
+  X
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -843,16 +843,30 @@ class MyStrategy(CtaTemplate):
                                   updatePayload.description = editDescription.trim()
                                 }
                                 
-                                // Send parameters if changed — compare raw editor text to stored representation
-                                try {
-                                  const existingString = typeof selectedDbStrategy.parameters === 'string' ? selectedDbStrategy.parameters : JSON.stringify(selectedDbStrategy.parameters || {}, null, 2)
-                                  const newString = editParameters || ''
-                                  if (existingString !== newString) {
-                                    updatePayload.parameters = newString
+                                // Send parameters if changed — compare normalized JSON
+                                const newString = (editParameters || '').trim()
+                                if (newString) {
+                                  try {
+                                    const parsed = JSON.parse(newString)
+                                    if (typeof parsed !== 'object' || Array.isArray(parsed)) {
+                                      setError('Parameters must be a JSON object')
+                                      return
+                                    }
+                                    // Compare normalized JSON to detect changes
+                                    const existingNormalized = JSON.stringify(selectedDbStrategy.parameters || {})
+                                    const newNormalized = JSON.stringify(parsed)
+                                    if (existingNormalized !== newNormalized) {
+                                      updatePayload.parameters = parsed
+                                    }
+                                  } catch (pe) {
+                                    setError('Parameters JSON invalid: ' + ((pe as any)?.message || String(pe)))
+                                    return
                                   }
-                                } catch (e) {
-                                  // Fallback: send raw editor contents if comparison fails
-                                  updatePayload.parameters = editParameters
+                                } else {
+                                  // Empty parameters editor — send empty object if existing had data
+                                  if (selectedDbStrategy.parameters && Object.keys(selectedDbStrategy.parameters).length > 0) {
+                                    updatePayload.parameters = {}
+                                  }
                                 }
 
                                 // Always send code if it has content OR if it explicitly changed
@@ -871,6 +885,7 @@ class MyStrategy(CtaTemplate):
                                   // else: both are empty, no need to send
                                 }
                                 
+                                // Force rebuild - payload should contain parsed object
                                 console.log('[Save] Update payload:', updatePayload)
                                 
                                 await strategiesAPI.update(selectedDbStrategy.id, updatePayload)
