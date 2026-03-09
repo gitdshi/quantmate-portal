@@ -32,7 +32,7 @@ export default function SymbolSearch({ onSelect, onChoose, onToggle, multi = fal
 	const { data: symbolsData, isLoading } = useQuery({
 		queryKey: ['symbols', selectedMarket, debouncedSearchTerm],
 		queryFn: () => marketDataAPI.symbols(selectedMarket || undefined, debouncedSearchTerm || undefined, 50, 0),
-		keepPreviousData: true,
+		// placeholderData: previousData => previousData, // optional: keep previous data while refetching
 	})
 
 	const symbols = symbolsData?.data || []

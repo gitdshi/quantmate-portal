@@ -66,7 +66,7 @@ export default function Layout() {
             >
               <Menu className="h-5 w-5" />
             </button>
-            <h1 className="text-xl font-bold text-foreground">TraderMate</h1>
+            <img src="/logo.svg" alt="TraderMate" className="h-8 w-auto" />
           </div>
         </div>
 

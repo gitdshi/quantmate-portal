@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { useAuthStore } from '../stores/auth'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const API_URL = import.meta.env.VITE_API_URL || '/api'
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -71,58 +71,58 @@ api.interceptors.response.use(
 // Auth API
 export const authAPI = {
   login: (username: string, password: string) =>
-    api.post('/api/auth/login', { username, password }),
+    api.post('/auth/login', { username, password }),
   
   register: (username: string, email: string, password: string) =>
-    api.post('/api/auth/register', { username, email, password }),
+    api.post('/auth/register', { username, email, password }),
   
-  me: () => api.get('/api/auth/me'),
+  me: () => api.get('/auth/me'),
   
   refresh: (refreshToken: string) =>
-    api.post('/api/auth/refresh', { refresh_token: refreshToken }),
+    api.post('/auth/refresh', { refresh_token: refreshToken }),
 }
 
 // Strategies API
 export const strategiesAPI = {
-  list: () => api.get('/api/strategies'),
+  list: () => api.get('/strategies'),
   
-  get: (id: number) => api.get(`/api/strategies/${id}`),
+  get: (id: number) => api.get(`/strategies/${id}`),
   
-  create: (data: any) => api.post('/api/strategies', data),
+  create: (data: any) => api.post('/strategies', data),
   
-  update: (id: number, data: any) => api.put(`/api/strategies/${id}`, data),
+  update: (id: number, data: any) => api.put(`/strategies/${id}`, data),
   
-  delete: (id: number) => api.delete(`/api/strategies/${id}`),
+  delete: (id: number) => api.delete(`/strategies/${id}`),
   
-  listBuiltin: () => api.get('/api/strategies/builtin'),
+  listBuiltin: () => api.get('/strategies/builtin'),
 }
 
 // Backtest API
 export const backtestAPI = {
-  submit: (data: any) => api.post('/api/backtest', data),
+  submit: (data: any) => api.post('/backtest', data),
   
-  submitBatch: (data: any) => api.post('/api/backtest/batch', data),
+  submitBatch: (data: any) => api.post('/backtest/batch', data),
   
-  getStatus: (jobId: string) => api.get(`/api/backtest/${jobId}`),
+  getStatus: (jobId: string) => api.get(`/backtest/${jobId}`),
   
-  getHistory: () => api.get('/api/backtest/history'),
+  getHistory: () => api.get('/backtest/history'),
   
-  cancel: (jobId: string) => api.post(`/api/backtest/${jobId}/cancel`),
+  cancel: (jobId: string) => api.post(`/backtest/${jobId}/cancel`),
 }
 
 // Queue API
 export const queueAPI = {
-  getStats: () => api.get('/api/queue/stats'),
-  stats: () => api.get('/api/queue/stats'),
+  getStats: () => api.get('/queue/stats'),
+  stats: () => api.get('/queue/stats'),
   
   listJobs: (status?: string, limit?: number) =>
-    api.get('/api/queue/jobs', { params: { status, limit } }),
+    api.get('/queue/jobs', { params: { status, limit } }),
   
-  getJob: (jobId: string) => api.get(`/api/queue/jobs/${jobId}`),
+  getJob: (jobId: string) => api.get(`/queue/jobs/${jobId}`),
   
-  cancelJob: (jobId: string) => api.post(`/api/queue/jobs/${jobId}/cancel`),
+  cancelJob: (jobId: string) => api.post(`/queue/jobs/${jobId}/cancel`),
   
-  deleteJob: (jobId: string) => api.delete(`/api/queue/jobs/${jobId}`),
+  deleteJob: (jobId: string) => api.delete(`/queue/jobs/${jobId}`),
   
   submitBacktest: (data: {
     strategy_id?: number
@@ -137,7 +137,7 @@ export const queueAPI = {
     slippage?: number
     benchmark?: string
     parameters?: Record<string, unknown>
-  }) => api.post('/api/queue/backtest', data),
+  }) => api.post('/queue/backtest', data),
 
   submitBulkBacktest: (data: {
     strategy_id?: number
@@ -151,13 +151,13 @@ export const queueAPI = {
     slippage?: number
     benchmark?: string
     parameters?: Record<string, unknown>
-  }) => api.post('/api/queue/bulk-backtest', data),
+  }) => api.post('/queue/bulk-backtest', data),
 
   getBulkJobResults: (jobId: string, page = 1, pageSize = 10, sortOrder: 'asc' | 'desc' = 'desc') =>
-    api.get(`/api/queue/bulk-jobs/${jobId}/results`, { params: { page, page_size: pageSize, sort_order: sortOrder } }),
+    api.get(`/queue/bulk-jobs/${jobId}/results`, { params: { page, page_size: pageSize, sort_order: sortOrder } }),
 
   getBulkJobSummary: (jobId: string) =>
-    api.get(`/api/queue/bulk-jobs/${jobId}/summary`),
+    api.get(`/queue/bulk-jobs/${jobId}/summary`),
 }
 
 // Market Data API
@@ -178,65 +178,65 @@ export const marketDataAPI = {
         exchParam = exchange
       }
     }
-    return api.get('/api/data/symbols', { params: { exchange: exchParam, keyword, limit, offset } })
+    return api.get('/data/symbols', { params: { exchange: exchParam, keyword, limit, offset } })
   },
   
   history: (symbol: string, startDate: string, endDate: string) =>
-    api.get('/api/data/history', { params: { symbol, start_date: startDate, end_date: endDate } }),
+    api.get('/data/history', { params: { symbol, start_date: startDate, end_date: endDate } }),
   
   indicators: (symbol: string, startDate: string, endDate: string) =>
-    api.get('/api/data/indicators', { params: { symbol, start_date: startDate, end_date: endDate } }),
+    api.get('/data/indicators', { params: { symbol, start_date: startDate, end_date: endDate } }),
   
-  overview: () => api.get('/api/data/overview'),
+  overview: () => api.get('/data/overview'),
   
-  sectors: () => api.get('/api/data/sectors'),
+  sectors: () => api.get('/data/sectors'),
 
-  exchanges: () => api.get('/api/data/exchanges'),
+  exchanges: () => api.get('/data/exchanges'),
 
   symbolsByFilter: (params: { industry?: string; exchange?: string; limit?: number }) =>
-    api.get('/api/data/symbols-by-filter', { params }),
-  indexes: () => api.get('/api/data/indexes'),
+    api.get('/data/symbols-by-filter', { params }),
+  indexes: () => api.get('/data/indexes'),
 }
 
 // Analytics API
 export const analyticsAPI = {
-  dashboard: () => api.get('/api/analytics/dashboard'),
+  dashboard: () => api.get('/analytics/dashboard'),
   
-  riskMetrics: () => api.get('/api/analytics/risk-metrics'),
+  riskMetrics: () => api.get('/analytics/risk-metrics'),
   
-  compare: (ids: string) => api.get('/api/analytics/compare', { params: { ids } }),
+  compare: (ids: string) => api.get('/analytics/compare', { params: { ids } }),
 }
 
 // System API
 export const systemAPI = {
-  syncStatus: () => api.get('/api/system/sync-status'),
+  syncStatus: () => api.get('/system/sync-status'),
 }
 
 // Portfolio API
 export const portfolioAPI = {
-  positions: () => api.get('/api/portfolio/positions'),
+  positions: () => api.get('/portfolio/positions'),
   
-  closedTrades: () => api.get('/api/portfolio/closed-trades'),
+  closedTrades: () => api.get('/portfolio/closed-trades'),
   
-  closePosition: (positionId: number) => api.post(`/api/portfolio/positions/${positionId}/close`),
+  closePosition: (positionId: number) => api.post(`/portfolio/positions/${positionId}/close`),
 }
 
 // Optimization API
 export const optimizationAPI = {
-  submit: (data: any) => api.post('/api/optimization', data),
+  submit: (data: any) => api.post('/optimization', data),
   
-  getStatus: (jobId: string) => api.get(`/api/optimization/${jobId}`),
+  getStatus: (jobId: string) => api.get(`/optimization/${jobId}`),
   
-  getHistory: () => api.get('/api/optimization/history'),
+  getHistory: () => api.get('/optimization/history'),
   
-  cancel: (jobId: string) => api.post(`/api/optimization/${jobId}/cancel`),
+  cancel: (jobId: string) => api.post(`/optimization/${jobId}/cancel`),
 }
 
 // Legacy aliases for backward compatibility (deprecated - use strategiesAPI instead)
 export const strategyFilesAPI = {
-  lint: (payload: { content: string }) => api.post('/api/strategy-code/lint', payload),
-  lintPyright: (payload: { content: string }) => api.post('/api/strategy-code/lint/pyright', payload),
-  parse: (payload: { content: string }) => api.post('/api/strategy-code/parse', payload),
+  lint: (payload: { content: string }) => api.post('/strategy-code/lint', payload),
+  lintPyright: (payload: { content: string }) => api.post('/strategy-code/lint/pyright', payload),
+  parse: (payload: { content: string }) => api.post('/strategy-code/parse', payload),
   
   // Removed file-based methods - return empty/default responses to prevent crashes
   list: () => Promise.resolve({ data: [] }),
@@ -256,12 +256,12 @@ export const strategyFilesAPI = {
 // Strategy code utilities and history API
 export const strategyCodeAPI = {
   // Code parsing and linting utilities
-  parse: (payload: { content: string }) => api.post('/api/strategy-code/parse', payload),
-  lint: (payload: { content: string }) => api.post('/api/strategy-code/lint', payload),
-  lintPyright: (payload: { content: string }) => api.post('/api/strategy-code/lint/pyright', payload),
+  parse: (payload: { content: string }) => api.post('/strategy-code/parse', payload),
+  lint: (payload: { content: string }) => api.post('/strategy-code/lint', payload),
+  lintPyright: (payload: { content: string }) => api.post('/strategy-code/lint/pyright', payload),
   
   // Code history management (DB-backed strategies)
-  listCodeHistory: (strategyId: number) => api.get(`/api/strategies/${strategyId}/code-history`),
-  getCodeHistory: (strategyId: number, historyId: number) => api.get(`/api/strategies/${strategyId}/code-history/${historyId}`),
-  restoreCodeHistory: (strategyId: number, historyId: number) => api.post(`/api/strategies/${strategyId}/code-history/${historyId}/restore`),
+  listCodeHistory: (strategyId: number) => api.get(`/strategies/${strategyId}/code-history`),
+  getCodeHistory: (strategyId: number, historyId: number) => api.get(`/strategies/${strategyId}/code-history/${historyId}`),
+  restoreCodeHistory: (strategyId: number, historyId: number) => api.post(`/strategies/${strategyId}/code-history/${historyId}/restore`),
 }

@@ -39,13 +39,16 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
+      {/* Banner */}
+      <div className="w-full max-w-2xl mb-6 rounded-lg overflow-hidden shadow-md">
+        <img src="/banner.svg" alt="TraderMate Platform" className="w-full h-auto" />
+      </div>
+      {/* Login Card */}
       <div className="w-full max-w-md">
         <div className="bg-card p-8 rounded-lg shadow-lg border border-border">
           <div className="flex items-center justify-center mb-8">
-            <div className="h-12 w-12 rounded-lg bg-primary flex items-center justify-center">
-              <LogIn className="h-6 w-6 text-primary-foreground" />
-            </div>
+            <img src="/logo.svg" alt="TraderMate" className="h-10 w-auto" />
           </div>
 
           <h1 className="text-2xl font-bold text-center mb-2">Welcome to TraderMate</h1>

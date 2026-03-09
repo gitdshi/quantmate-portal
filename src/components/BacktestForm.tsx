@@ -118,6 +118,7 @@ export default function BacktestForm({ onClose, onSubmitSuccess }: BacktestFormP
       return res.data as Stock[]
     },
     getNextPageParam: (lastPage, allPages) => (lastPage.length === PAGE_SIZE ? allPages.length * PAGE_SIZE : undefined),
+    initialPageParam: 0,
     enabled: true,
   })
 
