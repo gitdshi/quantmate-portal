@@ -18,6 +18,9 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
   const accessToken = localStorage.getItem('access_token')
   const refreshToken = localStorage.getItem('refresh_token')
   const [checking, setChecking] = useState(!!accessToken)
+  const [mustChangePassword, setMustChangePassword] = useState(
+    sessionStorage.getItem('force_change_password') === '1'
+  )
 
   useEffect(() => {
     if (!accessToken) {
@@ -36,6 +39,7 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
         }
         const user = response.data
         setAuth(user, accessToken, refreshToken || '')
+        setMustChangePassword(false)
         setChecking(false)
       })
       .catch((err: any) => {
@@ -45,6 +49,7 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
         const detail = err?.response?.data?.detail
         const detailText = typeof detail === 'string' ? detail.toLowerCase() : ''
         if (err?.response?.status === 403 && detailText.includes('password change required')) {
+          setMustChangePassword(true)
           setChecking(false)
           return
         }
@@ -63,6 +68,14 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
         Checking session...
       </div>
     )
+  }
+
+  const isChangePasswordRoute = window.location.pathname.startsWith('/change-password')
+  if (mustChangePassword) {
+    if (!isChangePasswordRoute) {
+      return <Navigate to="/change-password" replace />
+    }
+    return <>{children}</>
   }
 
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />
