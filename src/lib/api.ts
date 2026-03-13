@@ -28,6 +28,18 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config
 
+    const detail = error.response?.data?.detail
+    const detailText = typeof detail === 'string' ? detail : ''
+    if (error.response?.status === 403 && detailText.toLowerCase().includes('password change required')) {
+      const currentPath = window.location.pathname + window.location.search
+      if (!window.location.pathname.startsWith('/change-password')) {
+        sessionStorage.setItem('post_change_redirect', currentPath)
+        sessionStorage.setItem('force_change_password', '1')
+        window.location.href = '/change-password'
+      }
+      return Promise.reject(error)
+    }
+
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true
 
@@ -64,6 +76,15 @@ api.interceptors.response.use(
       }
     }
 
+    if (error.response?.status === 401) {
+      try { useAuthStore.getState().logout() } catch (e) { /* ignore */ }
+      localStorage.removeItem('access_token')
+      localStorage.removeItem('refresh_token')
+      if (!window.location.pathname.startsWith('/login')) {
+        window.location.href = '/login'
+      }
+    }
+
     return Promise.reject(error)
   }
 )
@@ -80,6 +101,12 @@ export const authAPI = {
   
   refresh: (refreshToken: string) =>
     api.post('/auth/refresh', { refresh_token: refreshToken }),
+
+  changePassword: (currentPassword: string, newPassword: string) =>
+    api.post('/auth/change-password', {
+      current_password: currentPassword,
+      new_password: newPassword,
+    }),
 }
 
 // Strategies API

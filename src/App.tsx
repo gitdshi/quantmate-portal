@@ -1,6 +1,9 @@
+import { useEffect, useState } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import Layout from './components/Layout'
+import { authAPI } from './lib/api'
 import Analytics from './pages/Analytics'
+import ChangePassword from './pages/auth/ChangePassword'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
 import Backtest from './pages/Backtest'
@@ -11,7 +14,57 @@ import Strategies from './pages/Strategies'
 import { useAuthStore } from './stores/auth'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, setAuth, logout } = useAuthStore()
+  const accessToken = localStorage.getItem('access_token')
+  const refreshToken = localStorage.getItem('refresh_token')
+  const [checking, setChecking] = useState(!!accessToken)
+
+  useEffect(() => {
+    if (!accessToken) {
+      if (isAuthenticated) {
+        logout()
+      }
+      setChecking(false)
+      return
+    }
+
+    let cancelled = false
+    authAPI.me()
+      .then((response) => {
+        if (cancelled) {
+          return
+        }
+        const user = response.data
+        setAuth(user, accessToken, refreshToken || '')
+        setChecking(false)
+      })
+      .catch((err: any) => {
+        if (cancelled) {
+          return
+        }
+        const detail = err?.response?.data?.detail
+        const detailText = typeof detail === 'string' ? detail.toLowerCase() : ''
+        if (err?.response?.status === 403 && detailText.includes('password change required')) {
+          setChecking(false)
+          return
+        }
+        logout()
+        setChecking(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [accessToken, refreshToken, isAuthenticated, setAuth, logout])
+
+  if (checking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-muted-foreground">
+        Checking session...
+      </div>
+    )
+  }
+
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />
 }
 
@@ -20,6 +73,14 @@ function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route
+        path="/change-password"
+        element={
+          <PrivateRoute>
+            <ChangePassword />
+          </PrivateRoute>
+        }
+      />
       
       <Route
         path="/"
