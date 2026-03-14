@@ -41,7 +41,7 @@ export default function Login() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
       {/* Banner */}
-      <div className="w-full max-w-2xl mb-6 rounded-lg overflow-hidden shadow-md">
+      <div className="w-full max-w-md mb-6 rounded-lg overflow-hidden shadow-md">
         <img src="/banner.svg" alt="QuantMate Platform" className="w-full h-auto" />
       </div>
       {/* Login Card */}
