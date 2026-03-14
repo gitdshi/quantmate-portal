@@ -1,10 +1,10 @@
-# TraderMate Portal (Frontend)
+# QuantMate Portal (Frontend)
 
 ## Documentation
 
 All project documentation lives in the dedicated docs repository:
 
-- https://github.com/gitdshi/tradermate-docs
+- https://github.com/gitdshi/QuantMate-docs
 
 This frontend repo intentionally does **not** keep a `docs/` folder to avoid duplication.
 
@@ -12,4 +12,5 @@ This frontend repo intentionally does **not** keep a `docs/` folder to avoid dup
 
 See the docs repo for the authoritative steps:
 
-- Development entry: https://github.com/gitdshi/tradermate-docs/tree/main/development/frontend
+- Development entry: https://github.com/gitdshi/QuantMate-docs/tree/main/development/frontend
+

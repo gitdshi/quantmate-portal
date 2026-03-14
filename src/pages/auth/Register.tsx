@@ -52,18 +52,18 @@ export default function Register() {
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
       {/* Banner */}
       <div className="w-full max-w-2xl mb-6 rounded-lg overflow-hidden shadow-md">
-        <img src="/banner.svg" alt="TraderMate Platform" className="w-full h-auto" />
+        <img src="/banner.svg" alt="QuantMate Platform" className="w-full h-auto" />
       </div>
       {/* Register Card */}
       <div className="w-full max-w-md">
         <div className="bg-card p-8 rounded-lg shadow-lg border border-border">
           <div className="flex items-center justify-center mb-8">
-            <img src="/logo.svg" alt="TraderMate" className="h-10 w-auto" />
+            <img src="/logo.svg" alt="QuantMate" className="h-10 w-auto" />
           </div>
 
           <h1 className="text-2xl font-bold text-center mb-2">Create an account</h1>
           <p className="text-muted-foreground text-center mb-8">
-            Join TraderMate to start trading
+            Join QuantMate to start trading
           </p>
 
           {success ? (
@@ -155,3 +155,4 @@ export default function Register() {
     </div>
   )
 }
+

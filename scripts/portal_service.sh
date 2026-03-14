@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Start/stop/restart frontend dev server using npm (Vite)
-# Logs are stored under tradermate-portal/logs
+# Logs are stored under QuantMate-portal/logs
 
 BASE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$BASE_DIR"
@@ -72,3 +72,4 @@ case "${1-}" in
     exit 2
     ;;
 esac
+

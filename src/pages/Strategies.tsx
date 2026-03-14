@@ -63,7 +63,7 @@ from vnpy_ctastrategy import (
 class MyStrategy(CtaTemplate):
     """Custom trading strategy following VNPy CTA format."""
     
-    author = "TraderMate"
+    author = "QuantMate"
     
     # Strategy parameters
     fast_window = 10
@@ -627,7 +627,7 @@ class MyStrategy(CtaTemplate):
       {classOptionsEdit && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-40" role="dialog">
           <div className="bg-white dark:bg-gray-800 rounded shadow-lg w-full max-w-md p-4">
-            <div className="mb-3 font-semibold">Multiple classes found â€” choose one</div>
+            <div className="mb-3 font-semibold">Multiple classes found â€?choose one</div>
             <div className="space-y-2 max-h-60 overflow-auto">
               {classOptionsEdit.map((n) => (
                 <button key={n} onClick={() => handleEditClassPick(n)} className="w-full text-left px-3 py-2 border rounded hover:bg-gray-100 dark:hover:bg-gray-700">
@@ -843,7 +843,7 @@ class MyStrategy(CtaTemplate):
                                   updatePayload.description = editDescription.trim()
                                 }
                                 
-                                // Send parameters if changed â€” compare normalized JSON
+                                // Send parameters if changed â€?compare normalized JSON
                                 const newString = (editParameters || '').trim()
                                 if (newString) {
                                   try {
@@ -863,7 +863,7 @@ class MyStrategy(CtaTemplate):
                                     return
                                   }
                                 } else {
-                                  // Empty parameters editor â€” send empty object if existing had data
+                                  // Empty parameters editor â€?send empty object if existing had data
                                   if (selectedDbStrategy.parameters && Object.keys(selectedDbStrategy.parameters).length > 0) {
                                     updatePayload.parameters = {}
                                   }
@@ -1233,3 +1233,4 @@ class MyStrategy(CtaTemplate):
     </div>
   )
 }
+

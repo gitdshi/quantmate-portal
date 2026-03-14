@@ -12,7 +12,7 @@
     </linearGradient>
   </defs>
   <rect width="1200" height="400" fill="url(#bg1)"/>
-  <!-- 大图标 -->
+  <!-- 大图�?-->
   <circle cx="250" cy="200" r="100" fill="white" fill-opacity="0.15"/>
   <circle cx="250" cy="200" r="80" fill="none" stroke="white" stroke-width="10"/>
   <polyline points="150,220 180,170 220,190 290,110"
@@ -26,9 +26,9 @@
   <circle cx="220" cy="190" r="12" fill="#fbbf24"/>
   <circle cx="290" cy="110" r="12" fill="#34d399"/>
   <!-- 标题 -->
-  <text x="450" y="180" font-family="Inter, -apple-system, sans-serif" font-size="80" font-weight="700" fill="white">TraderMate</text>
+  <text x="450" y="180" font-family="Inter, -apple-system, sans-serif" font-size="80" font-weight="700" fill="white">QuantMate</text>
   <text x="450" y="250" font-family="Inter, -apple-system, sans-serif" font-size="32" font-weight="400" fill="#bfdbfe">智能量化交易 · 专业策略分析</text>
-  <!-- 装饰点 -->
+  <!-- 装饰�?-->
   <circle cx="1050" cy="80" r="8" fill="white" opacity="0.3"/>
   <circle cx="1070" cy="120" r="12" fill="white" opacity="0.2"/>
   <circle cx="1090" cy="60" r="6" fill="white" opacity="0.4"/>
