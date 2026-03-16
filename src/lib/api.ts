@@ -121,7 +121,7 @@ export const strategiesAPI = {
   
   delete: (id: number) => api.delete(`/strategies/${id}`),
   
-  listBuiltin: () => api.get('/strategies/builtin'),
+  listBuiltin: () => api.get('/strategies/builtin/list'),
 }
 
 // Backtest API
@@ -132,7 +132,7 @@ export const backtestAPI = {
   
   getStatus: (jobId: string) => api.get(`/backtest/${jobId}`),
   
-  getHistory: () => api.get('/backtest/history'),
+  getHistory: () => api.get('/backtest/history/list'),
   
   cancel: (jobId: string) => api.post(`/backtest/${jobId}/cancel`),
 }
@@ -209,10 +209,10 @@ export const marketDataAPI = {
   },
   
   history: (symbol: string, startDate: string, endDate: string) =>
-    api.get('/data/history', { params: { symbol, start_date: startDate, end_date: endDate } }),
+    api.get(`/data/history/${encodeURIComponent(symbol)}`, { params: { start_date: startDate, end_date: endDate } }),
   
   indicators: (symbol: string, startDate: string, endDate: string) =>
-    api.get('/data/indicators', { params: { symbol, start_date: startDate, end_date: endDate } }),
+    api.get(`/data/indicators/${encodeURIComponent(symbol)}`, { params: { start_date: startDate, end_date: endDate } }),
   
   overview: () => api.get('/data/overview'),
   
