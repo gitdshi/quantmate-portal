@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { mockAnalyticsData } from '../../test/mockData'
-import { render, screen, waitFor } from '../../test/utils'
-import AnalyticsDashboard from '../AnalyticsDashboard'
+import { mockAnalyticsData } from '../test/mockData'
+import { render, screen, waitFor } from '../test/utils'
+import AnalyticsDashboard from './AnalyticsDashboard'
 
-// Mock API
-vi.mock('../../lib/api', () => ({
+// Mock API — component uses api.get() directly, not analyticsAPI
+vi.mock('../lib/api', () => ({
   api: {
     get: vi.fn(),
     interceptors: {
@@ -12,12 +12,9 @@ vi.mock('../../lib/api', () => ({
       response: { use: vi.fn() },
     },
   },
-  analyticsAPI: {
-    dashboard: vi.fn(),
-  },
 }))
 
-import { analyticsAPI } from '../../lib/api'
+import { api } from '../lib/api'
 
 describe('AnalyticsDashboard Component', () => {
   beforeEach(() => {
@@ -25,15 +22,17 @@ describe('AnalyticsDashboard Component', () => {
   })
 
   it('renders loading state initially', () => {
-    ;(analyticsAPI.dashboard as any).mockImplementation(() => new Promise(() => {}))
+    ;(api.get as any).mockImplementation(() => new Promise(() => {}))
     
     render(<AnalyticsDashboard />)
     
-    expect(screen.getByRole('status')).toBeInTheDocument()
+    // Loading spinner is rendered (animate-spin div)
+    const spinner = document.querySelector('.animate-spin')
+    expect(spinner).toBeInTheDocument()
   })
 
   it('displays portfolio statistics cards', async () => {
-    ;(analyticsAPI.dashboard as any).mockResolvedValue({ data: mockAnalyticsData })
+    ;(api.get as any).mockResolvedValue({ data: mockAnalyticsData })
     
     render(<AnalyticsDashboard />)
     
@@ -46,7 +45,7 @@ describe('AnalyticsDashboard Component', () => {
   })
 
   it('displays correct portfolio values', async () => {
-    ;(analyticsAPI.dashboard as any).mockResolvedValue({ data: mockAnalyticsData })
+    ;(api.get as any).mockResolvedValue({ data: mockAnalyticsData })
     
     render(<AnalyticsDashboard />)
     
@@ -58,7 +57,7 @@ describe('AnalyticsDashboard Component', () => {
   })
 
   it('displays performance chart', async () => {
-    ;(analyticsAPI.dashboard as any).mockResolvedValue({ data: mockAnalyticsData })
+    ;(api.get as any).mockResolvedValue({ data: mockAnalyticsData })
     
     render(<AnalyticsDashboard />)
     
@@ -68,7 +67,7 @@ describe('AnalyticsDashboard Component', () => {
   })
 
   it('displays strategy performance section', async () => {
-    ;(analyticsAPI.dashboard as any).mockResolvedValue({ data: mockAnalyticsData })
+    ;(api.get as any).mockResolvedValue({ data: mockAnalyticsData })
     
     render(<AnalyticsDashboard />)
     
@@ -79,7 +78,7 @@ describe('AnalyticsDashboard Component', () => {
   })
 
   it('displays sector allocation', async () => {
-    ;(analyticsAPI.dashboard as any).mockResolvedValue({ data: mockAnalyticsData })
+    ;(api.get as any).mockResolvedValue({ data: mockAnalyticsData })
     
     render(<AnalyticsDashboard />)
     
@@ -91,7 +90,7 @@ describe('AnalyticsDashboard Component', () => {
   })
 
   it('displays risk metrics', async () => {
-    ;(analyticsAPI.dashboard as any).mockResolvedValue({ data: mockAnalyticsData })
+    ;(api.get as any).mockResolvedValue({ data: mockAnalyticsData })
     
     render(<AnalyticsDashboard />)
     
@@ -105,7 +104,7 @@ describe('AnalyticsDashboard Component', () => {
   })
 
   it('handles API error gracefully', async () => {
-    ;(analyticsAPI.dashboard as any).mockRejectedValue(new Error('API Error'))
+    ;(api.get as any).mockRejectedValue(new Error('API Error'))
     
     render(<AnalyticsDashboard />)
     
@@ -115,7 +114,7 @@ describe('AnalyticsDashboard Component', () => {
   })
 
   it('shows positive P&L in green', async () => {
-    ;(analyticsAPI.dashboard as any).mockResolvedValue({ data: mockAnalyticsData })
+    ;(api.get as any).mockResolvedValue({ data: mockAnalyticsData })
     
     render(<AnalyticsDashboard />)
     

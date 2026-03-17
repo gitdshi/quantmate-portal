@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowDown, ArrowUp, BarChart3, Calendar, CheckCircle, ChevronDown, ChevronRight, Clock, DollarSign, Eye, Layers, Loader, Trash2, TrendingUp, XCircle } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { usePagination } from '../hooks/usePagination'
 import { queueAPI } from '../lib/api'
 import type { BulkJobChildResult, BulkJobResultsPage } from '../types'
+import Pagination from './Pagination'
 
 interface BacktestJobListProps {
   onViewResults: (jobId: string) => void
@@ -51,6 +53,7 @@ export default function BacktestJobList({ onViewResults, onViewBulkSummary }: Ba
   }
 
   const jobs = jobsData?.data || []
+  const jobsPagination = usePagination(jobs, { initialPageSize: 10 })
 
   // Auto-fetch details for completed jobs
   useEffect(() => {
@@ -164,7 +167,7 @@ export default function BacktestJobList({ onViewResults, onViewBulkSummary }: Ba
         </div>
       ) : (
         <div className="space-y-3">
-          {jobs.map((job: {
+          {jobsPagination.paginatedItems.map((job: {
             job_id: string
             status: string
             type?: string
@@ -399,6 +402,15 @@ export default function BacktestJobList({ onViewResults, onViewBulkSummary }: Ba
             )
           })}
         </div>
+      )}
+      {jobs.length > 0 && (
+        <Pagination
+          page={jobsPagination.page}
+          pageSize={jobsPagination.pageSize}
+          total={jobsPagination.total}
+          onPageChange={jobsPagination.onPageChange}
+          onPageSizeChange={jobsPagination.onPageSizeChange}
+        />
       )}
     </div>
   )

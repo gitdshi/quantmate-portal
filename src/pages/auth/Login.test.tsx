@@ -1,7 +1,7 @@
 import { userEvent } from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as authStore from '../../stores/auth'
-import { render, screen, waitFor } from '../test/utils'
+import { render, screen, waitFor } from '../../test/utils'
 import Login from './Login'
 
 // Mock the auth store
@@ -9,16 +9,11 @@ vi.mock('../../stores/auth', () => ({
   useAuthStore: vi.fn(),
 }))
 
-// Mock axios
-vi.mock('axios', () => ({
-  default: {
-    create: () => ({
-      post: vi.fn(),
-      interceptors: {
-        request: { use: vi.fn() },
-        response: { use: vi.fn() },
-      },
-    }),
+// Mock the API module
+const mockApiLogin = vi.fn()
+vi.mock('../../lib/api', () => ({
+  authAPI: {
+    login: (...args: any[]) => mockApiLogin(...args),
   },
 }))
 
@@ -34,21 +29,22 @@ vi.mock('react-router-dom', async () => {
 })
 
 describe('Login Component', () => {
-  const mockLogin = vi.fn()
+  const mockSetAuth = vi.fn()
 
   beforeEach(() => {
     vi.clearAllMocks()
     ;(authStore.useAuthStore as any).mockReturnValue({
-      login: mockLogin,
+      setAuth: mockSetAuth,
+      isAuthenticated: false,
     })
   })
 
   it('renders login form', () => {
     render(<Login />)
     
-    expect(screen.getByText('Welcome Back')).toBeInTheDocument()
-    expect(screen.getByPlaceholderText('Username')).toBeInTheDocument()
-    expect(screen.getByPlaceholderText('Password')).toBeInTheDocument()
+    expect(screen.getByText('Welcome to QuantMate')).toBeInTheDocument()
+    expect(screen.getByLabelText('Username')).toBeInTheDocument()
+    expect(screen.getByLabelText('Password')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument()
   })
 
@@ -59,18 +55,24 @@ describe('Login Component', () => {
     const submitButton = screen.getByRole('button', { name: /sign in/i })
     await user.click(submitButton)
     
-    // Form validation should prevent submission
-    expect(mockLogin).not.toHaveBeenCalled()
+    // HTML required attribute prevents submission with empty fields
+    expect(mockApiLogin).not.toHaveBeenCalled()
   })
 
   it('submits form with valid credentials', async () => {
     const user = userEvent.setup()
-    mockLogin.mockResolvedValue({ success: true })
+    mockApiLogin.mockResolvedValue({
+      data: {
+        user: { id: 1, username: 'testuser', email: 'test@test.com' },
+        access_token: 'access-token',
+        refresh_token: 'refresh-token',
+      },
+    })
     
     render(<Login />)
     
-    const usernameInput = screen.getByPlaceholderText('Username')
-    const passwordInput = screen.getByPlaceholderText('Password')
+    const usernameInput = screen.getByLabelText('Username')
+    const passwordInput = screen.getByLabelText('Password')
     const submitButton = screen.getByRole('button', { name: /sign in/i })
     
     await user.type(usernameInput, 'testuser')
@@ -78,19 +80,20 @@ describe('Login Component', () => {
     await user.click(submitButton)
     
     await waitFor(() => {
-      expect(mockLogin).toHaveBeenCalledWith('testuser', 'password123')
+      expect(mockApiLogin).toHaveBeenCalledWith('testuser', 'password123')
     })
   })
 
   it('displays error message on failed login', async () => {
     const user = userEvent.setup()
-    const errorMessage = 'Invalid credentials'
-    mockLogin.mockRejectedValue(new Error(errorMessage))
+    mockApiLogin.mockRejectedValue({
+      response: { data: { detail: 'Invalid credentials' } },
+    })
     
     render(<Login />)
     
-    const usernameInput = screen.getByPlaceholderText('Username')
-    const passwordInput = screen.getByPlaceholderText('Password')
+    const usernameInput = screen.getByLabelText('Username')
+    const passwordInput = screen.getByLabelText('Password')
     const submitButton = screen.getByRole('button', { name: /sign in/i })
     
     await user.type(usernameInput, 'testuser')

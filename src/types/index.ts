@@ -5,6 +5,22 @@ export interface User {
   created_at: string
 }
 
+// Generic paginated response matching backend format
+export interface PaginatedResponse<T> {
+  data: T[]
+  meta: {
+    page: number
+    page_size: number
+    total: number
+  }
+}
+
+// Pagination request parameters
+export interface PaginationParams {
+  page?: number
+  page_size?: number
+}
+
 export interface Strategy {
   id: number
   name: string
@@ -201,4 +217,221 @@ export interface StrategyComparison {
   status: 'synced' | 'data_newer' | 'project_newer' | 'different' | 'data_only' | 'project_only'
   data: StrategyFile | null
   project: StrategyFile | null
+}
+
+// ── P2 Types ─────────────────────────────────────────────────────────
+
+export interface Order {
+  id: number
+  symbol: string
+  direction: 'buy' | 'sell'
+  order_type: 'market' | 'limit' | 'stop' | 'stop_limit'
+  quantity: number
+  price?: number
+  stop_price?: number
+  status: 'created' | 'submitted' | 'partial_filled' | 'filled' | 'cancelled' | 'rejected' | 'expired'
+  mode: 'paper' | 'live'
+  filled_quantity?: number
+  avg_fill_price?: number
+  fee?: number
+  created_at: string
+  updated_at?: string
+}
+
+export interface AlertRule {
+  id: number
+  name: string
+  metric: string
+  comparator: string
+  threshold: number
+  level: 'info' | 'warning' | 'severe'
+  is_active: boolean
+  time_window?: number
+  created_at: string
+}
+
+export interface AlertHistory {
+  id: number
+  rule_id: number
+  message: string
+  level: string
+  status: 'unread' | 'read' | 'acknowledged'
+  triggered_at: string
+}
+
+export interface NotificationChannel {
+  id: number
+  channel_type: 'email' | 'wechat' | 'dingtalk' | 'telegram' | 'slack' | 'webhook'
+  config: Record<string, unknown>
+  is_active: boolean
+  created_at: string
+}
+
+export interface Report {
+  id: number
+  report_type: 'daily' | 'weekly' | 'monthly' | 'custom'
+  title: string
+  content_json?: Record<string, unknown>
+  pdf_path?: string
+  created_at: string
+}
+
+export interface APIKey {
+  id: number
+  key_id: string
+  name: string
+  permissions?: string[]
+  expires_at?: string
+  rate_limit: number
+  is_active: boolean
+  created_at: string
+  last_used_at?: string
+}
+
+export interface UserSession {
+  id: number
+  device_info?: string
+  ip_address?: string
+  created_at: string
+  expires_at: string
+  last_active_at?: string
+}
+
+export interface RiskRule {
+  id: number
+  name: string
+  rule_type: string
+  threshold: number
+  action: 'block' | 'reduce' | 'warn'
+  is_active: boolean
+  created_at: string
+}
+
+export interface BrokerConfig {
+  id: number
+  broker_name: string
+  config: Record<string, unknown>
+  is_paper: boolean
+  is_active: boolean
+  created_at: string
+}
+
+// ── P3 Types ─────────────────────────────────────────────────────────
+
+export interface AIConversation {
+  id: number
+  user_id: number
+  title: string
+  model?: string
+  total_tokens: number
+  status: 'active' | 'archived'
+  created_at: string
+  updated_at: string
+}
+
+export interface AIMessage {
+  id: number
+  conversation_id: number
+  role: 'user' | 'assistant' | 'system'
+  content: string
+  tokens?: number
+  created_at: string
+}
+
+export interface AIModelConfig {
+  id: number
+  name: string
+  provider: string
+  model_id: string
+  api_base?: string
+  max_tokens: number
+  temperature: number
+  is_active: boolean
+  created_at: string
+}
+
+export interface FactorDefinition {
+  id: number
+  user_id: number
+  name: string
+  category: string
+  expression: string
+  description?: string
+  status: 'draft' | 'testing' | 'active' | 'archived'
+  created_at: string
+  updated_at: string
+}
+
+export interface FactorEvaluation {
+  id: number
+  factor_id: number
+  start_date: string
+  end_date: string
+  ic_mean?: number
+  ic_std?: number
+  ir?: number
+  long_short_return?: number
+  turnover?: number
+  metrics_json?: Record<string, unknown>
+  created_at: string
+}
+
+export interface StrategyTemplate {
+  id: number
+  author_id: number
+  name: string
+  description?: string
+  category?: string
+  code: string
+  parameters_schema?: Record<string, unknown>
+  is_public: boolean
+  downloads: number
+  avg_rating?: number
+  rating_count?: number
+  created_at: string
+  updated_at: string
+}
+
+export interface StrategyComment {
+  id: number
+  template_id: number
+  user_id: number
+  username?: string
+  content: string
+  parent_id?: number
+  created_at: string
+}
+
+export interface StrategyRating {
+  template_id: number
+  avg_rating: number
+  rating_count: number
+}
+
+export interface TeamWorkspace {
+  id: number
+  name: string
+  description?: string
+  owner_id: number
+  max_members: number
+  status: 'active' | 'archived'
+  created_at: string
+  updated_at: string
+}
+
+export interface WorkspaceMember {
+  workspace_id: number
+  user_id: number
+  username?: string
+  role: 'owner' | 'admin' | 'member' | 'viewer'
+  joined_at: string
+}
+
+export interface StrategyShare {
+  id: number
+  strategy_id: number
+  shared_by: number
+  shared_with_user_id: number
+  permission: 'view' | 'edit' | 'execute'
+  created_at: string
 }

@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Eye, Pencil, Power, PowerOff, Trash2 } from 'lucide-react'
 import { useState } from 'react'
+import { usePagination } from '../hooks/usePagination'
 import { strategiesAPI } from '../lib/api'
 import type { Strategy } from '../types'
+import Pagination from './Pagination'
 
 interface StrategyListProps {
   onEdit: (strategy: Strategy) => void
@@ -27,6 +29,8 @@ export default function StrategyList({ onEdit, onView }: StrategyListProps) {
   })
 
   const strategies = strategiesData?.data || []
+  const { paginatedItems, page, pageSize, total, onPageChange, onPageSizeChange } =
+    usePagination<Strategy>(strategies, { initialPageSize: 10 })
 
   if (isLoading) {
     return (
@@ -49,7 +53,7 @@ export default function StrategyList({ onEdit, onView }: StrategyListProps) {
 
   return (
     <div className="space-y-4">
-      {strategies.map((strategy: Strategy) => (
+      {paginatedItems.map((strategy: Strategy) => (
         <div
           key={strategy.id}
           className="bg-card border border-border rounded-lg p-4 hover:shadow-md transition-shadow"
@@ -143,6 +147,13 @@ export default function StrategyList({ onEdit, onView }: StrategyListProps) {
           </div>
         </div>
       ))}
+      <Pagination
+        page={page}
+        pageSize={pageSize}
+        total={total}
+        onPageChange={onPageChange}
+        onPageSizeChange={onPageSizeChange}
+      />
     </div>
   )
 }

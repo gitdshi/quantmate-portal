@@ -1,0 +1,190 @@
+import { useCallback, useEffect, useState } from 'react'
+import {
+  Calendar, FileText, Loader2, Plus, RefreshCw
+} from 'lucide-react'
+import { reportsAPI } from '../lib/api'
+import type { Report } from '../types'
+
+export default function Reports() {
+  const [reports, setReports] = useState<Report[]>([])
+  const [loading, setLoading] = useState(true)
+  const [generating, setGenerating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [typeFilter, setTypeFilter] = useState<string>('')
+  const [selectedReport, setSelectedReport] = useState<Report | null>(null)
+  const [showGenerate, setShowGenerate] = useState(false)
+  const [genForm, setGenForm] = useState({ report_type: 'daily' as const, title: '' })
+
+  const fetchReports = useCallback(async () => {
+    setLoading(true)
+    try {
+      const params: Record<string, unknown> = { page_size: 100 }
+      if (typeFilter) params.report_type = typeFilter
+      const { data } = await reportsAPI.list(params as any)
+      const result = data as any
+      setReports(result.data || result || [])
+    } catch {
+      setError('Failed to load reports')
+    } finally {
+      setLoading(false)
+    }
+  }, [typeFilter])
+
+  useEffect(() => { fetchReports() }, [fetchReports])
+
+  const handleGenerate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setGenerating(true)
+    setError(null)
+    try {
+      await reportsAPI.generate({
+        report_type: genForm.report_type,
+        title: genForm.title || undefined,
+      })
+      setShowGenerate(false)
+      setGenForm({ report_type: 'daily', title: '' })
+      fetchReports()
+    } catch {
+      setError('Failed to generate report')
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  const handleViewDetail = async (id: number) => {
+    try {
+      const { data } = await reportsAPI.get(id)
+      setSelectedReport(data as Report)
+    } catch {
+      setError('Failed to load report details')
+    }
+  }
+
+  const TYPE_LABELS: Record<string, string> = {
+    daily: 'Daily',
+    weekly: 'Weekly',
+    monthly: 'Monthly',
+    custom: 'Custom',
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Reports</h1>
+        <button onClick={() => setShowGenerate(true)}
+          className="bg-primary text-primary-foreground px-4 py-2 rounded text-sm flex items-center gap-2">
+          <Plus className="h-4 w-4" /> Generate Report
+        </button>
+      </div>
+
+      {error && (
+        <div className="bg-destructive/10 text-destructive px-4 py-3 rounded text-sm">{error}</div>
+      )}
+
+      {/* Generate Report Form */}
+      {showGenerate && (
+        <form onSubmit={handleGenerate} className="bg-card border rounded-lg p-4 flex gap-4 items-end">
+          <div>
+            <label className="block text-sm font-medium mb-1">Type</label>
+            <select value={genForm.report_type}
+              onChange={e => setGenForm(f => ({ ...f, report_type: e.target.value as any }))}
+              className="border rounded px-3 py-2 text-sm">
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+              <option value="custom">Custom</option>
+            </select>
+          </div>
+          <div className="flex-1">
+            <label className="block text-sm font-medium mb-1">Title (optional)</label>
+            <input value={genForm.title} placeholder="Auto-generated if empty"
+              onChange={e => setGenForm(f => ({ ...f, title: e.target.value }))}
+              className="w-full border rounded px-3 py-2 text-sm" />
+          </div>
+          <button type="submit" disabled={generating}
+            className="bg-primary text-primary-foreground px-4 py-2 rounded text-sm disabled:opacity-50 flex items-center gap-2">
+            {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+            Generate
+          </button>
+          <button type="button" onClick={() => setShowGenerate(false)} className="px-3 py-2 text-sm">Cancel</button>
+        </form>
+      )}
+
+      {/* Filters */}
+      <div className="flex items-center gap-3">
+        <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
+          className="border rounded px-3 py-2 text-sm">
+          <option value="">All Types</option>
+          <option value="daily">Daily</option>
+          <option value="weekly">Weekly</option>
+          <option value="monthly">Monthly</option>
+          <option value="custom">Custom</option>
+        </select>
+        <button onClick={fetchReports} className="p-2 hover:bg-accent rounded">
+          <RefreshCw className="h-4 w-4" />
+        </button>
+      </div>
+
+      {/* Report List / Detail View */}
+      {selectedReport ? (
+        <div className="bg-card border rounded-lg p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">{selectedReport.title}</h2>
+            <button onClick={() => setSelectedReport(null)} className="text-sm text-primary hover:underline">Back to list</button>
+          </div>
+          <div className="flex gap-4 text-sm text-muted-foreground">
+            <span className="capitalize">{selectedReport.report_type}</span>
+            <span>{new Date(selectedReport.created_at).toLocaleString()}</span>
+          </div>
+          {selectedReport.content_json ? (
+            <pre className="bg-muted p-4 rounded text-xs overflow-auto max-h-96">
+              {JSON.stringify(selectedReport.content_json, null, 2)}
+            </pre>
+          ) : (
+            <div className="text-muted-foreground">No content available</div>
+          )}
+        </div>
+      ) : loading ? (
+        <div className="flex justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : reports.length === 0 ? (
+        <div className="text-center py-12 text-muted-foreground">No reports yet. Generate your first report above.</div>
+      ) : (
+        <div className="bg-card border rounded-lg overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50">
+              <tr>
+                <th className="text-left px-4 py-2">Title</th>
+                <th className="text-left px-4 py-2">Type</th>
+                <th className="text-left px-4 py-2">Created</th>
+                <th className="text-right px-4 py-2">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {reports.map(report => (
+                <tr key={report.id} className="border-t hover:bg-muted/30 cursor-pointer" onClick={() => handleViewDetail(report.id)}>
+                  <td className="px-4 py-2 font-medium flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    {report.title}
+                  </td>
+                  <td className="px-4 py-2">
+                    <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700 flex items-center gap-1 w-fit">
+                      <Calendar className="h-3 w-3" /> {TYPE_LABELS[report.report_type] || report.report_type}
+                    </span>
+                  </td>
+                  <td className="px-4 py-2 text-muted-foreground">{new Date(report.created_at).toLocaleString()}</td>
+                  <td className="px-4 py-2 text-right">
+                    <button className="text-primary text-sm hover:underline" onClick={e => { e.stopPropagation(); handleViewDetail(report.id) }}>
+                      View
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}

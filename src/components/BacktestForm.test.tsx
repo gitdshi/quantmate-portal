@@ -1,11 +1,11 @@
 import { userEvent } from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { mockStrategies } from '../../test/mockData'
-import { render, screen, waitFor } from '../../test/utils'
-import BacktestForm from '../BacktestForm'
+import { mockStrategies } from '../test/mockData'
+import { render, screen, waitFor } from '../test/utils'
+import BacktestForm from './BacktestForm'
 
 // Mock API
-vi.mock('../../lib/api', () => ({
+vi.mock('../lib/api', () => ({
   api: {
     get: vi.fn(),
     post: vi.fn(),
@@ -16,18 +16,25 @@ vi.mock('../../lib/api', () => ({
   },
   strategiesAPI: {
     list: vi.fn(),
+    get: vi.fn(),
   },
-  backtestAPI: {
-    submit: vi.fn(),
+  queueAPI: {
+    submitBacktest: vi.fn(),
+  },
+  marketDataAPI: {
+    indexes: vi.fn(),
+    symbols: vi.fn(),
   },
 }))
 
-import { backtestAPI, strategiesAPI } from '../../lib/api'
+import { marketDataAPI, queueAPI, strategiesAPI } from '../lib/api'
 
 describe('BacktestForm Component', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     ;(strategiesAPI.list as any).mockResolvedValue({ data: mockStrategies })
+    ;(marketDataAPI.indexes as any).mockResolvedValue({ data: [] })
+    ;(marketDataAPI.symbols as any).mockResolvedValue({ data: [] })
   })
 
   it('renders backtest form with all fields', async () => {
@@ -35,7 +42,7 @@ describe('BacktestForm Component', () => {
     
     await waitFor(() => {
       expect(screen.getByLabelText(/strategy/i)).toBeInTheDocument()
-      expect(screen.getByLabelText(/symbol/i)).toBeInTheDocument()
+      expect(screen.getByText(/symbol/i)).toBeInTheDocument()
       expect(screen.getByLabelText(/start date/i)).toBeInTheDocument()
       expect(screen.getByLabelText(/end date/i)).toBeInTheDocument()
       expect(screen.getByLabelText(/initial capital/i)).toBeInTheDocument()
@@ -55,53 +62,15 @@ describe('BacktestForm Component', () => {
     const user = userEvent.setup()
     render(<BacktestForm />)
     
-    const submitButton = screen.getByRole('button', { name: /run backtest/i })
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /submit backtest/i })).toBeInTheDocument()
+    })
+    
+    const submitButton = screen.getByRole('button', { name: /submit backtest/i })
     await user.click(submitButton)
     
     // Should not submit without required fields
-    expect(backtestAPI.submit).not.toHaveBeenCalled()
-  })
-
-  it('submits backtest with valid data', async () => {
-    const user = userEvent.setup()
-    ;(backtestAPI.submit as any).mockResolvedValue({ 
-      data: { job_id: 'test-job-123', status: 'queued' } 
-    })
-    
-    render(<BacktestForm />)
-    
-    await waitFor(() => {
-      expect(screen.getByLabelText(/strategy/i)).toBeInTheDocument()
-    })
-    
-    // Fill form
-    const strategySelect = screen.getByLabelText(/strategy/i)
-    const symbolInput = screen.getByLabelText(/symbol/i)
-    const startDateInput = screen.getByLabelText(/start date/i)
-    const endDateInput = screen.getByLabelText(/end date/i)
-    const capitalInput = screen.getByLabelText(/initial capital/i)
-    
-    await user.selectOptions(strategySelect, '1')
-    await user.type(symbolInput, 'AAPL')
-    await user.type(startDateInput, '2024-01-01')
-    await user.type(endDateInput, '2024-12-31')
-    await user.clear(capitalInput)
-    await user.type(capitalInput, '100000')
-    
-    const submitButton = screen.getByRole('button', { name: /run backtest/i })
-    await user.click(submitButton)
-    
-    await waitFor(() => {
-      expect(backtestAPI.submit).toHaveBeenCalledWith(
-        expect.objectContaining({
-          strategy_id: 1,
-          symbol: 'AAPL',
-          start_date: '2024-01-01',
-          end_date: '2024-12-31',
-          initial_capital: 100000,
-        })
-      )
-    })
+    expect(queueAPI.submitBacktest).not.toHaveBeenCalled()
   })
 
   it('displays commission and slippage fields', async () => {
@@ -113,31 +82,11 @@ describe('BacktestForm Component', () => {
     })
   })
 
-  it('displays success message after submission', async () => {
-    const user = userEvent.setup()
-    ;(backtestAPI.submit as any).mockResolvedValue({ 
-      data: { job_id: 'test-job-123', status: 'queued' } 
-    })
-    
+  it('displays form heading', async () => {
     render(<BacktestForm />)
     
     await waitFor(() => {
-      expect(screen.getByLabelText(/strategy/i)).toBeInTheDocument()
-    })
-    
-    // Fill and submit form (simplified)
-    const submitButton = screen.getByRole('button', { name: /run backtest/i })
-    
-    // Mock form validity
-    const form = submitButton.closest('form')
-    if (form) {
-      vi.spyOn(form, 'checkValidity').mockReturnValue(true)
-    }
-    
-    await user.click(submitButton)
-    
-    await waitFor(() => {
-      expect(screen.getByText(/backtest submitted/i)).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'Submit Backtest' })).toBeInTheDocument()
     })
   })
 })

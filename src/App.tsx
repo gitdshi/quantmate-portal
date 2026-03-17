@@ -10,7 +10,17 @@ import Backtest from './pages/Backtest'
 import Dashboard from './pages/Dashboard'
 import MarketData from './pages/MarketData'
 import Portfolio from './pages/Portfolio'
+import Settings from './pages/Settings'
 import Strategies from './pages/Strategies'
+import Trading from './pages/Trading'
+import Monitoring from './pages/Monitoring'
+import Reports from './pages/Reports'
+import AccountSecurity from './pages/AccountSecurity'
+import AIAssistant from './pages/AIAssistant'
+import FactorLab from './pages/FactorLab'
+import Marketplace from './pages/Marketplace'
+import TeamSpace from './pages/TeamSpace'
+import VisualExplorer from './pages/VisualExplorer'
 import { useAuthStore } from './stores/auth'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -110,6 +120,16 @@ function App() {
         <Route path="market-data" element={<MarketData />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="portfolio" element={<Portfolio />} />
+        <Route path="trading" element={<Trading />} />
+        <Route path="monitoring" element={<Monitoring />} />
+        <Route path="reports" element={<Reports />} />
+        <Route path="account-security" element={<AccountSecurity />} />
+        <Route path="ai-assistant" element={<AIAssistant />} />
+        <Route path="factor-lab" element={<FactorLab />} />
+        <Route path="marketplace" element={<Marketplace />} />
+        <Route path="team-space" element={<TeamSpace />} />
+        <Route path="visual-explorer" element={<VisualExplorer />} />
+        <Route path="settings" element={<Settings />} />
       </Route>
     </Routes>
   )

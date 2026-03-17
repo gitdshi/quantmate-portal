@@ -1,10 +1,13 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
+export type UserRole = 'admin' | 'user' | 'viewer'
+
 interface User {
   id: number
   username: string
   email: string
+  role?: UserRole
 }
 
 interface AuthState {

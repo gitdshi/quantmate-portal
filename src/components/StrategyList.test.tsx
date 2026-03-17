@@ -1,11 +1,11 @@
 import { userEvent } from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { mockStrategies } from '../../test/mockData'
-import { render, screen, waitFor } from '../../test/utils'
-import StrategyList from '../StrategyList'
+import { mockStrategies } from '../test/mockData'
+import { render, screen, waitFor } from '../test/utils'
+import StrategyList from './StrategyList'
 
 // Mock API
-vi.mock('../../lib/api', () => ({
+vi.mock('../lib/api', () => ({
   api: {
     get: vi.fn(),
     delete: vi.fn(),
@@ -20,7 +20,7 @@ vi.mock('../../lib/api', () => ({
   },
 }))
 
-import { strategiesAPI } from '../../lib/api'
+import { strategiesAPI } from '../lib/api'
 
 describe('StrategyList Component', () => {
   const mockOnEdit = vi.fn()
@@ -100,22 +100,25 @@ describe('StrategyList Component', () => {
     ;(strategiesAPI.list as any).mockResolvedValue({ data: mockStrategies })
     ;(strategiesAPI.delete as any).mockResolvedValue({ data: { success: true } })
     
-    // Mock window.confirm
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
-    
     render(<StrategyList onEdit={mockOnEdit} onView={mockOnView} />)
     
     await waitFor(() => {
       expect(screen.getByText('Test Strategy')).toBeInTheDocument()
     })
     
+    // Click the delete (trash) button — this shows inline Confirm/Cancel
     const deleteButtons = screen.getAllByRole('button', { name: /delete/i })
     await user.click(deleteButtons[0])
     
-    expect(confirmSpy).toHaveBeenCalled()
-    expect(strategiesAPI.delete).not.toHaveBeenCalled()
+    // Should show inline Confirm and Cancel buttons
+    await waitFor(() => {
+      expect(screen.getByText('Confirm')).toBeInTheDocument()
+      expect(screen.getByText('Cancel')).toBeInTheDocument()
+    })
     
-    confirmSpy.mockRestore()
+    // Click Cancel — should not delete
+    await user.click(screen.getByText('Cancel'))
+    expect(strategiesAPI.delete).not.toHaveBeenCalled()
   })
 
   it('displays empty state when no strategies', async () => {

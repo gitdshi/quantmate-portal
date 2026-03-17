@@ -1,7 +1,17 @@
-import { describe, expect, it, vi } from 'vitest'
-import { useAuthStore } from '../auth'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { useAuthStore } from './auth'
 
 describe('Auth Store', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    useAuthStore.setState({
+      user: null,
+      accessToken: null,
+      refreshToken: null,
+      isAuthenticated: false,
+    })
+  })
+
   it('initializes with no user and not authenticated', () => {
     const { user, isAuthenticated } = useAuthStore.getState()
     
@@ -9,31 +19,15 @@ describe('Auth Store', () => {
     expect(isAuthenticated).toBe(false)
   })
 
-  it('sets user and tokens on successful login', async () => {
+  it('sets user and tokens via setAuth', () => {
     const mockUser = {
       id: 1,
       username: 'testuser',
       email: 'test@example.com',
-      created_at: '2024-01-01T00:00:00Z',
     }
     
-    const mockAxiosResponse = {
-      data: {
-        access_token: 'test-access-token',
-        refresh_token: 'test-refresh-token',
-        user: mockUser,
-      },
-    }
-    
-    // Mock API call
-    vi.mock('../../lib/api', () => ({
-      authAPI: {
-        login: vi.fn().mockResolvedValue(mockAxiosResponse),
-      },
-    }))
-    
-    const { login } = useAuthStore.getState()
-    await login('testuser', 'password')
+    const { setAuth } = useAuthStore.getState()
+    setAuth(mockUser, 'test-access-token', 'test-refresh-token')
     
     const { user, isAuthenticated } = useAuthStore.getState()
     expect(user).toEqual(mockUser)
@@ -41,6 +35,10 @@ describe('Auth Store', () => {
   })
 
   it('clears user and tokens on logout', () => {
+    // First set auth
+    const { setAuth } = useAuthStore.getState()
+    setAuth({ id: 1, username: 'test', email: 'test@test.com' }, 'token', 'refresh')
+    
     const { logout } = useAuthStore.getState()
     logout()
     
@@ -51,30 +49,15 @@ describe('Auth Store', () => {
     expect(localStorage.getItem('refresh_token')).toBeNull()
   })
 
-  it('persists tokens to localStorage', async () => {
+  it('persists tokens to localStorage', () => {
     const mockUser = {
       id: 1,
       username: 'testuser',
       email: 'test@example.com',
-      created_at: '2024-01-01T00:00:00Z',
     }
     
-    const mockAxiosResponse = {
-      data: {
-        access_token: 'test-access-token',
-        refresh_token: 'test-refresh-token',
-        user: mockUser,
-      },
-    }
-    
-    vi.mock('../../lib/api', () => ({
-      authAPI: {
-        login: vi.fn().mockResolvedValue(mockAxiosResponse),
-      },
-    }))
-    
-    const { login } = useAuthStore.getState()
-    await login('testuser', 'password')
+    const { setAuth } = useAuthStore.getState()
+    setAuth(mockUser, 'test-access-token', 'test-refresh-token')
     
     expect(localStorage.getItem('access_token')).toBe('test-access-token')
     expect(localStorage.getItem('refresh_token')).toBe('test-refresh-token')

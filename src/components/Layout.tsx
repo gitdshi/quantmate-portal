@@ -1,12 +1,21 @@
 import {
     BarChart3,
+    Bell,
+    Bot,
     Briefcase,
     Database,
     FileCode,
+    FileText,
+    FlaskConical,
     LayoutDashboard,
     LogOut,
     Menu,
+    Settings,
+    ShieldCheck,
+    ShoppingBag,
+    ShoppingCart,
     TrendingUp,
+    Users,
 } from 'lucide-react'
 import { useState } from 'react'
 import { Link, Outlet, useNavigate } from 'react-router-dom'
@@ -30,7 +39,17 @@ export default function Layout() {
     { name: 'Backtest', href: '/backtest', icon: TrendingUp },
     { name: 'Market Data', href: '/market-data', icon: Database },
     { name: 'Portfolio', href: '/portfolio', icon: Briefcase },
+    { name: 'Trading', href: '/trading', icon: ShoppingCart },
     { name: 'Analytics', href: '/analytics', icon: BarChart3 },
+    { name: 'Monitoring', href: '/monitoring', icon: Bell },
+    { name: 'Reports', href: '/reports', icon: FileText },
+    { name: 'AI Assistant', href: '/ai-assistant', icon: Bot },
+    { name: 'Factor Lab', href: '/factor-lab', icon: FlaskConical },
+    { name: 'Marketplace', href: '/marketplace', icon: ShoppingBag },
+    { name: 'Team Space', href: '/team-space', icon: Users },
+    { name: 'Visual Explorer', href: '/visual-explorer', icon: BarChart3 },
+    { name: 'Account Security', href: '/account-security', icon: ShieldCheck },
+    { name: 'Settings', href: '/settings', icon: Settings },
   ]
 
   return (

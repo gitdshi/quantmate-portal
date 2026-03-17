@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { useAuthStore } from '../stores/auth'
 
-const API_URL = import.meta.env.VITE_API_URL || '/api'
+const API_URL = import.meta.env.VITE_API_URL || '/api/v1'
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -46,7 +46,7 @@ api.interceptors.response.use(
       try {
         const refreshToken = localStorage.getItem('refresh_token')
         if (refreshToken) {
-          const { data } = await axios.post(`${API_URL}/api/auth/refresh`, {
+          const { data } = await axios.post(`${API_URL}/auth/refresh`, {
             refresh_token: refreshToken,
           })
 
@@ -291,4 +291,184 @@ export const strategyCodeAPI = {
   listCodeHistory: (strategyId: number) => api.get(`/strategies/${strategyId}/code-history`),
   getCodeHistory: (strategyId: number, historyId: number) => api.get(`/strategies/${strategyId}/code-history/${historyId}`),
   restoreCodeHistory: (strategyId: number, historyId: number) => api.post(`/strategies/${strategyId}/code-history/${historyId}/restore`),
+}
+
+// Data Source Settings API
+export const dataSourceAPI = {
+  listItems: () => api.get('/settings/datasource-items'),
+  updateItem: (itemKey: string, data: { enabled: boolean }) =>
+    api.put(`/settings/datasource-items/${itemKey}`, data),
+  batchUpdate: (data: { items: Array<{ item_key: string; enabled: boolean }> }) =>
+    api.put('/settings/datasource-items/batch', data),
+  testConnection: (source: string) =>
+    api.post(`/settings/datasource-items/test/${source}`),
+}
+
+// Trading API
+export const tradingAPI = {
+  createOrder: (data: {
+    symbol: string; direction: string; order_type: string;
+    quantity: number; price?: number; mode?: string
+  }) => api.post('/trade/orders', data),
+  listOrders: (params?: { status?: string; mode?: string; page?: number; page_size?: number }) =>
+    api.get('/trade/orders', { params }),
+  getOrder: (id: number) => api.get(`/trade/orders/${id}`),
+  cancelOrder: (id: number) => api.post(`/trade/orders/${id}/cancel`),
+}
+
+// Risk API
+export const riskAPI = {
+  listRules: () => api.get('/risk/rules'),
+  createRule: (data: { name: string; rule_type: string; threshold: number; action?: string }) =>
+    api.post('/risk/rules', data),
+  updateRule: (id: number, data: Record<string, unknown>) =>
+    api.put(`/risk/rules/${id}`, data),
+  deleteRule: (id: number) => api.delete(`/risk/rules/${id}`),
+  check: (params: { symbol: string; direction: string; quantity: number }) =>
+    api.post('/risk/check', null, { params }),
+}
+
+// Alerts API
+export const alertsAPI = {
+  listRules: () => api.get('/alerts/rules'),
+  createRule: (data: {
+    name: string; metric: string; comparator: string;
+    threshold: number; level?: string
+  }) => api.post('/alerts/rules', data),
+  updateRule: (id: number, data: Record<string, unknown>) =>
+    api.put(`/alerts/rules/${id}`, data),
+  deleteRule: (id: number) => api.delete(`/alerts/rules/${id}`),
+  listHistory: (params?: { level?: string; page?: number; page_size?: number }) =>
+    api.get('/alerts/history', { params }),
+  acknowledgeAlert: (id: number) => api.post(`/alerts/history/${id}/acknowledge`),
+  listChannels: () => api.get('/alerts/channels'),
+  createChannel: (data: { channel_type: string; config: Record<string, unknown> }) =>
+    api.post('/alerts/channels', data),
+  deleteChannel: (id: number) => api.delete(`/alerts/channels/${id}`),
+}
+
+// Reports API
+export const reportsAPI = {
+  list: (params?: { report_type?: string; page?: number; page_size?: number }) =>
+    api.get('/reports', { params }),
+  get: (id: number) => api.get(`/reports/${id}`),
+  generate: (data: { report_type: string; title?: string; content_json?: Record<string, unknown> }) =>
+    api.post('/reports', data),
+}
+
+// Broker API
+export const brokerAPI = {
+  listConfigs: () => api.get('/broker/configs'),
+  createConfig: (data: { broker_name: string; config: Record<string, unknown>; is_paper?: boolean }) =>
+    api.post('/broker/configs', data),
+  updateConfig: (id: number, data: Record<string, unknown>) =>
+    api.put(`/broker/configs/${id}`, data),
+  deleteConfig: (id: number) => api.delete(`/broker/configs/${id}`),
+}
+
+// Account Security API (MFA, API Keys, Sessions)
+export const accountSecurityAPI = {
+  mfaSetup: () => api.post('/auth/mfa/setup'),
+  mfaVerify: (code: string) => api.post('/auth/mfa/verify', { code }),
+  mfaDisable: (code: string) => api.post('/auth/mfa/disable', { code }),
+  listApiKeys: () => api.get('/auth/api-keys'),
+  createApiKey: (data: { name: string; permissions?: string[]; rate_limit?: number }) =>
+    api.post('/auth/api-keys', data),
+  deleteApiKey: (id: number) => api.delete(`/auth/api-keys/${id}`),
+  listSessions: () => api.get('/auth/sessions'),
+  revokeSession: (id: number) => api.delete(`/auth/sessions/${id}`),
+  revokeAllSessions: () => api.delete('/auth/sessions/all'),
+}
+
+// Indicator Library API
+export const indicatorAPI = {
+  list: (category?: string) => api.get('/indicators', { params: { category } }),
+  get: (id: number) => api.get(`/indicators/${id}`),
+  create: (data: { name: string; display_name: string; category: string; default_params?: Record<string, unknown> }) =>
+    api.post('/indicators', data),
+  update: (id: number, data: Record<string, unknown>) => api.put(`/indicators/${id}`, data),
+  delete: (id: number) => api.delete(`/indicators/${id}`),
+}
+
+// ── P3 APIs ──────────────────────────────────────────────────────────
+
+// AI Assistant API
+export const aiAPI = {
+  listConversations: (params?: { page?: number; page_size?: number }) =>
+    api.get('/ai/conversations', { params }),
+  getConversation: (id: number) => api.get(`/ai/conversations/${id}`),
+  createConversation: (data: { title: string; model?: string }) =>
+    api.post('/ai/conversations', data),
+  updateConversation: (id: number, data: { title?: string; status?: string }) =>
+    api.put(`/ai/conversations/${id}`, data),
+  deleteConversation: (id: number) => api.delete(`/ai/conversations/${id}`),
+  listMessages: (conversationId: number) =>
+    api.get(`/ai/conversations/${conversationId}/messages`),
+  sendMessage: (conversationId: number, data: { content: string }) =>
+    api.post(`/ai/conversations/${conversationId}/messages`, data),
+  listModels: () => api.get('/ai/models'),
+  createModel: (data: { name: string; provider: string; model_id: string; api_base?: string; max_tokens?: number; temperature?: number }) =>
+    api.post('/ai/models', data),
+  updateModel: (id: number, data: Record<string, unknown>) => api.put(`/ai/models/${id}`, data),
+  deleteModel: (id: number) => api.delete(`/ai/models/${id}`),
+}
+
+// Factor Lab API
+export const factorAPI = {
+  list: (params?: { category?: string; page?: number; page_size?: number }) =>
+    api.get('/factors', { params }),
+  get: (id: number) => api.get(`/factors/${id}`),
+  create: (data: { name: string; category: string; expression: string; description?: string }) =>
+    api.post('/factors', data),
+  update: (id: number, data: Record<string, unknown>) => api.put(`/factors/${id}`, data),
+  delete: (id: number) => api.delete(`/factors/${id}`),
+  listEvaluations: (factorId: number) =>
+    api.get(`/factors/${factorId}/evaluations`),
+  runEvaluation: (factorId: number, data: { start_date: string; end_date: string; universe?: string }) =>
+    api.post(`/factors/${factorId}/evaluations`, data),
+  deleteEvaluation: (factorId: number, evalId: number) =>
+    api.delete(`/factors/${factorId}/evaluations/${evalId}`),
+}
+
+// Strategy Template / Marketplace API
+export const templateAPI = {
+  listMarketplace: (params?: { category?: string; page?: number; page_size?: number }) =>
+    api.get('/templates/marketplace', { params }),
+  listMine: (params?: { page?: number; page_size?: number }) =>
+    api.get('/templates/mine', { params }),
+  get: (id: number) => api.get(`/templates/${id}`),
+  create: (data: { name: string; description?: string; category?: string; code: string; parameters_schema?: Record<string, unknown>; is_public?: boolean }) =>
+    api.post('/templates', data),
+  update: (id: number, data: Record<string, unknown>) => api.put(`/templates/${id}`, data),
+  delete: (id: number) => api.delete(`/templates/${id}`),
+  clone: (id: number) => api.post(`/templates/${id}/clone`),
+  listComments: (id: number) => api.get(`/templates/${id}/comments`),
+  addComment: (id: number, data: { content: string; parent_id?: number }) =>
+    api.post(`/templates/${id}/comments`, data),
+  deleteComment: (id: number, commentId: number) =>
+    api.delete(`/templates/${id}/comments/${commentId}`),
+  getRatings: (id: number) => api.get(`/templates/${id}/ratings`),
+  rate: (id: number, data: { score: number }) =>
+    api.post(`/templates/${id}/ratings`, data),
+}
+
+// Team Workspace API
+export const teamAPI = {
+  listWorkspaces: () => api.get('/teams/workspaces'),
+  getWorkspace: (id: number) => api.get(`/teams/workspaces/${id}`),
+  createWorkspace: (data: { name: string; description?: string; max_members?: number }) =>
+    api.post('/teams/workspaces', data),
+  updateWorkspace: (id: number, data: Record<string, unknown>) =>
+    api.put(`/teams/workspaces/${id}`, data),
+  deleteWorkspace: (id: number) => api.delete(`/teams/workspaces/${id}`),
+  listMembers: (workspaceId: number) =>
+    api.get(`/teams/workspaces/${workspaceId}/members`),
+  addMember: (workspaceId: number, data: { user_id: number; role?: string }) =>
+    api.post(`/teams/workspaces/${workspaceId}/members`, data),
+  removeMember: (workspaceId: number, userId: number) =>
+    api.delete(`/teams/workspaces/${workspaceId}/members/${userId}`),
+  listSharedWithMe: () => api.get('/teams/shares/received'),
+  shareStrategy: (data: { strategy_id: number; shared_with_user_id: number; permission?: string }) =>
+    api.post('/teams/shares', data),
+  revokeShare: (id: number) => api.delete(`/teams/shares/${id}`),
 }

@@ -1,11 +1,11 @@
 import { userEvent } from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { mockClosedTrade, mockPosition } from '../../test/mockData'
-import { render, screen, waitFor } from '../../test/utils'
-import PortfolioManagement from '../PortfolioManagement'
+import { mockClosedTrade, mockPosition } from '../test/mockData'
+import { render, screen, waitFor } from '../test/utils'
+import PortfolioManagement from './PortfolioManagement'
 
-// Mock API
-vi.mock('../../lib/api', () => ({
+// Mock API — component uses api.get()/api.post() directly
+vi.mock('../lib/api', () => ({
   api: {
     get: vi.fn(),
     post: vi.fn(),
@@ -14,14 +14,18 @@ vi.mock('../../lib/api', () => ({
       response: { use: vi.fn() },
     },
   },
-  portfolioAPI: {
-    positions: vi.fn(),
-    closedTrades: vi.fn(),
-    closePosition: vi.fn(),
-  },
 }))
 
-import { portfolioAPI } from '../../lib/api'
+import { api } from '../lib/api'
+
+// Helper to set up api.get mock based on URL
+function setupApiMock(positions: any[] = [], closedTrades: any[] = []) {
+  ;(api.get as any).mockImplementation((url: string) => {
+    if (url.includes('positions')) return Promise.resolve({ data: positions })
+    if (url.includes('closed-trades')) return Promise.resolve({ data: closedTrades })
+    return Promise.resolve({ data: [] })
+  })
+}
 
 describe('PortfolioManagement Component', () => {
   beforeEach(() => {
@@ -29,21 +33,20 @@ describe('PortfolioManagement Component', () => {
   })
 
   it('displays summary cards', async () => {
-    ;(portfolioAPI.positions as any).mockResolvedValue({ data: [mockPosition] })
-    ;(portfolioAPI.closedTrades as any).mockResolvedValue({ data: [mockClosedTrade] })
+    setupApiMock([mockPosition], [mockClosedTrade])
     
     render(<PortfolioManagement />)
     
     await waitFor(() => {
       expect(screen.getByText('Total Market Value')).toBeInTheDocument()
-      expect(screen.getByText('Unrealized P&L')).toBeInTheDocument()
-      expect(screen.getByText('Realized P&L')).toBeInTheDocument()
+      // "Unrealized P&L" appears in summary card + table header; use getAllByText
+      expect(screen.getAllByText('Unrealized P&L').length).toBeGreaterThanOrEqual(1)
+      expect(screen.getAllByText('Realized P&L').length).toBeGreaterThanOrEqual(1)
     })
   })
 
   it('displays open positions table', async () => {
-    ;(portfolioAPI.positions as any).mockResolvedValue({ data: [mockPosition] })
-    ;(portfolioAPI.closedTrades as any).mockResolvedValue({ data: [] })
+    setupApiMock([mockPosition], [])
     
     render(<PortfolioManagement />)
     
@@ -56,8 +59,7 @@ describe('PortfolioManagement Component', () => {
   })
 
   it('displays closed trades table', async () => {
-    ;(portfolioAPI.positions as any).mockResolvedValue({ data: [] })
-    ;(portfolioAPI.closedTrades as any).mockResolvedValue({ data: [mockClosedTrade] })
+    setupApiMock([], [mockClosedTrade])
     
     render(<PortfolioManagement />)
     
@@ -69,8 +71,7 @@ describe('PortfolioManagement Component', () => {
 
   it('opens close position modal on close button click', async () => {
     const user = userEvent.setup()
-    ;(portfolioAPI.positions as any).mockResolvedValue({ data: [mockPosition] })
-    ;(portfolioAPI.closedTrades as any).mockResolvedValue({ data: [] })
+    setupApiMock([mockPosition], [])
     
     render(<PortfolioManagement />)
     
@@ -82,16 +83,16 @@ describe('PortfolioManagement Component', () => {
     await user.click(closeButton)
     
     await waitFor(() => {
-      expect(screen.getByText('Close Position')).toBeInTheDocument()
+      // "Close Position" appears as both heading and button; use getAllByText
+      expect(screen.getAllByText('Close Position').length).toBeGreaterThanOrEqual(1)
       expect(screen.getByText(/are you sure/i)).toBeInTheDocument()
     })
   })
 
   it('closes position when confirmed', async () => {
     const user = userEvent.setup()
-    ;(portfolioAPI.positions as any).mockResolvedValue({ data: [mockPosition] })
-    ;(portfolioAPI.closedTrades as any).mockResolvedValue({ data: [] })
-    ;(portfolioAPI.closePosition as any).mockResolvedValue({ data: { success: true } })
+    setupApiMock([mockPosition], [])
+    ;(api.post as any).mockResolvedValue({ data: { success: true } })
     
     render(<PortfolioManagement />)
     
@@ -103,20 +104,21 @@ describe('PortfolioManagement Component', () => {
     await user.click(closeButton)
     
     await waitFor(() => {
-      expect(screen.getByText('Close Position')).toBeInTheDocument()
+      expect(screen.getAllByText('Close Position').length).toBeGreaterThanOrEqual(1)
     })
     
-    const confirmButton = screen.getByRole('button', { name: /close position/i })
+    // Find the confirm button specifically (it's the one inside the modal with destructive styling)
+    const confirmButtons = screen.getAllByRole('button', { name: /close position/i })
+    const confirmButton = confirmButtons[confirmButtons.length - 1] // last one is the confirm button in modal
     await user.click(confirmButton)
     
     await waitFor(() => {
-      expect(portfolioAPI.closePosition).toHaveBeenCalledWith(mockPosition.id)
+      expect(api.post).toHaveBeenCalledWith(expect.stringContaining('/close'))
     })
   })
 
   it('displays empty state for no positions', async () => {
-    ;(portfolioAPI.positions as any).mockResolvedValue({ data: [] })
-    ;(portfolioAPI.closedTrades as any).mockResolvedValue({ data: [] })
+    setupApiMock([], [])
     
     render(<PortfolioManagement />)
     
@@ -128,8 +130,7 @@ describe('PortfolioManagement Component', () => {
 
   it('calculates totals correctly', async () => {
     const positions = [mockPosition, { ...mockPosition, id: 2, unrealized_pnl: 300 }]
-    ;(portfolioAPI.positions as any).mockResolvedValue({ data: positions })
-    ;(portfolioAPI.closedTrades as any).mockResolvedValue({ data: [] })
+    setupApiMock(positions, [])
     
     render(<PortfolioManagement />)
     

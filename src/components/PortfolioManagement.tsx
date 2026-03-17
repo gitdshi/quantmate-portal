@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { TrendingDown, TrendingUp, X } from 'lucide-react'
 import { useState } from 'react'
+import { usePagination } from '../hooks/usePagination'
 import { api } from '../lib/api'
+import Pagination from './Pagination'
 
 interface Position {
   id: number
@@ -83,6 +85,8 @@ export default function PortfolioManagement() {
   const totalUnrealizedPnL = positions?.reduce((sum, pos) => sum + pos.unrealized_pnl, 0) || 0
   const totalMarketValue = positions?.reduce((sum, pos) => sum + pos.market_value, 0) || 0
   const totalRealizedPnL = closedTrades?.reduce((sum, trade) => sum + trade.realized_pnl, 0) || 0
+
+  const closedTradesPagination = usePagination<ClosedTrade>(closedTrades || [], { initialPageSize: 10 })
 
   return (
     <div className="space-y-6">
@@ -255,7 +259,7 @@ export default function PortfolioManagement() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {closedTrades?.map((trade) => (
+              {closedTradesPagination.paginatedItems.map((trade) => (
                 <tr key={trade.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="font-medium text-gray-900">{trade.symbol}</div>
@@ -304,6 +308,15 @@ export default function PortfolioManagement() {
               )}
             </tbody>
           </table>
+        </div>
+        <div className="px-6">
+          <Pagination
+            page={closedTradesPagination.page}
+            pageSize={closedTradesPagination.pageSize}
+            total={closedTradesPagination.total}
+            onPageChange={closedTradesPagination.onPageChange}
+            onPageSizeChange={closedTradesPagination.onPageSizeChange}
+          />
         </div>
       </div>
 
