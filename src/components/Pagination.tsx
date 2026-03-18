@@ -40,7 +40,7 @@ export default function Pagination({
   return (
     <div className="flex items-center justify-between gap-4 py-3">
       <div className="text-sm text-muted-foreground">
-        Showing {start}–{end} of {total}
+        Showing {start}-{end} of {total}
       </div>
 
       <div className="flex items-center gap-1">
@@ -64,7 +64,7 @@ export default function Pagination({
         {getVisiblePages().map((p, idx) =>
           p === '...' ? (
             <span key={`ellipsis-${idx}`} className="px-2 text-muted-foreground">
-              …
+              ...
             </span>
           ) : (
             <button

@@ -32,7 +32,7 @@ export default defineConfig([
     },
   },
   {
-    files: ['src/test/**/*.{ts,tsx}'],
+    files: ['test/**/*.{ts,tsx}'],
     rules: {
       'react-refresh/only-export-components': 'off',
       '@typescript-eslint/no-require-imports': 'off',

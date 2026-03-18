@@ -7,16 +7,19 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    setupFiles: './src/test/setup.ts',
+    setupFiles: './test/support/setup.ts',
     css: true,
-    include: ['src/**/*.{test,spec}.{ts,tsx}'],
-    exclude: ['node_modules', 'dist', 'e2e/**'],
+    include: [
+      'test/unit/**/*.{test,spec}.{ts,tsx}',
+      'test/integration/**/*.{test,spec}.{ts,tsx}',
+    ],
+    exclude: ['node_modules', 'dist', 'test/e2e/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
       exclude: [
         'node_modules/',
-        'src/test/',
+        'test/',
         '**/*.d.ts',
         '**/*.config.*',
         '**/mockData',
@@ -27,6 +30,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      '@test': path.resolve(__dirname, './test'),
     },
   },
 })
