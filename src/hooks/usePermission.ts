@@ -48,7 +48,7 @@ export function usePermission() {
 
   function can(feature: string): boolean {
     const required = FEATURE_PERMISSIONS[feature]
-    if (!required) return true // unknown feature = allow
+    if (!required) return false // unknown feature = deny by default
     return ROLE_HIERARCHY[role] >= ROLE_HIERARCHY[required]
   }
 

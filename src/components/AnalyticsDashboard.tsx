@@ -42,7 +42,7 @@ export default function AnalyticsDashboard() {
   const { data, isLoading } = useQuery<AnalyticsData>({
     queryKey: ['analytics'],
     queryFn: async () => {
-      const { data } = await api.get('/api/analytics/dashboard')
+      const { data } = await api.get('/analytics/dashboard')
       return data
     },
     refetchInterval: 30000, // Refetch every 30 seconds

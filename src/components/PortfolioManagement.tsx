@@ -40,28 +40,36 @@ export default function PortfolioManagement() {
   const queryClient = useQueryClient()
 
   // Fetch open positions
-  const { data: positions } = useQuery<Position[]>({
+  const { data: positionsData } = useQuery<{ portfolio_id: number; cash: number; positions: Position[] }>({
     queryKey: ['portfolio', 'positions'],
     queryFn: async () => {
-      const { data } = await api.get('/api/portfolio/positions')
+      const { data } = await api.get('/portfolio/positions')
       return data
     },
     refetchInterval: 5000, // Refetch every 5 seconds
   })
 
-  // Fetch closed trades
+  const positions = positionsData?.positions
+
+  // Fetch transaction history (closed trades)
   const { data: closedTrades } = useQuery<ClosedTrade[]>({
     queryKey: ['portfolio', 'closed-trades'],
     queryFn: async () => {
-      const { data } = await api.get('/api/portfolio/closed-trades')
-      return data
+      if (!positionsData?.portfolio_id) return []
+      const { data } = await api.get(`/portfolio/${positionsData.portfolio_id}/transactions`)
+      return data?.data || []
     },
+    enabled: !!positionsData?.portfolio_id,
   })
 
   // Close position mutation
   const closePositionMutation = useMutation({
-    mutationFn: async (positionId: number) => {
-      const { data } = await api.post(`/api/portfolio/positions/${positionId}/close`)
+    mutationFn: async (position: Position) => {
+      const { data } = await api.post('/portfolio/close', {
+        symbol: position.symbol,
+        quantity: position.quantity,
+        price: position.current_price || position.entry_price,
+      })
       return data
     },
     onSuccess: () => {
@@ -78,7 +86,7 @@ export default function PortfolioManagement() {
 
   const confirmClose = () => {
     if (selectedPosition) {
-      closePositionMutation.mutate(selectedPosition.id)
+      closePositionMutation.mutate(selectedPosition)
     }
   }
 

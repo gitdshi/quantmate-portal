@@ -347,14 +347,20 @@ describe('API Client - HTTP Calls', () => {
       expect(mockGet).toHaveBeenCalledWith('/portfolio/positions')
     })
 
-    it('closedTrades sends GET', () => {
-      portfolioAPI.closedTrades()
-      expect(mockGet).toHaveBeenCalledWith('/portfolio/closed-trades')
+    it('close sends POST with data', () => {
+      const data = { symbol: 'AAPL', quantity: 10, price: 150 }
+      portfolioAPI.close(data)
+      expect(mockPost).toHaveBeenCalledWith('/portfolio/close', data)
     })
 
-    it('closePosition sends POST with id', () => {
-      portfolioAPI.closePosition(42)
-      expect(mockPost).toHaveBeenCalledWith('/portfolio/positions/42/close')
+    it('transactions sends GET with portfolio id', () => {
+      portfolioAPI.transactions(1)
+      expect(mockGet).toHaveBeenCalledWith('/portfolio/1/transactions', { params: undefined })
+    })
+
+    it('snapshots sends GET with portfolio id', () => {
+      portfolioAPI.snapshots(1)
+      expect(mockGet).toHaveBeenCalledWith('/portfolio/1/snapshots')
     })
   })
 

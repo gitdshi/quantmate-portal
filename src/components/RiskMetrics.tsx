@@ -41,7 +41,7 @@ export default function RiskMetrics() {
   const { data, isLoading } = useQuery<RiskMetrics>({
     queryKey: ['risk-metrics'],
     queryFn: async () => {
-      const { data } = await api.get('/api/analytics/risk-metrics')
+      const { data } = await api.get('/analytics/risk-metrics')
       return data
     },
     refetchInterval: 30000, // Refetch every 30 seconds

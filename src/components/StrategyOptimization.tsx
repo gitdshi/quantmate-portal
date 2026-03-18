@@ -52,7 +52,7 @@ export default function StrategyOptimization() {
   const { data: strategiesData } = useQuery({
     queryKey: ['strategies'],
     queryFn: async () => {
-      const { data } = await api.get('/api/strategies')
+      const { data } = await api.get('/strategies')
       return data
     },
   })
@@ -63,7 +63,7 @@ export default function StrategyOptimization() {
   const { data: optimizationResult } = useQuery<OptimizationResult>({
     queryKey: ['optimization', optimizationJobId],
     queryFn: async () => {
-      const { data } = await api.get(`/api/optimization/${optimizationJobId}`)
+      const { data } = await api.get(`/optimization/${optimizationJobId}`)
       return data
     },
     enabled: !!optimizationJobId,
@@ -78,7 +78,7 @@ export default function StrategyOptimization() {
   // Submit optimization
   const optimizationMutation = useMutation({
     mutationFn: async (params: OptimizationParams) => {
-      const { data } = await api.post('/api/optimization', params)
+      const { data } = await api.post('/optimization', params)
       return data
     },
     onSuccess: (data) => {

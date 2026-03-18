@@ -99,7 +99,7 @@ export default function EquityCurveChart({
         annualTrend: annualTrend,
       }
     })
-  }, [data, initialCapital, benchmarkData, annualReturn])
+  }, [data, initialCapital, benchmarkData, stockPriceData, annualReturn])
 
   if (chartData.length === 0) {
     return (

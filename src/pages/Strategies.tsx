@@ -149,7 +149,7 @@ class MyStrategy(CtaTemplate):
   const formatParameters = (val: any): string => {
     if (val == null) return '{}'
     if (typeof val === 'object') return JSON.stringify(val, null, 2)
-    let s = String(val).trim()
+    const s = String(val).trim()
     try {
       const parsed = JSON.parse(s)
       if (typeof parsed === 'string') {
@@ -202,7 +202,7 @@ class MyStrategy(CtaTemplate):
       const error = err as { response?: { data?: { detail?: string }, status?: number } }
       console.error('[Strategies] Failed to load strategies:', err)
       if (error.response?.status === 401) {
-        try { logout() } catch (e) {}
+        try { logout() } catch { /* ignored */ }
         navigate('/login')
         return
       }
@@ -337,7 +337,7 @@ class MyStrategy(CtaTemplate):
         try {
           const baseName = pendingEditFileName.replace(/\.py$/i, '')
           setEditName((prev) => (prev && prev.trim() ? prev : baseName))
-        } catch (e) {}
+        } catch { /* ignored */ }
       }
     } catch (err: any) {
       setError(err?.response?.data?.detail || String(err))
@@ -627,7 +627,7 @@ class MyStrategy(CtaTemplate):
       {classOptionsEdit && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-40" role="dialog">
           <div className="bg-white dark:bg-gray-800 rounded shadow-lg w-full max-w-md p-4">
-            <div className="mb-3 font-semibold">Multiple classes found â€?choose one</div>
+            <div className="mb-3 font-semibold">Multiple classes found ï¿½?choose one</div>
             <div className="space-y-2 max-h-60 overflow-auto">
               {classOptionsEdit.map((n) => (
                 <button key={n} onClick={() => handleEditClassPick(n)} className="w-full text-left px-3 py-2 border rounded hover:bg-gray-100 dark:hover:bg-gray-700">
@@ -843,7 +843,7 @@ class MyStrategy(CtaTemplate):
                                   updatePayload.description = editDescription.trim()
                                 }
                                 
-                                // Send parameters if changed â€?compare normalized JSON
+                                // Send parameters if changed ï¿½?compare normalized JSON
                                 const newString = (editParameters || '').trim()
                                 if (newString) {
                                   try {
@@ -863,7 +863,7 @@ class MyStrategy(CtaTemplate):
                                     return
                                   }
                                 } else {
-                                  // Empty parameters editor â€?send empty object if existing had data
+                                  // Empty parameters editor ï¿½?send empty object if existing had data
                                   if (selectedDbStrategy.parameters && Object.keys(selectedDbStrategy.parameters).length > 0) {
                                     updatePayload.parameters = {}
                                   }

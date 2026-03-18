@@ -21,8 +21,8 @@ import { api } from '../lib/api'
 // Helper to set up api.get mock based on URL
 function setupApiMock(positions: any[] = [], closedTrades: any[] = []) {
   ;(api.get as any).mockImplementation((url: string) => {
-    if (url.includes('positions')) return Promise.resolve({ data: positions })
-    if (url.includes('closed-trades')) return Promise.resolve({ data: closedTrades })
+    if (url.includes('positions')) return Promise.resolve({ data: { portfolio_id: 1, cash: 10000, positions } })
+    if (url.includes('transactions')) return Promise.resolve({ data: { data: closedTrades } })
     return Promise.resolve({ data: [] })
   })
 }
@@ -113,7 +113,7 @@ describe('PortfolioManagement Component', () => {
     await user.click(confirmButton)
     
     await waitFor(() => {
-      expect(api.post).toHaveBeenCalledWith(expect.stringContaining('/close'))
+      expect(api.post).toHaveBeenCalledWith(expect.stringContaining('/close'), expect.any(Object))
     })
   })
 

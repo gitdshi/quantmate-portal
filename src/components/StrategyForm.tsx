@@ -24,7 +24,7 @@ export default function StrategyForm({ strategy, onClose }: StrategyFormProps) {
     if (val == null) return '{}'
     if (typeof val === 'object') return JSON.stringify(val, null, 2)
     // val is a string - attempt to unescape / parse common encodings
-    let s = String(val).trim()
+    const s = String(val).trim()
     try {
       const parsed = JSON.parse(s)
       if (typeof parsed === 'string') {
@@ -125,7 +125,7 @@ export default function StrategyForm({ strategy, onClose }: StrategyFormProps) {
     onError: (err: unknown) => {
       const e = err as any
       console.error('[StrategyForm] save error', err)
-      let parts: string[] = []
+      const parts: string[] = []
 
       const resp = e?.response
       if (resp?.status) parts.push(`HTTP ${resp.status}`)
@@ -302,7 +302,7 @@ export default function StrategyForm({ strategy, onClose }: StrategyFormProps) {
         try {
           const baseName = pendingFileName.replace(/\.py$/i, '')
           setName((prev) => (prev && prev.trim() ? prev : baseName))
-        } catch (e) {}
+        } catch { /* ignored */ }
       }
     } catch (err: any) {
       setError(err?.response?.data?.detail || String(err))

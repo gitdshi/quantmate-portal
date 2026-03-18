@@ -25,7 +25,7 @@ export default function PerformanceComparison() {
   const { data: backtests } = useQuery({
     queryKey: ['backtest-history'],
     queryFn: async () => {
-      const { data } = await api.get('/api/backtest/history')
+      const { data } = await api.get('/backtest/history/list')
       return data
     },
   })
@@ -34,7 +34,7 @@ export default function PerformanceComparison() {
   const { data: comparisonData, isLoading } = useQuery<ComparisonMetrics[]>({
     queryKey: ['performance-comparison', selectedIds],
     queryFn: async () => {
-      const { data } = await api.get('/api/analytics/compare', {
+      const { data } = await api.get('/analytics/compare', {
         params: { ids: selectedIds.join(',') },
       })
       return data

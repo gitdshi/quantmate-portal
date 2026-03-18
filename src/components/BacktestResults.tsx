@@ -426,7 +426,7 @@ export default function BacktestResults({ jobId, onClose }: BacktestResultsProps
                       <button
                         onClick={() => {
                           const params = jobData?.parameters || result?.parameters || {}
-                          navigator.clipboard && navigator.clipboard.writeText(JSON.stringify(params, null, 2))
+                          if (navigator.clipboard) { navigator.clipboard.writeText(JSON.stringify(params, null, 2)) }
                         }}
                         className="text-xs text-muted-foreground hover:text-foreground"
                       >

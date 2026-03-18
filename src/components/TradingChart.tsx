@@ -190,40 +190,6 @@ export default function TradingChart({
   zoomStateRef.current = zoomState
   chartDataLengthRef.current = chartData.length
 
-  if (chartData.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-64 bg-muted/30 rounded-lg">
-        <p className="text-muted-foreground">No price data available</p>
-      </div>
-    )
-  }
-
-  const hasBenchmark = chartData.some(d => d.benchmarkPrice !== undefined)
-
-  // Get visible data based on zoom state
-  const visibleData = chartData.slice(zoomState.startIndex, zoomState.endIndex + 1)
-
-  // Calculate price domains from visible data (includes OHLC for candlesticks)
-  const visibleStockPrices = visibleData.flatMap(d =>
-    [d.open, d.high, d.low, d.close].filter((v): v is number => v != null)
-  )
-  const visibleTradePrices = tradeMarkers
-    .filter(t => visibleData.some(d => d.date === t.date))
-    .map(t => t.price)
-  const allVisiblePrices = [...visibleStockPrices, ...visibleTradePrices]
-  const stockMin = allVisiblePrices.length > 0 ? Math.min(...allVisiblePrices) : 0
-  const stockMax = allVisiblePrices.length > 0 ? Math.max(...allVisiblePrices) : 100
-  const stockPadding = (stockMax - stockMin) * 0.1 || 1
-
-  const benchmarkPricesArr = visibleData.map(d => d.benchmarkPrice).filter((p): p is number => p !== undefined)
-  const benchMin = benchmarkPricesArr.length > 0 ? Math.min(...benchmarkPricesArr) : 0
-  const benchMax = benchmarkPricesArr.length > 0 ? Math.max(...benchmarkPricesArr) : 100
-  const benchPadding = (benchMax - benchMin) * 0.1 || 1
-
-  const handleResetZoom = () => {
-    setZoomState({ startIndex: 0, endIndex: chartData.length - 1 })
-  }
-
   // Initialize zoom to show all data
   if (zoomState.endIndex === 0 && chartData.length > 0) {
     setZoomState({ startIndex: 0, endIndex: chartData.length - 1 })
@@ -262,6 +228,40 @@ export default function TradingChart({
     el.addEventListener('wheel', handler, { passive: false })
     return () => el.removeEventListener('wheel', handler)
   }, [])
+
+  if (chartData.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64 bg-muted/30 rounded-lg">
+        <p className="text-muted-foreground">No price data available</p>
+      </div>
+    )
+  }
+
+  const hasBenchmark = chartData.some(d => d.benchmarkPrice !== undefined)
+
+  // Get visible data based on zoom state
+  const visibleData = chartData.slice(zoomState.startIndex, zoomState.endIndex + 1)
+
+  // Calculate price domains from visible data (includes OHLC for candlesticks)
+  const visibleStockPrices = visibleData.flatMap(d =>
+    [d.open, d.high, d.low, d.close].filter((v): v is number => v != null)
+  )
+  const visibleTradePrices = tradeMarkers
+    .filter(t => visibleData.some(d => d.date === t.date))
+    .map(t => t.price)
+  const allVisiblePrices = [...visibleStockPrices, ...visibleTradePrices]
+  const stockMin = allVisiblePrices.length > 0 ? Math.min(...allVisiblePrices) : 0
+  const stockMax = allVisiblePrices.length > 0 ? Math.max(...allVisiblePrices) : 100
+  const stockPadding = (stockMax - stockMin) * 0.1 || 1
+
+  const benchmarkPricesArr = visibleData.map(d => d.benchmarkPrice).filter((p): p is number => p !== undefined)
+  const benchMin = benchmarkPricesArr.length > 0 ? Math.min(...benchmarkPricesArr) : 0
+  const benchMax = benchmarkPricesArr.length > 0 ? Math.max(...benchmarkPricesArr) : 100
+  const benchPadding = (benchMax - benchMin) * 0.1 || 1
+
+  const handleResetZoom = () => {
+    setZoomState({ startIndex: 0, endIndex: chartData.length - 1 })
+  }
 
   // Handle mouse drag to pan
   const handleMouseDown = (e: React.MouseEvent) => {

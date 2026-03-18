@@ -152,12 +152,16 @@ describe('API Client', () => {
       expect(portfolioAPI.positions).toBeDefined()
     })
 
-    it('has closedTrades endpoint', () => {
-      expect(portfolioAPI.closedTrades).toBeDefined()
+    it('has close endpoint', () => {
+      expect(portfolioAPI.close).toBeDefined()
     })
 
-    it('has closePosition endpoint', () => {
-      expect(portfolioAPI.closePosition).toBeDefined()
+    it('has transactions endpoint', () => {
+      expect(portfolioAPI.transactions).toBeDefined()
+    })
+
+    it('has snapshots endpoint', () => {
+      expect(portfolioAPI.snapshots).toBeDefined()
     })
   })
 

@@ -243,9 +243,14 @@ export const systemAPI = {
 export const portfolioAPI = {
   positions: () => api.get('/portfolio/positions'),
   
-  closedTrades: () => api.get('/portfolio/closed-trades'),
-  
-  closePosition: (positionId: number) => api.post(`/portfolio/positions/${positionId}/close`),
+  close: (data: { symbol: string; quantity: number; price: number }) =>
+    api.post('/portfolio/close', data),
+
+  transactions: (portfolioId: number, params?: { page?: number; page_size?: number }) =>
+    api.get(`/portfolio/${portfolioId}/transactions`, { params }),
+
+  snapshots: (portfolioId: number) =>
+    api.get(`/portfolio/${portfolioId}/snapshots`),
 }
 
 // Optimization API
