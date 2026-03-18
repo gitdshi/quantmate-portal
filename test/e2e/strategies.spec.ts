@@ -9,7 +9,7 @@ test.describe('Strategy Management', () => {
   })
 
   test('should display strategies page', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: /strategies/i })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Strategies', exact: true })).toBeVisible({ timeout: 10000 })
   })
 
   test('should create new strategy', async ({ page }) => {

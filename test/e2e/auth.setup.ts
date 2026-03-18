@@ -1,7 +1,7 @@
 import { test as setup, expect } from '@playwright/test'
 import { env } from './env'
 
-const authFile = 'e2e/.auth/user.json'
+const authFile = 'test/e2e/.auth/user.json'
 
 /**
  * Authenticates once and saves storage state (localStorage + cookies)

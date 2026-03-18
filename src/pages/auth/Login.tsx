@@ -27,8 +27,8 @@ export default function Login() {
       navigate('/')
     },
     onError: (err: unknown) => {
-      const error = err as { response?: { data?: { detail?: string } } }
-      setError(error.response?.data?.detail || 'Login failed')
+      const error = err as { response?: { data?: { detail?: string; error?: { message?: string } } } }
+      setError(error.response?.data?.error?.message || error.response?.data?.detail || 'Login failed')
     },
   })
 

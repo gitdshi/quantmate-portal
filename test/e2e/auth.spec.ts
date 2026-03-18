@@ -27,10 +27,18 @@ test.describe('Authentication', () => {
     await page.goto('/login')
     await page.locator('#username').fill('wronguser')
     await page.locator('#password').fill('wrongpassword')
-    await page.getByRole('button', { name: /sign in/i }).click()
 
-    // Should show error message
-    await expect(page.locator('.bg-destructive\\/10')).toBeVisible({ timeout: 5000 })
+    // Wait for the API response after clicking sign in
+    const [response] = await Promise.all([
+      page.waitForResponse((resp) => resp.url().includes('/auth/login')),
+      page.getByRole('button', { name: /sign in/i }).click(),
+    ])
+
+    // API should respond with 401
+    expect(response.status()).toBe(401)
+
+    // Should show error message rendered by the Login component
+    await expect(page.locator('.bg-destructive\\/10')).toBeVisible({ timeout: 10000 })
   })
 
   test('should navigate to register page', async ({ page }) => {
@@ -84,5 +92,4 @@ test.describe('Authentication', () => {
     // Should still be on dashboard
     await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible({ timeout: 10000 })
   })
-})
 })

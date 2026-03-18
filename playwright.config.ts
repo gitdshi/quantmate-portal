@@ -1,4 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
+import { existsSync, readFileSync, readdirSync } from 'fs'
+import { resolve } from 'path'
+import { homedir } from 'os'
 
 /**
  * Environment configuration for E2E tests.
@@ -24,8 +27,29 @@ const envDefaults: Record<string, { baseURL: string; apiURL: string }> = {
 
 const env = envDefaults[testEnv] || envDefaults.dev
 
+/**
+ * In WSL2, chrome-headless-shell may SIGSEGV. Use the full Chromium binary instead.
+ */
+function getChromiumExecutable(): string | undefined {
+  try {
+    const procVersion = readFileSync('/proc/version', 'utf8')
+    if (!procVersion.toLowerCase().includes('microsoft')) return undefined
+    const browsersPath = resolve(homedir(), '.cache', 'ms-playwright')
+    const chromiumDir = readdirSync(browsersPath).find(
+      (d) => /^chromium-\d+$/.test(d),
+    )
+    if (!chromiumDir) return undefined
+    const exe = resolve(browsersPath, chromiumDir, 'chrome-linux64', 'chrome')
+    return existsSync(exe) ? exe : undefined
+  } catch {
+    return undefined
+  }
+}
+
+const chromiumExecutable = getChromiumExecutable()
+
 export default defineConfig({
-  testDir: './e2e',
+  testDir: './test/e2e',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
@@ -47,12 +71,16 @@ export default defineConfig({
     {
       name: 'setup',
       testMatch: /.*\.setup\.ts/,
+      use: {
+        ...(chromiumExecutable ? { launchOptions: { executablePath: chromiumExecutable } } : {}),
+      },
     },
     {
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
-        storageState: 'e2e/.auth/user.json',
+        ...(chromiumExecutable ? { launchOptions: { executablePath: chromiumExecutable } } : {}),
+        storageState: 'test/e2e/.auth/user.json',
       },
       dependencies: ['setup'],
     },
@@ -60,7 +88,7 @@ export default defineConfig({
       name: 'firefox',
       use: {
         ...devices['Desktop Firefox'],
-        storageState: 'e2e/.auth/user.json',
+        storageState: 'test/e2e/.auth/user.json',
       },
       dependencies: ['setup'],
     },
@@ -68,7 +96,7 @@ export default defineConfig({
       name: 'webkit',
       use: {
         ...devices['Desktop Safari'],
-        storageState: 'e2e/.auth/user.json',
+        storageState: 'test/e2e/.auth/user.json',
       },
       dependencies: ['setup'],
     },
@@ -76,7 +104,8 @@ export default defineConfig({
       name: 'Mobile Chrome',
       use: {
         ...devices['Pixel 5'],
-        storageState: 'e2e/.auth/user.json',
+        ...(chromiumExecutable ? { launchOptions: { executablePath: chromiumExecutable } } : {}),
+        storageState: 'test/e2e/.auth/user.json',
       },
       dependencies: ['setup'],
     },
@@ -84,7 +113,7 @@ export default defineConfig({
       name: 'Mobile Safari',
       use: {
         ...devices['iPhone 12'],
-        storageState: 'e2e/.auth/user.json',
+        storageState: 'test/e2e/.auth/user.json',
       },
       dependencies: ['setup'],
     },

@@ -9,7 +9,7 @@ test.describe('Backtest Workflow', () => {
   })
 
   test('should display backtest page', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: /backtest/i })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Backtest', exact: true })).toBeVisible()
   })
 
   test('should have action buttons', async ({ page }) => {
@@ -32,7 +32,7 @@ test.describe('Backtest Workflow', () => {
   test('should display job list section', async ({ page }) => {
     // Check for jobs section — the page shows backtest jobs/history
     await expect(
-      page.getByText(/jobs|history|results|no.*backtest/i)
+      page.getByRole('heading', { name: /backtest jobs/i })
     ).toBeVisible({ timeout: 5000 })
   })
 
