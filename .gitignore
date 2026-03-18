@@ -24,5 +24,8 @@ dist-ssr
 *.sln
 *.sw?
 playwright_browsers/
+e2e/.auth/
+test-results/
+playwright-report/
 
 .vite

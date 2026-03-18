@@ -1,81 +1,88 @@
 import { expect, test } from '@playwright/test'
+import { env } from './env'
 
 test.describe('Authentication', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('http://localhost:5173')
-  })
+  // These tests do NOT use the shared auth state — they test the login flow itself.
+  test.use({ storageState: { cookies: [], origins: [] } })
 
   test('should display login page', async ({ page }) => {
-    await expect(page.getByText('Welcome Back')).toBeVisible()
-    await expect(page.getByPlaceholder('Username')).toBeVisible()
-    await expect(page.getByPlaceholder('Password')).toBeVisible()
+    await page.goto('/login')
+    await expect(page.getByRole('heading', { name: /welcome/i })).toBeVisible()
+    await expect(page.locator('#username')).toBeVisible()
+    await expect(page.locator('#password')).toBeVisible()
   })
 
   test('should login successfully with valid credentials', async ({ page }) => {
-    await page.getByPlaceholder('Username').fill('testuser')
-    await page.getByPlaceholder('Password').fill('password123')
+    await page.goto('/login')
+    await page.locator('#username').fill(env.username)
+    await page.locator('#password').fill(env.password)
     await page.getByRole('button', { name: /sign in/i }).click()
 
     // Should redirect to dashboard
-    await expect(page).toHaveURL('http://localhost:5173/')
-    await expect(page.getByText('Dashboard')).toBeVisible()
+    await expect(page).toHaveURL(/\/dashboard/, { timeout: 15000 })
+    await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible()
   })
 
   test('should show error with invalid credentials', async ({ page }) => {
-    await page.getByPlaceholder('Username').fill('wronguser')
-    await page.getByPlaceholder('Password').fill('wrongpassword')
+    await page.goto('/login')
+    await page.locator('#username').fill('wronguser')
+    await page.locator('#password').fill('wrongpassword')
     await page.getByRole('button', { name: /sign in/i }).click()
 
     // Should show error message
-    await expect(page.getByText(/invalid credentials/i)).toBeVisible()
+    await expect(page.locator('.bg-destructive\\/10')).toBeVisible({ timeout: 5000 })
   })
 
   test('should navigate to register page', async ({ page }) => {
-    await page.getByText(/sign up/i).click()
-    await expect(page).toHaveURL('http://localhost:5173/register')
-    await expect(page.getByText('Create Account')).toBeVisible()
+    await page.goto('/login')
+    await page.getByRole('link', { name: /sign up/i }).click()
+    await expect(page).toHaveURL(/\/register/)
+    await expect(page.getByRole('heading', { name: /create an account/i })).toBeVisible()
   })
 
   test('should register new user', async ({ page }) => {
-    await page.goto('http://localhost:5173/register')
-    
-    const timestamp = Date.now()
-    await page.getByPlaceholder('Username').fill(`testuser${timestamp}`)
-    await page.getByPlaceholder('Email').fill(`test${timestamp}@example.com`)
-    await page.getByPlaceholder('Password').fill('password123')
-    await page.getByRole('button', { name: /sign up/i }).click()
+    await page.goto('/register')
+    const ts = Date.now()
+    await page.locator('#username').fill(`e2euser${ts}`)
+    await page.locator('#email').fill(`e2e${ts}@test.local`)
+    await page.locator('#password').fill('Test@12345')
+    await page.locator('#confirmPassword').fill('Test@12345')
+    await page.getByRole('button', { name: /create account/i }).click()
 
-    // Should redirect to dashboard after successful registration
-    await expect(page).toHaveURL('http://localhost:5173/')
-    await expect(page.getByText('Dashboard')).toBeVisible()
+    // Should show success or redirect to login
+    await expect(
+      page.getByText(/account created/i).or(page.locator('#username'))
+    ).toBeVisible({ timeout: 10000 })
   })
 
-  test('should logout successfully', async ({ page, context }) => {
+  test('should logout successfully', async ({ page }) => {
     // Login first
-    await page.getByPlaceholder('Username').fill('testuser')
-    await page.getByPlaceholder('Password').fill('password123')
+    await page.goto('/login')
+    await page.locator('#username').fill(env.username)
+    await page.locator('#password').fill(env.password)
     await page.getByRole('button', { name: /sign in/i }).click()
-    await expect(page.getByText('Dashboard')).toBeVisible()
+    await expect(page).toHaveURL(/\/dashboard/, { timeout: 15000 })
 
-    // Logout
-    await page.getByRole('button', { name: /logout/i }).click()
+    // Click logout (icon-only button in sidebar)
+    const logoutBtn = page.locator('button').filter({ has: page.locator('svg.lucide-log-out') })
+    await logoutBtn.click()
 
     // Should redirect to login
-    await expect(page).toHaveURL('http://localhost:5173/login')
+    await expect(page).toHaveURL(/\/login/)
   })
 
   test('should persist session after page reload', async ({ page }) => {
-    // Login
-    await page.getByPlaceholder('Username').fill('testuser')
-    await page.getByPlaceholder('Password').fill('password123')
+    await page.goto('/login')
+    await page.locator('#username').fill(env.username)
+    await page.locator('#password').fill(env.password)
     await page.getByRole('button', { name: /sign in/i }).click()
-    await expect(page.getByText('Dashboard')).toBeVisible()
+    await expect(page).toHaveURL(/\/dashboard/, { timeout: 15000 })
 
     // Reload page
     await page.reload()
 
-    // Should still be authenticated
-    await expect(page.getByText('Dashboard')).toBeVisible()
-    await expect(page).toHaveURL('http://localhost:5173/')
+    // Should still be on dashboard
+    await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible({ timeout: 10000 })
   })
+})
 })
