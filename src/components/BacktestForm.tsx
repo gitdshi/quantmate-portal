@@ -1,6 +1,6 @@
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Play, X } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { marketDataAPI, queueAPI, strategiesAPI } from '../lib/api'
 import { useAuthStore } from '../stores/auth'
 import SymbolSearch from './SymbolSearch'
@@ -10,11 +10,13 @@ interface BacktestFormProps {
   onSubmitSuccess?: (jobId: string) => void
 }
 
-interface Stock {
-  symbol: string
+interface Strategy {
+  id: number
   name: string
-  vt_symbol: string
-  exchange: string
+  class_name: string
+  is_active: boolean
+  parameters?: Record<string, unknown>
+  version?: number
 }
 
 export default function BacktestForm({ onClose, onSubmitSuccess }: BacktestFormProps) {
@@ -26,8 +28,6 @@ export default function BacktestForm({ onClose, onSubmitSuccess }: BacktestFormP
   const [strategyId, setStrategyId] = useState<string>('')
   const [symbol, setSymbol] = useState('')
   const [symbolName, setSymbolName] = useState('')
-  const [searchTerm, setSearchTerm] = useState('')
-  const [showDropdown, setShowDropdown] = useState(false)
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [initialCapital, setInitialCapital] = useState('100000')
@@ -37,8 +37,6 @@ export default function BacktestForm({ onClose, onSubmitSuccess }: BacktestFormP
   const [error, setError] = useState('')
   const [activeTab, setActiveTab] = useState<'basic' | 'parameters'>('basic')
   const [parameters, setParameters] = useState<string>('{}')
-  
-  const dropdownRef = useRef<HTMLDivElement>(null)
 
   // Benchmark options (can be extended later)
   const [benchmarkOptions, setBenchmarkOptions] = useState<{value:string,label:string}[]>([
@@ -91,7 +89,15 @@ export default function BacktestForm({ onClose, onSubmitSuccess }: BacktestFormP
     refetchOnWindowFocus: false,
   })
 
-  const strategies = strategiesData?.data || []
+  const strategies = useMemo<Strategy[]>(() => {
+    const payload = strategiesData?.data
+    if (Array.isArray(payload)) return payload
+    if (payload && typeof payload === 'object' && 'data' in payload) {
+      const nested = (payload as { data?: unknown }).data
+      if (Array.isArray(nested)) return nested as Strategy[]
+    }
+    return []
+  }, [strategiesData])
   
   console.log('Final strategies array:', strategies)
   try {
@@ -100,34 +106,11 @@ export default function BacktestForm({ onClose, onSubmitSuccess }: BacktestFormP
     console.log('Could not stringify strategies', e)
   }
 
-  // Fetch stocks with paginated search (20 per page) and support loading more
-  const PAGE_SIZE = 20
-
-  const {
-    data: stocksPages,
-    isLoading: isLoadingStocks,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = useInfiniteQuery({
-    queryKey: ['stocks', searchTerm],
-    queryFn: async ({ pageParam = 0 }) => {
-      const keyword = searchTerm.trim() || undefined
-      const offset = pageParam || 0
-      const res = await marketDataAPI.symbols(undefined, keyword, PAGE_SIZE, offset)
-      return res.data as Stock[]
-    },
-    getNextPageParam: (lastPage, allPages) => (lastPage.length === PAGE_SIZE ? allPages.length * PAGE_SIZE : undefined),
-    initialPageParam: 0,
-    enabled: true,
-  })
-
-  const stocks: Stock[] = stocksPages?.pages.flat() || []
 
   // Auto-select first active strategy
   useEffect(() => {
     if (!strategyId && strategies.length > 0) {
-      const firstActive = strategies.find((s: any) => s.is_active) || strategies[0]
+      const firstActive = strategies.find((s) => s.is_active) ?? strategies[0]
       if (firstActive) {
         setStrategyId(String(firstActive.id))
         // Load strategy's default parameters
@@ -142,7 +125,7 @@ export default function BacktestForm({ onClose, onSubmitSuccess }: BacktestFormP
   // Update parameters when strategy changes
   useEffect(() => {
     if (strategyId) {
-      const selected = strategies.find((s: any) => String(s.id) === strategyId)
+      const selected = strategies.find((s) => String(s.id) === strategyId)
       if (selected && selected.parameters && Object.keys(selected.parameters).length > 0) {
         setParameters(JSON.stringify(selected.parameters, null, 2))
       } else {
@@ -163,18 +146,6 @@ export default function BacktestForm({ onClose, onSubmitSuccess }: BacktestFormP
       }
     }
   }, [strategyId, strategies])
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowDropdown(false)
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
 
   const submitMutation = useMutation({
     mutationFn: (data: {
@@ -200,46 +171,35 @@ export default function BacktestForm({ onClose, onSubmitSuccess }: BacktestFormP
     onError: (err: unknown) => {
       // Normalize various error shapes (string, array, object) into a string
       // and avoid rendering raw objects which cause React to crash.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const e: any = err
+      const e = err as { response?: { data?: { detail?: unknown } } }
       console.error('Backtest submit error:', e)
 
       let message = 'Failed to submit backtest'
       const resp = e?.response?.data
+      const detail = resp?.detail
 
-      if (resp) {
-        if (typeof resp.detail === 'string') {
-          message = resp.detail
-        } else if (Array.isArray(resp.detail)) {
-          // pydantic validation errors -> array of {loc,msg,...}
-          message = resp.detail.map((d: any) => d.msg || JSON.stringify(d)).join('; ')
-        } else if (typeof resp.detail === 'object') {
-          message = JSON.stringify(resp.detail)
-        } else if (typeof resp === 'string') {
-          message = resp
-        }
+      if (typeof detail === 'string') {
+        message = detail
+      } else if (Array.isArray(detail)) {
+        // pydantic validation errors -> array of {loc,msg,...}
+        const parts = detail.map((d) => {
+          if (typeof d === 'string') return d
+          if (d && typeof d === 'object' && 'msg' in d) {
+            const msg = (d as { msg?: unknown }).msg
+            return typeof msg === 'string' ? msg : JSON.stringify(d)
+          }
+          return JSON.stringify(d)
+        })
+        message = parts.join('; ')
+      } else if (detail && typeof detail === 'object') {
+        message = JSON.stringify(detail)
+      } else if (typeof resp === 'string') {
+        message = resp
       }
 
       setError(message)
     },
   })
-
-  const handleStockSelect = (stock: Stock) => {
-    setSymbol(stock.vt_symbol)
-    setSymbolName(stock.name)
-    setSearchTerm(`${stock.symbol} - ${stock.name}`)
-    setShowDropdown(false)
-  }
-
-  const handleSearchChange = (value: string) => {
-    setSearchTerm(value)
-    setShowDropdown(true)
-    // If user clears the search, clear the symbol
-    if (!value) {
-      setSymbol('')
-      setSymbolName('')
-    }
-  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -269,12 +229,12 @@ export default function BacktestForm({ onClose, onSubmitSuccess }: BacktestFormP
     let paramsObj: Record<string, unknown> = {}
     try {
       paramsObj = parameters && parameters.trim() ? JSON.parse(parameters) : {}
-    } catch (e) {
+    } catch {
       setError('Parameters must be valid JSON')
       return
     }
 
-    const selectedStrategy = strategies.find((s: any) => String(s.id) === strategyId)
+    const selectedStrategy = strategies.find((s) => String(s.id) === strategyId)
 
     submitMutation.mutate({
       strategy_id: strategyId ? parseInt(strategyId) : undefined,
@@ -355,7 +315,7 @@ export default function BacktestForm({ onClose, onSubmitSuccess }: BacktestFormP
               <option value="">
                 {isLoadingStrategies ? 'Loading strategies...' : isErrorStrategies ? 'Error loading strategies' : strategies.length === 0 ? 'No strategies available' : 'Select a strategy'}
               </option>
-              {strategies.map((strategy: { id: number; name: string; class_name: string; is_active: boolean; version?: number }) => (
+              {strategies.map((strategy) => (
                 <option key={strategy.id} value={strategy.id}>
                   {strategy.name} v{strategy.version || 1} ({strategy.class_name}) {!strategy.is_active && '(Inactive)'}
                 </option>
@@ -369,7 +329,6 @@ export default function BacktestForm({ onClose, onSubmitSuccess }: BacktestFormP
               onChoose={(stock) => {
                 setSymbol(stock.vt_symbol || '')
                 setSymbolName(stock.name || '')
-                setSearchTerm(`${stock.symbol} - ${stock.name}`)
               }}
             />
             {symbol && (
