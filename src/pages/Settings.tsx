@@ -42,7 +42,8 @@ export default function Settings() {
       setLoading(true)
       setError(null)
       const response = await dataSourceAPI.listItems()
-      setItems(response.data.data)
+      const payload = response?.data?.data ?? response?.data ?? []
+      setItems(Array.isArray(payload) ? payload : [])
     } catch {
       setError('Failed to load data source items')
     } finally {

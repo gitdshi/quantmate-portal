@@ -47,7 +47,7 @@ const mockItems = [
     name: '十大股东',
     source: 'tushare',
     api_identifier: 'top10_holders',
-    permission_level: '积分 �?5000',
+    permission_level: '积分 �?5000',
     enabled: false,
   },
   {
@@ -103,7 +103,7 @@ describe('Settings Page', () => {
       expect(screen.getAllByText('基础')).toHaveLength(2)
     })
 
-    expect(screen.getByText('积分 �?5000')).toBeInTheDocument()
+    expect(screen.getByText('积分 �?5000')).toBeInTheDocument()
     expect(screen.getByText('无需Token')).toBeInTheDocument()
   })
 
