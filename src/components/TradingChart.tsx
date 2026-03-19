@@ -187,13 +187,17 @@ export default function TradingChart({
   }, [stockPriceData, benchmarkData, trades])
 
   // Keep refs in sync for native event handlers
-  zoomStateRef.current = zoomState
-  chartDataLengthRef.current = chartData.length
+  useEffect(() => {
+    zoomStateRef.current = zoomState
+    chartDataLengthRef.current = chartData.length
+  }, [zoomState, chartData.length])
 
   // Initialize zoom to show all data
-  if (zoomState.endIndex === 0 && chartData.length > 0) {
-    setZoomState({ startIndex: 0, endIndex: chartData.length - 1 })
-  }
+  useEffect(() => {
+    if (zoomState.endIndex === 0 && chartData.length > 0) {
+      setZoomState({ startIndex: 0, endIndex: chartData.length - 1 })
+    }
+  }, [zoomState.endIndex, chartData.length])
 
   // Native wheel handler to prevent page scroll and zoom chart
   useEffect(() => {
