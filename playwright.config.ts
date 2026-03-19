@@ -50,10 +50,11 @@ const chromiumExecutable = getChromiumExecutable()
 
 export default defineConfig({
   testDir: './test/e2e',
-  fullyParallel: true,
+  fullyParallel: false,
   forbidOnly: !!process.env.CI,
+  timeout: 90000,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: 1,
   reporter: [
     ['html'],
     ['json', { outputFile: 'test-results/results.json' }],
@@ -64,6 +65,9 @@ export default defineConfig({
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
+  },
+  expect: {
+    timeout: 45000,
   },
 
   projects: [

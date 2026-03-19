@@ -186,17 +186,18 @@ class MyStrategy(CtaTemplate):
     try {
       setLoading(true)
       setError(null)
-      const { data } = await strategiesAPI.list()
-      console.log('[Strategies] Loaded strategies:', data)
-      setDbStrategies(data)
+      const { data: responseData } = await strategiesAPI.list()
+      console.log('[Strategies] Loaded strategies:', responseData)
+      const items = Array.isArray(responseData) ? responseData : (responseData.data ?? [])
+      setDbStrategies(items)
       
       // Auto-select first strategy if none selected and strategies exist
-      if (data.length > 0 && !selectedDbStrategy) {
-        console.log('[Strategies] Auto-selecting first strategy:', data[0].id)
+      if (items.length > 0 && !selectedDbStrategy) {
+        console.log('[Strategies] Auto-selecting first strategy:', items[0].id)
         // Fetch full strategy details including code
-        const fullStrategy = await strategiesAPI.get(data[0].id)
+        const fullStrategy = await strategiesAPI.get(items[0].id)
         setSelectedDbStrategy(fullStrategy.data)
-        await loadDbStrategyHistory(data[0].id)
+        await loadDbStrategyHistory(items[0].id)
       }
     } catch (err: unknown) {
       const error = err as { response?: { data?: { detail?: string }, status?: number } }

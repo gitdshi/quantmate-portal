@@ -95,7 +95,8 @@ export default function AIAssistant() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-4rem)]" data-testid="ai-assistant-page">
+    <div className="flex flex-col h-[calc(100vh-4rem)]" data-testid="ai-assistant-page">
+      <div className="flex flex-1 min-h-0">
       {/* Sidebar */}
       <div className="w-72 border-r border-gray-200 bg-gray-50 flex flex-col">
         <div className="p-4 border-b border-gray-200 flex items-center justify-between">
@@ -275,6 +276,7 @@ export default function AIAssistant() {
           </div>
         </div>
       )}
+    </div>
     </div>
   )
 }

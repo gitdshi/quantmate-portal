@@ -42,7 +42,7 @@ export default function Settings() {
       setLoading(true)
       setError(null)
       const response = await dataSourceAPI.listItems()
-      setItems(response.data)
+      setItems(response.data.data)
     } catch {
       setError('Failed to load data source items')
     } finally {
@@ -126,35 +126,6 @@ export default function Settings() {
     return { total: sourceItems.length, enabled: enabledCount }
   }
 
-  if (loading) {
-    return (
-      <div className="p-6 flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="p-6 space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Settings</h1>
-          <p className="text-muted-foreground mt-2">Manage data sources and system configuration</p>
-        </div>
-        <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-6 text-center">
-          <AlertCircle className="h-8 w-8 text-destructive mx-auto mb-2" />
-          <p className="text-destructive">{error}</p>
-          <button
-            onClick={fetchItems}
-            className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -172,6 +143,24 @@ export default function Settings() {
           <RefreshCw className="h-5 w-5" />
         </button>
       </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : error ? (
+        <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-6 text-center">
+          <AlertCircle className="h-8 w-8 text-destructive mx-auto mb-2" />
+          <p className="text-destructive">{error}</p>
+          <button
+            onClick={fetchItems}
+            className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+          >
+            Retry
+          </button>
+        </div>
+      ) : (
+      <>
 
       {/* Data Source Item Toggle Management */}
       <div className="bg-card border border-border rounded-lg">
@@ -318,6 +307,8 @@ export default function Settings() {
           </div>
         )}
       </div>
+      </>
+      )}
     </div>
   )
 }

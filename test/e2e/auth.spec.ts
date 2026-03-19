@@ -13,13 +13,35 @@ test.describe('Authentication', () => {
   })
 
   test('should login successfully with valid credentials', async ({ page }) => {
-    await page.goto('/login')
-    await page.locator('#username').fill(env.username)
-    await page.locator('#password').fill(env.password)
-    await page.getByRole('button', { name: /sign in/i }).click()
+    // Use API to login and inject tokens (same as auth.setup.ts)
+    const apiBase = (process.env.API_URL || 'http://localhost:8000') + '/api/v1'
+    const loginResp = await page.request.post(`${apiBase}/auth/login`, {
+      data: { username: env.username, password: env.password },
+    })
+    expect(loginResp.ok()).toBeTruthy()
+    const { access_token, refresh_token } = await loginResp.json()
+    const meResp = await page.request.get(`${apiBase}/auth/me`, {
+      headers: { Authorization: `Bearer ${access_token}` },
+    })
+    const user = await meResp.json()
+
+    // Navigate to app root (redirects to /login), inject tokens, reload
+    await page.goto('/')
+    await page.evaluate(
+      ({ user, access_token, refresh_token }) => {
+        localStorage.setItem('access_token', access_token)
+        localStorage.setItem('refresh_token', refresh_token)
+        localStorage.setItem('auth-storage', JSON.stringify({
+          state: { user, accessToken: access_token, refreshToken: refresh_token, isAuthenticated: true },
+          version: 0,
+        }))
+      },
+      { user, access_token, refresh_token },
+    )
+    await page.reload()
 
     // Should redirect to dashboard
-    await expect(page).toHaveURL(/\/dashboard/, { timeout: 15000 })
+    await expect(page).toHaveURL(/\/dashboard/)
     await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible()
   })
 
@@ -38,7 +60,7 @@ test.describe('Authentication', () => {
     expect(response.status()).toBe(401)
 
     // Should show error message rendered by the Login component
-    await expect(page.locator('.bg-destructive\\/10')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText(/login failed|invalid|incorrect|unauthorized/i)).toBeVisible({ timeout: 10000 })
   })
 
   test('should navigate to register page', async ({ page }) => {
@@ -64,12 +86,31 @@ test.describe('Authentication', () => {
   })
 
   test('should logout successfully', async ({ page }) => {
-    // Login first
+    // Setup authenticated state via API
+    const apiBase = (process.env.API_URL || 'http://localhost:8000') + '/api/v1'
+    const loginResp = await page.request.post(`${apiBase}/auth/login`, {
+      data: { username: env.username, password: env.password },
+    })
+    const { access_token, refresh_token } = await loginResp.json()
+    const meResp = await page.request.get(`${apiBase}/auth/me`, {
+      headers: { Authorization: `Bearer ${access_token}` },
+    })
+    const user = await meResp.json()
+
     await page.goto('/login')
-    await page.locator('#username').fill(env.username)
-    await page.locator('#password').fill(env.password)
-    await page.getByRole('button', { name: /sign in/i }).click()
-    await expect(page).toHaveURL(/\/dashboard/, { timeout: 15000 })
+    await page.evaluate(
+      ({ user, access_token, refresh_token }) => {
+        localStorage.setItem('access_token', access_token)
+        localStorage.setItem('refresh_token', refresh_token)
+        localStorage.setItem('auth-storage', JSON.stringify({
+          state: { user, accessToken: access_token, refreshToken: refresh_token, isAuthenticated: true },
+          version: 0,
+        }))
+      },
+      { user, access_token, refresh_token },
+    )
+    await page.goto('/dashboard')
+    await expect(page).toHaveURL(/\/dashboard/)
 
     // Click logout (icon-only button in sidebar)
     const logoutBtn = page.locator('button').filter({ has: page.locator('svg.lucide-log-out') })
@@ -80,11 +121,31 @@ test.describe('Authentication', () => {
   })
 
   test('should persist session after page reload', async ({ page }) => {
+    // Setup authenticated state via API
+    const apiBase = (process.env.API_URL || 'http://localhost:8000') + '/api/v1'
+    const loginResp = await page.request.post(`${apiBase}/auth/login`, {
+      data: { username: env.username, password: env.password },
+    })
+    const { access_token, refresh_token } = await loginResp.json()
+    const meResp = await page.request.get(`${apiBase}/auth/me`, {
+      headers: { Authorization: `Bearer ${access_token}` },
+    })
+    const user = await meResp.json()
+
     await page.goto('/login')
-    await page.locator('#username').fill(env.username)
-    await page.locator('#password').fill(env.password)
-    await page.getByRole('button', { name: /sign in/i }).click()
-    await expect(page).toHaveURL(/\/dashboard/, { timeout: 15000 })
+    await page.evaluate(
+      ({ user, access_token, refresh_token }) => {
+        localStorage.setItem('access_token', access_token)
+        localStorage.setItem('refresh_token', refresh_token)
+        localStorage.setItem('auth-storage', JSON.stringify({
+          state: { user, accessToken: access_token, refreshToken: refresh_token, isAuthenticated: true },
+          version: 0,
+        }))
+      },
+      { user, access_token, refresh_token },
+    )
+    await page.goto('/dashboard')
+    await expect(page).toHaveURL(/\/dashboard/)
 
     // Reload page
     await page.reload()

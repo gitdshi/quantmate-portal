@@ -1,0 +1,60 @@
+import { expect, test } from '@playwright/test'
+import { env } from './env'
+
+/**
+ * API Health Check — verifies all major backend endpoints respond.
+ * Uses direct API calls (not browser navigation) to isolate backend issues.
+ */
+test.describe('API Health Check', () => {
+  let authToken: string
+
+  test.beforeAll(async ({ request }) => {
+    // Login to get auth token
+    const loginRes = await request.post(`${env.apiURL}/api/v1/auth/login`, {
+      data: { username: env.username, password: env.password },
+    })
+    expect(loginRes.ok()).toBeTruthy()
+    const loginData = await loginRes.json()
+    authToken = loginData.access_token
+  })
+
+  const endpoints = [
+    { name: 'Auth - Me', method: 'GET', path: '/api/v1/auth/me' },
+    { name: 'Queue - Stats', method: 'GET', path: '/api/v1/queue/stats' },
+    { name: 'Queue - Jobs', method: 'GET', path: '/api/v1/queue/jobs' },
+    { name: 'Strategies - List', method: 'GET', path: '/api/v1/strategies' },
+    { name: 'Data - Symbols', method: 'GET', path: '/api/v1/data/symbols?limit=5' },
+    { name: 'Data - Overview', method: 'GET', path: '/api/v1/data/overview' },
+    { name: 'Data - Indexes', method: 'GET', path: '/api/v1/data/indexes' },
+    { name: 'System - Sync Status', method: 'GET', path: '/api/v1/system/sync-status' },
+    { name: 'Portfolio - Positions', method: 'GET', path: '/api/v1/portfolio/positions' },
+    { name: 'Trade - Orders', method: 'GET', path: '/api/v1/trade/orders' },
+    { name: 'Analytics - Dashboard', method: 'GET', path: '/api/v1/analytics/dashboard' },
+    { name: 'Analytics - Risk Metrics', method: 'GET', path: '/api/v1/analytics/risk-metrics' },
+    { name: 'Alerts - Rules', method: 'GET', path: '/api/v1/alerts/rules' },
+    { name: 'Alerts - History', method: 'GET', path: '/api/v1/alerts/history' },
+    { name: 'Alerts - Channels', method: 'GET', path: '/api/v1/alerts/channels' },
+    { name: 'Reports - List', method: 'GET', path: '/api/v1/reports' },
+    { name: 'AI - Conversations', method: 'GET', path: '/api/v1/ai/conversations' },
+    { name: 'AI - Models', method: 'GET', path: '/api/v1/ai/models' },
+    { name: 'Factors - List', method: 'GET', path: '/api/v1/factors' },
+    { name: 'Templates - Marketplace', method: 'GET', path: '/api/v1/templates/marketplace' },
+    { name: 'Templates - Mine', method: 'GET', path: '/api/v1/templates/mine' },
+    { name: 'Teams - Workspaces', method: 'GET', path: '/api/v1/teams/workspaces' },
+    { name: 'Teams - Shared With Me', method: 'GET', path: '/api/v1/teams/shares/received' },
+    { name: 'Auth - API Keys', method: 'GET', path: '/api/v1/auth/api-keys' },
+    { name: 'Auth - Sessions', method: 'GET', path: '/api/v1/auth/sessions' },
+    { name: 'Settings - Data Sources', method: 'GET', path: '/api/v1/settings/datasource-items' },
+    { name: 'Strategies - Builtin', method: 'GET', path: '/api/v1/strategies/builtin/list' },
+  ]
+
+  for (const endpoint of endpoints) {
+    test(`${endpoint.name} (${endpoint.method} ${endpoint.path}) should respond`, async ({ request }) => {
+      const res = await request.get(`${env.apiURL}${endpoint.path}`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      })
+      // Expect 200 or other non-error status (some endpoints may return 404 for empty data)
+      expect(res.status()).toBeLessThan(500)
+    })
+  }
+})
