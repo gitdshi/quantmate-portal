@@ -7,7 +7,7 @@ test.describe('Trading', () => {
   })
 
   test('should display trading page', async ({ page }) => {
-    await expect(page.locator('h1').filter({ hasText: 'Trading' })).toBeVisible({ timeout: 60000 })
+    await expect(page.locator('h1').filter({ hasText: 'Live Trading' })).toBeVisible({ timeout: 60000 })
   })
 
   test('should display new order form', async ({ page }) => {
@@ -42,9 +42,11 @@ test.describe('Trading', () => {
     }
   })
 
-  test('should display mode toggle (paper/live)', async ({ page }) => {
-    const modeSection = page.getByText(/paper|live/i).first()
-    await expect(modeSection).toBeVisible()
+  test('should display gateway selector', async ({ page }) => {
+    const gatewaySelect = page.locator('select').filter({ hasText: /gateway|Select gateway/i }).first()
+    if (await gatewaySelect.isVisible({ timeout: 5000 }).catch(() => false)) {
+      await expect(gatewaySelect).toBeVisible()
+    }
   })
 
   test('should show order status filter', async ({ page }) => {

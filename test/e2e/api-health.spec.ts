@@ -46,6 +46,18 @@ test.describe('API Health Check', () => {
     { name: 'Auth - Sessions', method: 'GET', path: '/api/v1/auth/sessions' },
     { name: 'Settings - Data Sources', method: 'GET', path: '/api/v1/settings/datasource-items' },
     { name: 'Strategies - Builtin', method: 'GET', path: '/api/v1/strategies/builtin/list' },
+    // VNPy gateway & auto-strategy endpoints
+    { name: 'Trade - Gateways', method: 'GET', path: '/api/v1/trade/gateways' },
+    { name: 'Trade - Gateway Positions', method: 'GET', path: '/api/v1/trade/gateway/positions' },
+    { name: 'Trade - Gateway Account', method: 'GET', path: '/api/v1/trade/gateway/account' },
+    { name: 'Trade - Auto Strategy Status', method: 'GET', path: '/api/v1/trade/auto-strategy/status' },
+    // Qlib AI model endpoints
+    { name: 'Qlib - Status', method: 'GET', path: '/api/v1/ai/qlib/status' },
+    { name: 'Qlib - Supported Models', method: 'GET', path: '/api/v1/ai/qlib/supported-models' },
+    { name: 'Qlib - Supported Datasets', method: 'GET', path: '/api/v1/ai/qlib/supported-datasets' },
+    { name: 'Qlib - Training Runs', method: 'GET', path: '/api/v1/ai/qlib/training-runs' },
+    // Qlib factor endpoints
+    { name: 'Factors - Qlib Sets', method: 'GET', path: '/api/v1/factors/qlib/factor-sets' },
   ]
 
   for (const endpoint of endpoints) {

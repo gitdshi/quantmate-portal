@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { analyticsAPI, authAPI, backtestAPI, marketDataAPI, optimizationAPI, portfolioAPI, queueAPI, strategiesAPI } from '@/lib/api'
+import { analyticsAPI, authAPI, backtestAPI, marketDataAPI, optimizationAPI, paperTradingAPI, portfolioAPI, qlibAPI, queueAPI, strategiesAPI, tradingAPI } from '@/lib/api'
 
 // Mock axios
 vi.mock('axios', () => ({
@@ -180,6 +180,116 @@ describe('API Client', () => {
 
     it('has cancel endpoint', () => {
       expect(optimizationAPI.cancel).toBeDefined()
+    })
+  })
+
+  describe('Trading API', () => {
+    it('has createOrder endpoint', () => {
+      expect(tradingAPI.createOrder).toBeDefined()
+    })
+
+    it('has listOrders endpoint', () => {
+      expect(tradingAPI.listOrders).toBeDefined()
+    })
+
+    it('has connectGateway endpoint', () => {
+      expect(tradingAPI.connectGateway).toBeDefined()
+    })
+
+    it('has disconnectGateway endpoint', () => {
+      expect(tradingAPI.disconnectGateway).toBeDefined()
+    })
+
+    it('has listGateways endpoint', () => {
+      expect(tradingAPI.listGateways).toBeDefined()
+    })
+
+    it('has startAutoStrategy endpoint', () => {
+      expect(tradingAPI.startAutoStrategy).toBeDefined()
+    })
+
+    it('has stopAutoStrategy endpoint', () => {
+      expect(tradingAPI.stopAutoStrategy).toBeDefined()
+    })
+
+    it('has listAutoStrategies endpoint', () => {
+      expect(tradingAPI.listAutoStrategies).toBeDefined()
+    })
+  })
+
+  describe('Paper Trading API', () => {
+    it('has deployStrategy endpoint', () => {
+      expect(paperTradingAPI.deployStrategy).toBeDefined()
+    })
+
+    it('has listDeployments endpoint', () => {
+      expect(paperTradingAPI.listDeployments).toBeDefined()
+    })
+
+    it('has stopDeployment endpoint', () => {
+      expect(paperTradingAPI.stopDeployment).toBeDefined()
+    })
+
+    it('has listPaperOrders endpoint', () => {
+      expect(paperTradingAPI.listPaperOrders).toBeDefined()
+    })
+
+    it('has createPaperOrder endpoint', () => {
+      expect(paperTradingAPI.createPaperOrder).toBeDefined()
+    })
+
+    it('has cancelPaperOrder endpoint', () => {
+      expect(paperTradingAPI.cancelPaperOrder).toBeDefined()
+    })
+
+    it('has getPaperPositions endpoint', () => {
+      expect(paperTradingAPI.getPaperPositions).toBeDefined()
+    })
+
+    it('has getPaperPerformance endpoint', () => {
+      expect(paperTradingAPI.getPaperPerformance).toBeDefined()
+    })
+  })
+
+  describe('Qlib API', () => {
+    it('has status endpoint', () => {
+      expect(qlibAPI.status).toBeDefined()
+    })
+
+    it('has supportedModels endpoint', () => {
+      expect(qlibAPI.supportedModels).toBeDefined()
+    })
+
+    it('has supportedDatasets endpoint', () => {
+      expect(qlibAPI.supportedDatasets).toBeDefined()
+    })
+
+    it('has train endpoint', () => {
+      expect(qlibAPI.train).toBeDefined()
+    })
+
+    it('has listTrainingRuns endpoint', () => {
+      expect(qlibAPI.listTrainingRuns).toBeDefined()
+    })
+
+    it('has getTrainingRun endpoint', () => {
+      expect(qlibAPI.getTrainingRun).toBeDefined()
+    })
+
+    it('has getPredictions endpoint', () => {
+      expect(qlibAPI.getPredictions).toBeDefined()
+    })
+
+    it('has convertData endpoint', () => {
+      expect(qlibAPI.convertData).toBeDefined()
+    })
+
+    it('has listFactorSets endpoint', () => {
+      expect(qlibAPI.listFactorSets).toBeDefined()
+    })
+
+    it('has computeFactors endpoint', () => {
+      expect(qlibAPI.computeFactors).toBeDefined()
     })
   })
 })

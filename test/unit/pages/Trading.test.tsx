@@ -12,6 +12,14 @@ vi.mock('@/lib/api', () => ({
     listOrders: vi.fn(),
     createOrder: vi.fn(),
     cancelOrder: vi.fn(),
+    connectGateway: vi.fn(),
+    disconnectGateway: vi.fn(),
+    listGateways: vi.fn(),
+    getGatewayPositions: vi.fn(),
+    getGatewayAccount: vi.fn(),
+    startAutoStrategy: vi.fn(),
+    stopAutoStrategy: vi.fn(),
+    listAutoStrategies: vi.fn(),
   },
 }))
 
@@ -20,29 +28,46 @@ import { tradingAPI } from '@/lib/api'
 const mockOrders = [
   {
     id: 1, symbol: '000001.SZ', direction: 'buy', order_type: 'limit',
-    quantity: 100, price: 10.5, status: 'filled', mode: 'paper',
+    quantity: 100, price: 10.5, status: 'filled', mode: 'live',
     filled_quantity: 100, avg_fill_price: 10.48, created_at: '2025-01-01T10:00:00Z',
   },
   {
     id: 2, symbol: '600519.SH', direction: 'sell', order_type: 'market',
-    quantity: 50, status: 'created', mode: 'paper',
+    quantity: 50, status: 'created', mode: 'live',
     created_at: '2025-01-02T10:00:00Z',
   },
 ]
 
-describe('Trading Page', () => {
+const mockGateways = [
+  { name: 'ctp_01', type: 'ctp', connected: true },
+]
+
+describe('Trading Page (Live-Only)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     ;(tradingAPI.listOrders as any).mockResolvedValue({ data: mockOrders })
     ;(tradingAPI.createOrder as any).mockResolvedValue({ data: { id: 3 } })
     ;(tradingAPI.cancelOrder as any).mockResolvedValue({ data: {} })
+    ;(tradingAPI.listGateways as any).mockResolvedValue({ data: { gateways: mockGateways } })
   })
 
   it('renders heading and order form', () => {
     render(<Trading />)
-    expect(screen.getByText('Trading')).toBeInTheDocument()
+    expect(screen.getByText('Live Trading')).toBeInTheDocument()
     expect(screen.getByText('New Order')).toBeInTheDocument()
     expect(screen.getByText('Submit Order')).toBeInTheDocument()
+  })
+
+  it('does not show paper/live mode toggle', () => {
+    render(<Trading />)
+    expect(screen.queryByText('Paper')).not.toBeInTheDocument()
+  })
+
+  it('shows gateway selector', async () => {
+    render(<Trading />)
+    await waitFor(() => {
+      expect(screen.getByText(/ctp_01/)).toBeInTheDocument()
+    })
   })
 
   it('displays orders after loading', async () => {
@@ -72,13 +97,12 @@ describe('Trading Page', () => {
   it('shows cancel button for cancellable orders', async () => {
     render(<Trading />)
     await waitFor(() => {
-      // order id=2 has status 'created', should have cancel button
       const cancelButtons = screen.getAllByTitle('Cancel')
       expect(cancelButtons.length).toBe(1)
     })
   })
 
-  it('submits an order', async () => {
+  it('submits a live order', async () => {
     render(<Trading />)
 
     const symbolInput = screen.getByPlaceholderText('000001.SZ')
@@ -93,7 +117,7 @@ describe('Trading Page', () => {
         direction: 'buy',
         order_type: 'market',
         quantity: 100,
-        mode: 'paper',
+        mode: 'live',
       }))
     })
   })
@@ -101,8 +125,7 @@ describe('Trading Page', () => {
   it('shows price field for limit orders', async () => {
     render(<Trading />)
 
-    // Change order type to limit
-    const typeSelect = screen.getAllByRole('combobox')[1] // second select is order type
+    const typeSelect = screen.getAllByRole('combobox')[1]
     fireEvent.change(typeSelect, { target: { value: 'limit' } })
 
     expect(screen.getByText('Price')).toBeInTheDocument()
@@ -112,6 +135,10 @@ describe('Trading Page', () => {
     ;(tradingAPI.listOrders as any).mockRejectedValue(new Error('Network error'))
     render(<Trading />)
     await waitFor(() => {
+      expect(screen.getByText('Failed to load orders')).toBeInTheDocument()
+    })
+  })
+})
       expect(screen.getByText('Failed to load orders')).toBeInTheDocument()
     })
   })

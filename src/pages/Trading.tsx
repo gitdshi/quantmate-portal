@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
   ArrowDownCircle, ArrowUpCircle, Clock, Filter, Loader2,
-  PlayCircle, RefreshCw, StopCircle, XCircle
+  PlayCircle, RefreshCw, XCircle
 } from 'lucide-react'
 import { tradingAPI } from '../lib/api'
 import type { Order } from '../types'
@@ -12,7 +12,13 @@ type OrderFormData = {
   order_type: 'market' | 'limit' | 'stop' | 'stop_limit'
   quantity: number
   price?: number
-  mode: 'paper' | 'live'
+  gateway_name: string
+}
+
+interface GatewayInfo {
+  name: string
+  type: string
+  connected: boolean
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -27,18 +33,19 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function Trading() {
   const [orders, setOrders] = useState<Order[]>([])
+  const [gateways, setGateways] = useState<GatewayInfo[]>([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState<string>('')
   const [form, setForm] = useState<OrderFormData>({
-    symbol: '', direction: 'buy', order_type: 'market', quantity: 100, mode: 'paper',
+    symbol: '', direction: 'buy', order_type: 'market', quantity: 100, gateway_name: '',
   })
 
   const fetchOrders = useCallback(async () => {
     setLoading(true)
     try {
-      const params: Record<string, unknown> = { page_size: 200 }
+      const params: Record<string, unknown> = { page_size: 200, mode: 'live' }
       if (statusFilter) params.status = statusFilter
       const { data } = await tradingAPI.listOrders(params as any)
       const result = data as any
@@ -52,6 +59,15 @@ export default function Trading() {
 
   useEffect(() => { fetchOrders() }, [fetchOrders])
 
+  useEffect(() => {
+    tradingAPI.listGateways().then(({ data }) => {
+      const gws = data.gateways ?? []
+      setGateways(gws)
+      const connected = gws.find((g: GatewayInfo) => g.connected)
+      if (connected) setForm(f => ({ ...f, gateway_name: connected.name }))
+    }).catch(() => {})
+  }, [])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.symbol || form.quantity <= 0) return
@@ -64,7 +80,8 @@ export default function Trading() {
         order_type: form.order_type,
         quantity: form.quantity,
         price: form.order_type !== 'market' ? form.price : undefined,
-        mode: form.mode,
+        mode: 'live',
+        gateway_name: form.gateway_name || undefined,
       })
       setForm(f => ({ ...f, symbol: '', quantity: 100, price: undefined }))
       fetchOrders()
@@ -86,7 +103,7 @@ export default function Trading() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Trading</h1>
+      <h1 className="text-2xl font-bold">Live Trading</h1>
 
       {/* Order Form */}
       <div className="bg-card border rounded-lg p-6">
@@ -139,19 +156,19 @@ export default function Trading() {
             </div>
           )}
           <div>
-            <label className="block text-sm font-medium mb-1">Mode</label>
-            <div className="flex items-center gap-2 mt-1">
-              <button type="button"
-                className={`px-3 py-1.5 text-sm rounded ${form.mode === 'paper' ? 'bg-blue-600 text-white' : 'bg-gray-100'}`}
-                onClick={() => setForm(f => ({ ...f, mode: 'paper' }))}>
-                Paper
-              </button>
-              <button type="button"
-                className={`px-3 py-1.5 text-sm rounded ${form.mode === 'live' ? 'bg-red-600 text-white' : 'bg-gray-100'}`}
-                onClick={() => setForm(f => ({ ...f, mode: 'live' }))}>
-                Live
-              </button>
-            </div>
+            <label className="block text-sm font-medium mb-1">Gateway</label>
+            <select
+              value={form.gateway_name}
+              onChange={e => setForm(f => ({ ...f, gateway_name: e.target.value }))}
+              className="w-full border rounded px-3 py-2 text-sm"
+            >
+              <option value="">Select gateway...</option>
+              {gateways.map(g => (
+                <option key={g.name} value={g.name}>
+                  {g.name} ({g.type}) {g.connected ? '●' : '○'}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="flex items-end">
             <button type="submit" disabled={submitting}
@@ -205,7 +222,6 @@ export default function Trading() {
                     <th className="text-right px-4 py-2">Qty</th>
                     <th className="text-right px-4 py-2">Price</th>
                     <th className="text-left px-4 py-2">Status</th>
-                    <th className="text-left px-4 py-2">Mode</th>
                     <th className="text-left px-4 py-2">Time</th>
                     <th className="text-right px-4 py-2">Actions</th>
                   </tr>
@@ -226,11 +242,6 @@ export default function Trading() {
                       <td className="px-4 py-2">
                         <span className={`px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[order.status] || ''}`}>
                           {order.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2">
-                        <span className={`text-xs px-1.5 py-0.5 rounded ${order.mode === 'paper' ? 'bg-blue-50 text-blue-600' : 'bg-red-50 text-red-600'}`}>
-                          {order.mode}
                         </span>
                       </td>
                       <td className="px-4 py-2 text-muted-foreground">{new Date(order.created_at).toLocaleString()}</td>

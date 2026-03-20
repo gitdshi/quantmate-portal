@@ -44,11 +44,14 @@ import {
   backtestAPI,
   marketDataAPI,
   optimizationAPI,
+  paperTradingAPI,
   portfolioAPI,
+  qlibAPI,
   queueAPI,
   strategiesAPI,
   strategyCodeAPI,
   systemAPI,
+  tradingAPI,
 } from '@/lib/api'
 
 // Capture interceptor registrations immediately after module load,
@@ -418,6 +421,163 @@ describe('API Client - HTTP Calls', () => {
     it('restoreCodeHistory sends POST', () => {
       strategyCodeAPI.restoreCodeHistory(42, 7)
       expect(mockPost).toHaveBeenCalledWith('/strategies/42/code-history/7/restore')
+    })
+  })
+
+  // ─── Trading API (gateway & auto-strategy) ───────────────
+  describe('tradingAPI - gateway management', () => {
+    it('connectGateway sends POST', () => {
+      tradingAPI.connectGateway({ gateway_type: 'ctp', config: { host: '127.0.0.1' } })
+      expect(mockPost).toHaveBeenCalledWith('/trade/gateway/connect', {
+        gateway_type: 'ctp', config: { host: '127.0.0.1' },
+      })
+    })
+
+    it('disconnectGateway sends POST with query param', () => {
+      tradingAPI.disconnectGateway('my_ctp')
+      expect(mockPost).toHaveBeenCalledWith('/trade/gateway/disconnect', null, {
+        params: { gateway_name: 'my_ctp' },
+      })
+    })
+
+    it('listGateways sends GET', () => {
+      tradingAPI.listGateways()
+      expect(mockGet).toHaveBeenCalledWith('/trade/gateways')
+    })
+
+    it('startAutoStrategy sends POST', () => {
+      tradingAPI.startAutoStrategy({
+        strategy_class_name: 'DoubleMa', vt_symbol: 'IF2406.CFFEX',
+      })
+      expect(mockPost).toHaveBeenCalledWith('/trade/auto-strategy/start', {
+        strategy_class_name: 'DoubleMa', vt_symbol: 'IF2406.CFFEX',
+      })
+    })
+
+    it('stopAutoStrategy sends POST', () => {
+      tradingAPI.stopAutoStrategy('test_001')
+      expect(mockPost).toHaveBeenCalledWith('/trade/auto-strategy/stop', {
+        strategy_name: 'test_001',
+      })
+    })
+
+    it('listAutoStrategies sends GET', () => {
+      tradingAPI.listAutoStrategies()
+      expect(mockGet).toHaveBeenCalledWith('/trade/auto-strategy/status')
+    })
+  })
+
+  // ─── Paper Trading API ───────────────────────────────────
+  describe('paperTradingAPI', () => {
+    it('deployStrategy sends POST', () => {
+      paperTradingAPI.deployStrategy({ strategy_id: 1, vt_symbol: 'IF2406.CFFEX', parameters: { fast: 10 } })
+      expect(mockPost).toHaveBeenCalledWith('/paper-trade/deploy', {
+        strategy_id: 1, vt_symbol: 'IF2406.CFFEX', parameters: { fast: 10 },
+      })
+    })
+
+    it('listDeployments sends GET', () => {
+      paperTradingAPI.listDeployments()
+      expect(mockGet).toHaveBeenCalledWith('/paper-trade/deployments')
+    })
+
+    it('stopDeployment sends POST with id', () => {
+      paperTradingAPI.stopDeployment(5)
+      expect(mockPost).toHaveBeenCalledWith('/paper-trade/deployments/5/stop')
+    })
+
+    it('listPaperOrders sends GET with params', () => {
+      paperTradingAPI.listPaperOrders({ status: 'filled', page: 2 })
+      expect(mockGet).toHaveBeenCalledWith('/paper-trade/orders', {
+        params: { status: 'filled', page: 2 },
+      })
+    })
+
+    it('createPaperOrder sends POST', () => {
+      paperTradingAPI.createPaperOrder({
+        symbol: '000001.SZ', direction: 'buy', order_type: 'market', quantity: 100,
+      })
+      expect(mockPost).toHaveBeenCalledWith('/paper-trade/orders', {
+        symbol: '000001.SZ', direction: 'buy', order_type: 'market', quantity: 100,
+      })
+    })
+
+    it('cancelPaperOrder sends POST with id', () => {
+      paperTradingAPI.cancelPaperOrder(10)
+      expect(mockPost).toHaveBeenCalledWith('/paper-trade/orders/10/cancel')
+    })
+
+    it('getPaperPositions sends GET', () => {
+      paperTradingAPI.getPaperPositions()
+      expect(mockGet).toHaveBeenCalledWith('/paper-trade/positions')
+    })
+
+    it('getPaperPerformance sends GET', () => {
+      paperTradingAPI.getPaperPerformance()
+      expect(mockGet).toHaveBeenCalledWith('/paper-trade/performance')
+    })
+  })
+
+  // ─── Qlib API ────────────────────────────────────────────
+  describe('qlibAPI', () => {
+    it('status sends GET', () => {
+      qlibAPI.status()
+      expect(mockGet).toHaveBeenCalledWith('/ai/qlib/status')
+    })
+
+    it('supportedModels sends GET', () => {
+      qlibAPI.supportedModels()
+      expect(mockGet).toHaveBeenCalledWith('/ai/qlib/supported-models')
+    })
+
+    it('supportedDatasets sends GET', () => {
+      qlibAPI.supportedDatasets()
+      expect(mockGet).toHaveBeenCalledWith('/ai/qlib/supported-datasets')
+    })
+
+    it('train sends POST', () => {
+      qlibAPI.train({ model_type: 'LightGBM', factor_set: 'Alpha158' })
+      expect(mockPost).toHaveBeenCalledWith('/ai/qlib/train', {
+        model_type: 'LightGBM', factor_set: 'Alpha158',
+      })
+    })
+
+    it('listTrainingRuns sends GET', () => {
+      qlibAPI.listTrainingRuns({ status: 'completed', limit: 10 })
+      expect(mockGet).toHaveBeenCalledWith('/ai/qlib/training-runs', {
+        params: { status: 'completed', limit: 10 },
+      })
+    })
+
+    it('getTrainingRun sends GET with id', () => {
+      qlibAPI.getTrainingRun(42)
+      expect(mockGet).toHaveBeenCalledWith('/ai/qlib/training-runs/42')
+    })
+
+    it('getPredictions sends GET with params', () => {
+      qlibAPI.getPredictions(42, { trade_date: '2024-01-02', top_n: 10 })
+      expect(mockGet).toHaveBeenCalledWith('/ai/qlib/training-runs/42/predictions', {
+        params: { trade_date: '2024-01-02', top_n: 10 },
+      })
+    })
+
+    it('convertData sends POST', () => {
+      qlibAPI.convertData({ start_date: '2023-01-01' })
+      expect(mockPost).toHaveBeenCalledWith('/ai/qlib/data/convert', {
+        start_date: '2023-01-01',
+      })
+    })
+
+    it('listFactorSets sends GET', () => {
+      qlibAPI.listFactorSets()
+      expect(mockGet).toHaveBeenCalledWith('/factors/qlib/factor-sets')
+    })
+
+    it('computeFactors sends POST', () => {
+      qlibAPI.computeFactors({ factor_set: 'Alpha158', instruments: 'csi300', start_date: '2023-01-01', end_date: '2024-12-31' })
+      expect(mockPost).toHaveBeenCalledWith('/factors/qlib/compute', {
+        factor_set: 'Alpha158', instruments: 'csi300', start_date: '2023-01-01', end_date: '2024-12-31',
+      })
     })
   })
 })

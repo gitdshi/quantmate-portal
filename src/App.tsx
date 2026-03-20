@@ -13,6 +13,8 @@ import Portfolio from './pages/Portfolio'
 import Settings from './pages/Settings'
 import Strategies from './pages/Strategies'
 import Trading from './pages/Trading'
+import PaperTrading from './pages/PaperTrading'
+import Positions from './pages/Positions'
 import Monitoring from './pages/Monitoring'
 import Reports from './pages/Reports'
 import AccountSecurity from './pages/AccountSecurity'
@@ -120,7 +122,9 @@ function App() {
         <Route path="market-data" element={<MarketData />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="portfolio" element={<Portfolio />} />
+        <Route path="paper-trading" element={<PaperTrading />} />
         <Route path="trading" element={<Trading />} />
+        <Route path="positions" element={<Positions />} />
         <Route path="monitoring" element={<Monitoring />} />
         <Route path="reports" element={<Reports />} />
         <Route path="account-security" element={<AccountSecurity />} />

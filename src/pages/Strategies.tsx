@@ -2,6 +2,7 @@ import { diffLines } from 'diff'
 import {
   Edit2,
   GitCompare,
+  Play,
   Plus,
   RefreshCw,
   Save,
@@ -720,6 +721,16 @@ class MyStrategy(CtaTemplate):
                                 )}
                               </div>
                               <div className="flex items-center gap-2">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    navigate(`/paper-trading?strategy_id=${strategy.id}`)
+                                  }}
+                                  className="p-2 text-green-600 hover:bg-green-50 rounded"
+                                  title="Deploy to Paper Trading"
+                                >
+                                  <Play size={16} />
+                                </button>
                                 <button
                                   onClick={async (e) => {
                                     e.stopPropagation()

@@ -2,6 +2,7 @@ import { X } from 'lucide-react'
 import { useState } from 'react'
 import MarketDataView from '../components/MarketDataView'
 import MarketOverview from '../components/MarketOverview'
+import RealtimeQuotePanel from '../components/RealtimeQuotePanel'
 import SymbolSearch from '../components/SymbolSearch'
 import TechnicalIndicators from '../components/TechnicalIndicators'
 
@@ -22,6 +23,8 @@ export default function MarketData() {
           View real-time market data and technical indicators
         </p>
       </div>
+
+      <RealtimeQuotePanel defaultSymbol={selectedSymbol} />
 
       <MarketOverview />
 

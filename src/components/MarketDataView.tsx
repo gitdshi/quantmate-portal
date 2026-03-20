@@ -22,6 +22,7 @@ export default function MarketDataView({ symbol }: MarketDataViewProps) {
   })
 
   const history = historyData?.data || []
+  const getDateValue = (row: { date?: string; datetime?: string }) => row.date || row.datetime || ''
 
   if (isLoading) {
     return (
@@ -105,7 +106,7 @@ export default function MarketDataView({ symbol }: MarketDataViewProps) {
       <div className="bg-card border border-border rounded-lg p-6">
         <h3 className="text-lg font-semibold mb-4">Price Chart</h3>
         <div className="h-64 flex items-end gap-1">
-          {history.slice(-30).map((dataPoint: { date: string; close: number }, index: number) => {
+          {history.slice(-30).map((dataPoint: { date?: string; datetime?: string; close: number }, index: number) => {
             const height = ((dataPoint.close - lowPrice) / (highPrice - lowPrice)) * 100
             return (
               <div
@@ -115,7 +116,7 @@ export default function MarketDataView({ symbol }: MarketDataViewProps) {
               >
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block bg-background border border-border rounded px-2 py-1 text-xs whitespace-nowrap z-10">
                   <div className="font-medium">${dataPoint.close.toFixed(2)}</div>
-                  <div className="text-muted-foreground">{new Date(dataPoint.date).toLocaleDateString()}</div>
+                  <div className="text-muted-foreground">{new Date(getDateValue(dataPoint)).toLocaleDateString()}</div>
                 </div>
               </div>
             )
@@ -143,7 +144,8 @@ export default function MarketDataView({ symbol }: MarketDataViewProps) {
             </thead>
             <tbody>
               {history.slice().reverse().map((row: {
-                date: string
+                date?: string
+                datetime?: string
                 open: number
                 high: number
                 low: number
@@ -151,7 +153,7 @@ export default function MarketDataView({ symbol }: MarketDataViewProps) {
                 volume: number
               }, index: number) => (
                 <tr key={index} className="border-t border-border hover:bg-muted/50">
-                  <td className="p-3">{new Date(row.date).toLocaleDateString()}</td>
+                  <td className="p-3">{new Date(getDateValue(row)).toLocaleDateString()}</td>
                   <td className="p-3 text-right">${row.open.toFixed(2)}</td>
                   <td className="p-3 text-right">${row.high.toFixed(2)}</td>
                   <td className="p-3 text-right">${row.low.toFixed(2)}</td>

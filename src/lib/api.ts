@@ -170,6 +170,15 @@ export const queueAPI = {
     slippage?: number
     benchmark?: string
     parameters?: Record<string, unknown>
+    engine_type?: 'vnpy' | 'qlib'
+    // Qlib-specific options (used when engine_type='qlib')
+    model_type?: string
+    factor_set?: string
+    universe?: string
+    strategy_type?: string
+    topk?: number
+    n_drop?: number
+    hyperparams?: Record<string, unknown>
   }) => api.post('/queue/backtest', data),
 
   submitBulkBacktest: (data: {
@@ -229,6 +238,10 @@ export const marketDataAPI = {
   symbolsByFilter: (params: { industry?: string; exchange?: string; limit?: number }) =>
     api.get('/data/symbols-by-filter', { params }),
   indexes: () => api.get('/data/indexes'),
+  quote: (params: { symbol: string; market?: string }) =>
+    api.get('/data/quote', { params }),
+  quoteSeries: (params: { symbol: string; market?: string; start_ts?: number; end_ts?: number }) =>
+    api.get('/data/quote/series', { params }),
 }
 
 // Analytics API
@@ -243,6 +256,14 @@ export const analyticsAPI = {
 // System API
 export const systemAPI = {
   syncStatus: () => api.get('/system/sync-status'),
+  listConfigs: (category?: string) => api.get('/system/configs', { params: { category } }),
+  upsertConfig: (data: {
+    config_key: string
+    config_value: string
+    category?: string
+    description?: string
+    user_overridable?: boolean
+  }) => api.put('/system/configs', data),
 }
 
 // Portfolio API
@@ -307,9 +328,9 @@ export const strategyCodeAPI = {
 // Data Source Settings API
 export const dataSourceAPI = {
   listItems: () => api.get('/settings/datasource-items'),
-  updateItem: (itemKey: string, data: { enabled: boolean }) =>
-    api.put(`/settings/datasource-items/${itemKey}`, data),
-  batchUpdate: (data: { items: Array<{ item_key: string; enabled: boolean }> }) =>
+  updateItem: (itemKey: string, data: { enabled: boolean; source: string }) =>
+    api.put(`/settings/datasource-items/${itemKey}`, { enabled: data.enabled }, { params: { source: data.source } }),
+  batchUpdate: (data: { items: Array<{ source: string; item_key: string; enabled: boolean }> }) =>
     api.put('/settings/datasource-items/batch', data),
   testConnection: (source: string) =>
     api.post(`/settings/datasource-items/test/${source}`),
@@ -319,12 +340,50 @@ export const dataSourceAPI = {
 export const tradingAPI = {
   createOrder: (data: {
     symbol: string; direction: string; order_type: string;
-    quantity: number; price?: number; mode?: string
+    quantity: number; price?: number; mode?: string; gateway_name?: string
   }) => api.post('/trade/orders', data),
   listOrders: (params?: { status?: string; mode?: string; page?: number; page_size?: number }) =>
     api.get('/trade/orders', { params }),
   getOrder: (id: number) => api.get(`/trade/orders/${id}`),
   cancelOrder: (id: number) => api.post(`/trade/orders/${id}/cancel`),
+
+  // Gateway management (vnpy live trading)
+  connectGateway: (data: { gateway_name: string; gateway_type: string; config?: Record<string, unknown> }) =>
+    api.post('/trade/gateway/connect', data),
+  disconnectGateway: (data: { gateway_name: string }) =>
+    api.post('/trade/gateway/disconnect', data),
+  listGateways: () => api.get('/trade/gateways'),
+  getGatewayPositions: (params?: { gateway_name?: string }) =>
+    api.get('/trade/gateway/positions', { params }),
+  getGatewayAccount: (params?: { gateway_name?: string }) =>
+    api.get('/trade/gateway/account', { params }),
+
+  // Auto-strategy (CTA live execution)
+  startAutoStrategy: (data: {
+    strategy_class_name: string; vt_symbol: string;
+    parameters?: Record<string, unknown>; gateway_name?: string
+  }) => api.post('/trade/auto-strategy/start', data),
+  stopAutoStrategy: (data: { strategy_name: string }) =>
+    api.post('/trade/auto-strategy/stop', data),
+  listAutoStrategies: () => api.get('/trade/auto-strategy/status'),
+}
+
+// Paper Trading API (simulation environment)
+export const paperTradingAPI = {
+  deployStrategy: (data: {
+    strategy_id: number; vt_symbol: string; parameters?: Record<string, unknown>
+  }) => api.post('/paper-trade/deploy', data),
+  listDeployments: () => api.get('/paper-trade/deployments'),
+  stopDeployment: (id: number) => api.post(`/paper-trade/deployments/${id}/stop`),
+  listPaperOrders: (params?: { status?: string; page?: number; page_size?: number }) =>
+    api.get('/paper-trade/orders', { params }),
+  createPaperOrder: (data: {
+    symbol: string; direction: string; order_type: string;
+    quantity: number; price?: number
+  }) => api.post('/paper-trade/orders', data),
+  cancelPaperOrder: (id: number) => api.post(`/paper-trade/orders/${id}/cancel`),
+  getPaperPositions: () => api.get('/paper-trade/positions'),
+  getPaperPerformance: () => api.get('/paper-trade/performance'),
 }
 
 // Risk API
@@ -482,4 +541,37 @@ export const teamAPI = {
   shareStrategy: (data: { strategy_id: number; shared_with_user_id: number; permission?: string }) =>
     api.post('/teams/shares', data),
   revokeShare: (id: number) => api.delete(`/teams/shares/${id}`),
+}
+
+// Qlib AI Models API
+export const qlibAPI = {
+  // Status & supported options
+  status: () => api.get('/ai/qlib/status'),
+  supportedModels: () => api.get('/ai/qlib/supported-models'),
+  supportedDatasets: () => api.get('/ai/qlib/supported-datasets'),
+
+  // Model training
+  train: (data: {
+    model_type?: string; factor_set?: string; universe?: string;
+    train_start?: string; train_end?: string;
+    valid_start?: string; valid_end?: string;
+    test_start?: string; test_end?: string;
+    hyperparams?: Record<string, unknown>
+  }) => api.post('/ai/qlib/train', data),
+  listTrainingRuns: (params?: { status?: string; limit?: number; offset?: number }) =>
+    api.get('/ai/qlib/training-runs', { params }),
+  getTrainingRun: (runId: number) => api.get(`/ai/qlib/training-runs/${runId}`),
+  getPredictions: (runId: number, params?: { trade_date?: string; top_n?: number }) =>
+    api.get(`/ai/qlib/training-runs/${runId}/predictions`, { params }),
+
+  // Data conversion (tushare/akshare → Qlib binary)
+  convertData: (data?: { start_date?: string; end_date?: string; use_akshare_supplement?: boolean }) =>
+    api.post('/ai/qlib/data/convert', data || {}),
+
+  // Factor computation
+  listFactorSets: () => api.get('/factors/qlib/factor-sets'),
+  computeFactors: (data: {
+    factor_set?: string; instruments?: string;
+    start_date?: string; end_date?: string
+  }) => api.post('/factors/qlib/compute', data),
 }

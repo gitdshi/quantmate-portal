@@ -18,6 +18,18 @@ vi.mock('@/lib/api', () => ({
     runEvaluation: vi.fn(),
     deleteEvaluation: vi.fn(),
   },
+  qlibAPI: {
+    listFactorSets: vi.fn(),
+    computeFactors: vi.fn(),
+    status: vi.fn(),
+    supportedModels: vi.fn(),
+    supportedDatasets: vi.fn(),
+    train: vi.fn(),
+    listTrainingRuns: vi.fn(),
+    getTrainingRun: vi.fn(),
+    getPredictions: vi.fn(),
+    convertData: vi.fn(),
+  },
 }))
 
 import { factorAPI } from '@/lib/api'
