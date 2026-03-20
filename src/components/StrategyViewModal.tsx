@@ -1,4 +1,5 @@
 import { Calendar, Code, Settings, User, X } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import type { Strategy } from '../types'
 
 interface StrategyViewModalProps {
@@ -8,6 +9,7 @@ interface StrategyViewModalProps {
 }
 
 export default function StrategyViewModal({ strategy, onClose, onEdit }: StrategyViewModalProps) {
+  const { t } = useTranslation(['strategies', 'common'])
   return (
     <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-card border border-border rounded-lg shadow-lg w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
@@ -24,7 +26,7 @@ export default function StrategyViewModal({ strategy, onClose, onEdit }: Strateg
                   : 'bg-gray-500/10 text-gray-500'
               }`}
             >
-              {strategy.is_active ? 'Active' : 'Inactive'}
+              {strategy.is_active ? t('common:active') : t('common:inactive')}
             </span>
           </div>
           <button
@@ -38,7 +40,7 @@ export default function StrategyViewModal({ strategy, onClose, onEdit }: Strateg
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {strategy.description && (
             <div>
-              <h3 className="text-sm font-medium text-muted-foreground mb-2">Description</h3>
+              <h3 className="text-sm font-medium text-muted-foreground mb-2">{t('common:description')}</h3>
               <p className="text-sm">{strategy.description}</p>
             </div>
           )}
@@ -46,12 +48,12 @@ export default function StrategyViewModal({ strategy, onClose, onEdit }: Strateg
           <div className="grid grid-cols-2 gap-4">
             <div className="flex items-center gap-2 text-sm">
               <User className="h-4 w-4 text-muted-foreground" />
-              <span className="text-muted-foreground">User ID:</span>
+              <span className="text-muted-foreground">{t('view.userId')}</span>
               <span>{strategy.user_id}</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
               <Calendar className="h-4 w-4 text-muted-foreground" />
-              <span className="text-muted-foreground">Created:</span>
+              <span className="text-muted-foreground">{t('view.created')}</span>
               <span>{new Date(strategy.created_at).toLocaleString()}</span>
             </div>
           </div>
@@ -60,7 +62,7 @@ export default function StrategyViewModal({ strategy, onClose, onEdit }: Strateg
             <div>
               <div className="flex items-center gap-2 mb-3">
                 <Settings className="h-4 w-4 text-muted-foreground" />
-                <h3 className="text-sm font-medium">Parameters</h3>
+                <h3 className="text-sm font-medium">{t('common:parameters')}</h3>
               </div>
               <div className="bg-muted/50 rounded-lg p-4 space-y-2">
                 {Object.entries(strategy.parameters).map(([key, value]) => (
@@ -76,7 +78,7 @@ export default function StrategyViewModal({ strategy, onClose, onEdit }: Strateg
           <div>
             <div className="flex items-center gap-2 mb-3">
               <Code className="h-4 w-4 text-muted-foreground" />
-              <h3 className="text-sm font-medium">Strategy Code</h3>
+              <h3 className="text-sm font-medium">{t('view.strategyCode')}</h3>
             </div>
             <div className="bg-muted/50 rounded-lg p-4 overflow-x-auto">
               <pre className="text-xs font-mono">{strategy.code}</pre>
@@ -89,13 +91,13 @@ export default function StrategyViewModal({ strategy, onClose, onEdit }: Strateg
             onClick={onClose}
             className="px-4 py-2 border border-input rounded-md hover:bg-muted transition-colors"
           >
-            Close
+            {t('common:close')}
           </button>
           <button
             onClick={onEdit}
             className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
           >
-            Edit Strategy
+            {t('editStrategy')}
           </button>
         </div>
       </div>

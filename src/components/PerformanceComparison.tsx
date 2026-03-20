@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { BarChart2, TrendingDown, TrendingUp } from 'lucide-react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
 import type { BacktestResult } from '../types'
 
@@ -19,6 +20,7 @@ interface ComparisonMetrics {
 }
 
 export default function PerformanceComparison() {
+  const { t } = useTranslation(['backtest', 'common'])
   const [selectedIds, setSelectedIds] = useState<string[]>([])
 
   // Fetch backtest history
@@ -53,16 +55,16 @@ export default function PerformanceComparison() {
   }
 
   const metrics = [
-    { key: 'total_return', label: 'Total Return', format: (v: number) => `${v.toFixed(2)}%`, colorize: true },
-    { key: 'annual_return', label: 'Annual Return', format: (v: number) => `${v.toFixed(2)}%`, colorize: true },
-    { key: 'sharpe_ratio', label: 'Sharpe Ratio', format: (v: number) => v.toFixed(2), colorize: false },
-    { key: 'max_drawdown', label: 'Max Drawdown', format: (v: number) => `${v.toFixed(2)}%`, colorize: false },
-    { key: 'volatility', label: 'Volatility', format: (v: number) => `${v.toFixed(2)}%`, colorize: false },
-    { key: 'winning_rate', label: 'Win Rate', format: (v: number) => `${v.toFixed(1)}%`, colorize: false },
-    { key: 'total_trades', label: 'Total Trades', format: (v: number) => v.toString(), colorize: false },
-    { key: 'profit_factor', label: 'Profit Factor', format: (v: number) => v.toFixed(2), colorize: false },
-    { key: 'avg_win', label: 'Avg Win', format: (v: number) => `$${v.toFixed(2)}`, colorize: false },
-    { key: 'avg_loss', label: 'Avg Loss', format: (v: number) => `$${v.toFixed(2)}`, colorize: false },
+    { key: 'total_return', label: t('metrics.totalReturn'), format: (v: number) => `${v.toFixed(2)}%`, colorize: true },
+    { key: 'annual_return', label: t('metrics.annualReturn'), format: (v: number) => `${v.toFixed(2)}%`, colorize: true },
+    { key: 'sharpe_ratio', label: t('metrics.sharpeRatio'), format: (v: number) => v.toFixed(2), colorize: false },
+    { key: 'max_drawdown', label: t('metrics.maxDrawdown'), format: (v: number) => `${v.toFixed(2)}%`, colorize: false },
+    { key: 'volatility', label: t('metrics.volatility'), format: (v: number) => `${v.toFixed(2)}%`, colorize: false },
+    { key: 'winning_rate', label: t('metrics.winRate'), format: (v: number) => `${v.toFixed(1)}%`, colorize: false },
+    { key: 'total_trades', label: t('metrics.totalTrades'), format: (v: number) => v.toString(), colorize: false },
+    { key: 'profit_factor', label: t('metrics.profitFactor'), format: (v: number) => v.toFixed(2), colorize: false },
+    { key: 'avg_win', label: t('metrics.avgWin'), format: (v: number) => `$${v.toFixed(2)}`, colorize: false },
+    { key: 'avg_loss', label: t('metrics.avgLoss'), format: (v: number) => `$${v.toFixed(2)}`, colorize: false },
   ]
 
   return (
@@ -70,10 +72,10 @@ export default function PerformanceComparison() {
       {/* Selection Panel */}
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          Select Backtests to Compare (2-5)
+          {t('comparison.selectToCompare', { min: 2, max: 5 })}
         </h3>
         <div className="text-sm text-gray-600 mb-4">
-          Selected: {selectedIds.length} / 5
+          {t('comparison.selected')}: {selectedIds.length} / 5
         </div>
         <div className="max-h-64 overflow-y-auto space-y-2">
           {backtests?.map((backtest: BacktestResult) => (
@@ -106,7 +108,7 @@ export default function PerformanceComparison() {
                   )}
                 </div>
                 <div className="text-sm text-gray-600">
-                  Job ID: {backtest.job_id}
+                  {t('common:id')}: {backtest.job_id}
                 </div>
               </div>
             </label>
@@ -119,7 +121,7 @@ export default function PerformanceComparison() {
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
           <BarChart2 className="w-12 h-12 text-blue-600 mx-auto mb-3" />
           <p className="text-gray-700">
-            Select at least 2 backtests to compare their performance
+            {t('comparison.noItemsToCompare')}
           </p>
         </div>
       )}
@@ -133,7 +135,7 @@ export default function PerformanceComparison() {
       {selectedIds.length >= 2 && !isLoading && comparisonData && (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
           <div className="p-6 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Performance Comparison</h3>
+            <h3 className="text-lg font-semibold text-gray-900">{t('comparison.title')}</h3>
           </div>
           
           <div className="overflow-x-auto">
@@ -141,7 +143,7 @@ export default function PerformanceComparison() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10">
-                    Metric
+                    {t('comparison.metric')}
                   </th>
                   {comparisonData.map((item, idx) => (
                     <th
@@ -206,7 +208,7 @@ export default function PerformanceComparison() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Return Comparison */}
           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <h4 className="text-base font-semibold text-gray-900 mb-4">Return Comparison</h4>
+            <h4 className="text-base font-semibold text-gray-900 mb-4">{t('comparison.returnComparison')}</h4>
             <div className="space-y-3">
               {comparisonData.map((item, idx) => {
                 const maxReturn = Math.max(...comparisonData.map(d => Math.abs(d.total_return)))
@@ -234,7 +236,7 @@ export default function PerformanceComparison() {
 
           {/* Risk-Adjusted Return (Sharpe Ratio) */}
           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <h4 className="text-base font-semibold text-gray-900 mb-4">Risk-Adjusted Return</h4>
+            <h4 className="text-base font-semibold text-gray-900 mb-4">{t('comparison.riskAdjustedReturn')}</h4>
             <div className="space-y-3">
               {comparisonData.map((item, idx) => {
                 const maxSharpe = Math.max(...comparisonData.map(d => Math.abs(d.sharpe_ratio)))

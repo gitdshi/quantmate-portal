@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Copy, X } from 'lucide-react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { strategiesAPI } from '../lib/api'
 
 interface BuiltinStrategiesModalProps {
@@ -9,6 +10,7 @@ interface BuiltinStrategiesModalProps {
 }
 
 export default function BuiltinStrategiesModal({ onClose, onCreate }: BuiltinStrategiesModalProps) {
+  const { t } = useTranslation(['strategies', 'common'])
   const [selectedStrategy, setSelectedStrategy] = useState<{ name: string; code: string } | null>(null)
 
   const { data: strategiesData, isLoading } = useQuery({
@@ -29,7 +31,7 @@ export default function BuiltinStrategiesModal({ onClose, onCreate }: BuiltinStr
     <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-card border border-border rounded-lg shadow-lg w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
         <div className="flex items-center justify-between p-4 border-b border-border">
-          <h2 className="text-xl font-semibold">Built-in Strategies</h2>
+          <h2 className="text-xl font-semibold">{t('builtin.title')}</h2>
           <button
             onClick={onClose}
             className="p-2 hover:bg-muted rounded-md transition-colors"
@@ -42,11 +44,11 @@ export default function BuiltinStrategiesModal({ onClose, onCreate }: BuiltinStr
           <div className="w-1/3 border-r border-border overflow-y-auto">
             {isLoading ? (
               <div className="p-4 text-center text-muted-foreground">
-                Loading strategies...
+                {t('builtin.loadingStrategies')}
               </div>
             ) : builtinStrategies.length === 0 ? (
               <div className="p-4 text-center text-muted-foreground">
-                No built-in strategies available
+                {t('builtin.noStrategies')}
               </div>
             ) : (
               <div className="p-2">
@@ -76,7 +78,7 @@ export default function BuiltinStrategiesModal({ onClose, onCreate }: BuiltinStr
                 <div className="mb-4">
                   <h3 className="text-lg font-semibold mb-2">{selectedStrategy.name}</h3>
                   <p className="text-sm text-muted-foreground">
-                    Preview the strategy code below
+                    {t('builtin.previewCode')}
                   </p>
                 </div>
                 <div className="bg-muted/50 rounded-lg p-4 overflow-x-auto">
@@ -85,7 +87,7 @@ export default function BuiltinStrategiesModal({ onClose, onCreate }: BuiltinStr
               </div>
             ) : (
               <div className="flex items-center justify-center h-full text-muted-foreground">
-                Select a strategy to preview
+                {t('builtin.selectToPreview')}
               </div>
             )}
           </div>
@@ -96,7 +98,7 @@ export default function BuiltinStrategiesModal({ onClose, onCreate }: BuiltinStr
             onClick={onClose}
             className="px-4 py-2 border border-input rounded-md hover:bg-muted transition-colors"
           >
-            Cancel
+            {t('common:cancel')}
           </button>
           <button
             onClick={handleUseStrategy}
@@ -104,7 +106,7 @@ export default function BuiltinStrategiesModal({ onClose, onCreate }: BuiltinStr
             className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
           >
             <Copy className="h-4 w-4" />
-            Use This Strategy
+            {t('builtin.useStrategy')}
           </button>
         </div>
       </div>

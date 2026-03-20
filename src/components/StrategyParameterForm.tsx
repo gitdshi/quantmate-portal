@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Plus, Trash2 } from 'lucide-react'
 
 /** Supported parameter types for auto-rendering. */
@@ -154,6 +155,7 @@ function FreeFormEditor({
   onChange: (v: Record<string, unknown>) => void
   readOnly: boolean
 }) {
+  const { t } = useTranslation(['strategies'])
   const [entries, setEntries] = useState<{ key: string; value: string }[]>([])
 
   useEffect(() => {
@@ -180,13 +182,13 @@ function FreeFormEditor({
   return (
     <div className="space-y-2">
       <div className="grid grid-cols-[1fr_1fr_auto] gap-2 text-xs font-medium text-gray-500 mb-1">
-        <span>Key</span><span>Value</span><span />
+        <span>{t('parameterForm.key')}</span><span>{t('parameterForm.value')}</span><span />
       </div>
       {entries.map((e, i) => (
         <div key={i} className="grid grid-cols-[1fr_1fr_auto] gap-2 items-center">
           <input
             className="border rounded px-2 py-1 text-sm"
-            placeholder="parameter_name"
+            placeholder={t('parameterForm.parameterNamePlaceholder')}
             value={e.key}
             disabled={readOnly}
             onChange={(ev) => {
@@ -197,7 +199,7 @@ function FreeFormEditor({
           />
           <input
             className="border rounded px-2 py-1 text-sm"
-            placeholder="value"
+            placeholder={t('parameterForm.valuePlaceholder')}
             value={e.value}
             disabled={readOnly}
             onChange={(ev) => {
@@ -221,7 +223,7 @@ function FreeFormEditor({
           className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800"
           onClick={() => sync([...entries, { key: '', value: '' }])}
         >
-          <Plus size={14} /> Add parameter
+          <Plus size={14} /> {t('parameterForm.addParameter')}
         </button>
       )}
     </div>

@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { Calendar, DollarSign, Play, TrendingUp, X } from 'lucide-react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
 import type { Strategy } from '../types'
 
@@ -37,6 +38,7 @@ interface OptimizationResult {
 }
 
 export default function StrategyOptimization() {
+  const { t } = useTranslation(['strategies', 'common'])
   const [isOpen, setIsOpen] = useState(false)
   const [formData, setFormData] = useState({
     strategy_id: '',
@@ -100,7 +102,7 @@ export default function StrategyOptimization() {
   }
 
   const addParameter = () => {
-    const paramName = prompt('Enter parameter name:')
+    const paramName = prompt(t('optimization.enterParamName'))
     if (paramName) {
       setParamRanges({
         ...paramRanges,
@@ -132,7 +134,7 @@ export default function StrategyOptimization() {
         className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
       >
         <TrendingUp className="w-5 h-5" />
-        Optimize Strategy
+        {t('optimization.optimizeStrategy')}
       </button>
     )
   }
@@ -141,7 +143,7 @@ export default function StrategyOptimization() {
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white">
-          <h2 className="text-2xl font-bold text-gray-900">Strategy Optimization</h2>
+          <h2 className="text-2xl font-bold text-gray-900">{t('optimization.title')}</h2>
           <button
             onClick={() => setIsOpen(false)}
             className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
@@ -154,11 +156,11 @@ export default function StrategyOptimization() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Left: Configuration Form */}
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Configuration</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('optimization.configuration')}</h3>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Strategy
+                    {t('optimization.strategy')}
                   </label>
                   <select
                     value={formData.strategy_id}
@@ -166,7 +168,7 @@ export default function StrategyOptimization() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     required
                   >
-                    <option value="">Select Strategy</option>
+                    <option value="">{t('optimization.selectStrategy')}</option>
                     {strategies.map((strategy) => (
                       <option key={strategy.id} value={strategy.id}>
                         {strategy.name} v{strategy.version}
@@ -177,13 +179,13 @@ export default function StrategyOptimization() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Symbol
+                    {t('optimization.symbol')}
                   </label>
                   <input
                     type="text"
                     value={formData.symbol}
                     onChange={(e) => setFormData({ ...formData, symbol: e.target.value })}
-                    placeholder="e.g., AAPL"
+                    placeholder={t('optimization.symbolPlaceholder')}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     required
                   />
@@ -193,7 +195,7 @@ export default function StrategyOptimization() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       <Calendar className="w-4 h-4 inline mr-1" />
-                      Start Date
+                      {t('optimization.startDate')}
                     </label>
                     <input
                       type="date"
@@ -206,7 +208,7 @@ export default function StrategyOptimization() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       <Calendar className="w-4 h-4 inline mr-1" />
-                      End Date
+                      {t('optimization.endDate')}
                     </label>
                     <input
                       type="date"
@@ -221,7 +223,7 @@ export default function StrategyOptimization() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     <DollarSign className="w-4 h-4 inline mr-1" />
-                    Initial Capital
+                    {t('optimization.initialCapital')}
                   </label>
                   <input
                     type="number"
@@ -236,14 +238,14 @@ export default function StrategyOptimization() {
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <label className="block text-sm font-medium text-gray-700">
-                      Parameter Ranges
+                      {t('optimization.parameterRanges')}
                     </label>
                     <button
                       type="button"
                       onClick={addParameter}
                       className="text-sm text-blue-600 hover:text-blue-700"
                     >
-                      + Add Parameter
+                      {t('optimization.addParameter')}
                     </button>
                   </div>
 
@@ -257,7 +259,7 @@ export default function StrategyOptimization() {
                             onClick={() => removeParameter(paramName)}
                             className="text-red-600 hover:text-red-700 text-sm"
                           >
-                            Remove
+                            {t('common:remove')}
                           </button>
                         </div>
                         <div className="grid grid-cols-3 gap-2">
@@ -294,18 +296,18 @@ export default function StrategyOptimization() {
                   className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400 transition-colors"
                 >
                   <Play className="w-5 h-5" />
-                  {optimizationMutation.isPending ? 'Starting...' : 'Start Optimization'}
+                  {optimizationMutation.isPending ? t('optimization.starting') : t('optimization.startOptimization')}
                 </button>
               </form>
             </div>
 
             {/* Right: Results */}
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Results</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('optimization.results')}</h3>
               
               {!optimizationResult && (
                 <div className="text-center text-gray-500 py-8">
-                  Configure parameters and start optimization to see results
+                  {t('optimization.noResults')}
                 </div>
               )}
 
@@ -313,7 +315,7 @@ export default function StrategyOptimization() {
                 <div className="space-y-4">
                   {/* Status */}
                   <div className="bg-gray-50 p-4 rounded-lg">
-                    <div className="text-sm text-gray-600 mb-1">Status</div>
+                    <div className="text-sm text-gray-600 mb-1">{t('common:status')}</div>
                     <div className="flex items-center gap-2">
                       <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
                         optimizationResult.status === 'finished' ? 'bg-green-100 text-green-800' :
@@ -329,7 +331,7 @@ export default function StrategyOptimization() {
                   {/* Best Parameters */}
                   {optimizationResult.best_params && (
                     <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                      <div className="text-sm font-medium text-green-900 mb-2">Best Parameters</div>
+                      <div className="text-sm font-medium text-green-900 mb-2">{t('optimization.bestParameters')}</div>
                       <div className="space-y-2">
                         {Object.entries(optimizationResult.best_params).map(([key, value]) => (
                           <div key={key} className="flex justify-between text-sm">
@@ -345,19 +347,19 @@ export default function StrategyOptimization() {
                   {optimizationResult.best_result && (
                     <div className="grid grid-cols-3 gap-3">
                       <div className="bg-white p-3 rounded-lg border border-gray-200">
-                        <div className="text-xs text-gray-600 mb-1">Total Return</div>
+                        <div className="text-xs text-gray-600 mb-1">{t('optimization.totalReturn')}</div>
                         <div className={`text-lg font-bold ${optimizationResult.best_result.total_return >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                           {optimizationResult.best_result.total_return.toFixed(2)}%
                         </div>
                       </div>
                       <div className="bg-white p-3 rounded-lg border border-gray-200">
-                        <div className="text-xs text-gray-600 mb-1">Sharpe Ratio</div>
+                        <div className="text-xs text-gray-600 mb-1">{t('optimization.sharpeRatio')}</div>
                         <div className="text-lg font-bold text-blue-600">
                           {optimizationResult.best_result.sharpe_ratio.toFixed(2)}
                         </div>
                       </div>
                       <div className="bg-white p-3 rounded-lg border border-gray-200">
-                        <div className="text-xs text-gray-600 mb-1">Max Drawdown</div>
+                        <div className="text-xs text-gray-600 mb-1">{t('optimization.maxDrawdown')}</div>
                         <div className="text-lg font-bold text-red-600">
                           {optimizationResult.best_result.max_drawdown.toFixed(2)}%
                         </div>
@@ -369,15 +371,15 @@ export default function StrategyOptimization() {
                   {optimizationResult.all_results && optimizationResult.all_results.length > 0 && (
                     <div className="mt-4">
                       <div className="text-sm font-medium text-gray-900 mb-2">
-                        All Results ({optimizationResult.all_results.length})
+                        {t('optimization.allResults', { count: optimizationResult.all_results.length })}
                       </div>
                       <div className="max-h-64 overflow-y-auto border border-gray-200 rounded-lg">
                         <table className="min-w-full divide-y divide-gray-200">
                           <thead className="bg-gray-50 sticky top-0">
                             <tr>
-                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Params</th>
-                              <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Return</th>
-                              <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Sharpe</th>
+                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('optimization.params')}</th>
+                              <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">{t('optimization.return')}</th>
+                              <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">{t('optimization.sharpe')}</th>
                             </tr>
                           </thead>
                           <tbody className="bg-white divide-y divide-gray-200">

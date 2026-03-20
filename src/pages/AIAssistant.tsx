@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   Bot, Loader2, MessageSquare, Plus, Send, Settings2, Trash2, X
 } from 'lucide-react'
@@ -6,6 +7,7 @@ import { aiAPI } from '../lib/api'
 import type { AIConversation, AIMessage, AIModelConfig } from '../types'
 
 export default function AIAssistant() {
+  const { t } = useTranslation(['social', 'common'])
   const [conversations, setConversations] = useState<AIConversation[]>([])
   const [messages, setMessages] = useState<AIMessage[]>([])
   const [models, setModels] = useState<AIModelConfig[]>([])
@@ -26,7 +28,7 @@ export default function AIAssistant() {
       const result = data as any
       setConversations(result.data || result || [])
     } catch {
-      setError('Failed to load conversations')
+      setError(t('ai.loadFailed'))
     } finally {
       setLoading(false)
     }
@@ -47,7 +49,7 @@ export default function AIAssistant() {
       const { data } = await aiAPI.listMessages(conv.id)
       setMessages(Array.isArray(data) ? data : data.data || [])
     } catch {
-      setError('Failed to load messages')
+      setError(t('ai.loadMessagesFailed'))
     }
   }
 
@@ -60,7 +62,7 @@ export default function AIAssistant() {
       setShowNewConv(false)
       fetchConversations()
     } catch (err: any) {
-      setError(err?.response?.data?.message || 'Failed to create conversation')
+      setError(err?.response?.data?.message || t('ai.createFailed'))
     }
   }
 
@@ -80,7 +82,7 @@ export default function AIAssistant() {
         setMessages(Array.isArray(msgs) ? msgs : msgs.data || [])
       }
     } catch (err: any) {
-      setError(err?.response?.data?.message || 'Failed to send message')
+      setError(err?.response?.data?.message || t('ai.sendFailed'))
     } finally {
       setSending(false)
     }
@@ -91,7 +93,7 @@ export default function AIAssistant() {
       await aiAPI.deleteConversation(id)
       if (activeConv?.id === id) { setActiveConv(null); setMessages([]) }
       fetchConversations()
-    } catch { setError('Failed to delete conversation') }
+    } catch { setError(t('ai.deleteFailed')) }
   }
 
   return (
@@ -101,13 +103,13 @@ export default function AIAssistant() {
       <div className="w-72 border-r border-gray-200 bg-gray-50 flex flex-col">
         <div className="p-4 border-b border-gray-200 flex items-center justify-between">
           <h2 className="font-semibold text-gray-900 flex items-center gap-2">
-            <Bot className="h-5 w-5" /> AI Assistant
+            <Bot className="h-5 w-5" /> {t('ai.title')}
           </h2>
           <div className="flex gap-1">
-            <button onClick={() => setShowModels(true)} className="p-1 hover:bg-gray-200 rounded" title="Model settings">
+            <button onClick={() => setShowModels(true)} className="p-1 hover:bg-gray-200 rounded" title={t('ai.modelSettings')}>
               <Settings2 className="h-4 w-4" />
             </button>
-            <button onClick={() => setShowNewConv(true)} className="p-1 hover:bg-gray-200 rounded" title="New conversation">
+            <button onClick={() => setShowNewConv(true)} className="p-1 hover:bg-gray-200 rounded" title={t('ai.newConversation')}>
               <Plus className="h-4 w-4" />
             </button>
           </div>
@@ -123,7 +125,7 @@ export default function AIAssistant() {
             >
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-gray-900 truncate">{c.title}</p>
-                <p className="text-xs text-gray-500">{c.model || 'default'}</p>
+                <p className="text-xs text-gray-500">{c.model || t('ai.defaultModel')}</p>
               </div>
               <button
                 onClick={e => { e.stopPropagation(); handleDeleteConversation(c.id) }}
@@ -155,7 +157,7 @@ export default function AIAssistant() {
           <div className="flex-1 flex items-center justify-center text-gray-400">
             <div className="text-center">
               <MessageSquare className="h-12 w-12 mx-auto mb-3" />
-              <p>Select or create a conversation</p>
+              <p>{t('ai.selectConversation')}</p>
             </div>
           </div>
         ) : (
@@ -186,7 +188,7 @@ export default function AIAssistant() {
                   value={input}
                   onChange={e => setInput(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
-                  placeholder="Type a message..."
+                  placeholder={t('ai.typeMessage')}
                   className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   disabled={sending}
                 />
@@ -207,12 +209,12 @@ export default function AIAssistant() {
       {showNewConv && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-96 shadow-xl">
-            <h3 className="text-lg font-semibold mb-4">New Conversation</h3>
+            <h3 className="text-lg font-semibold mb-4">{t('ai.newConversationTitle')}</h3>
             <input
               type="text"
               value={newTitle}
               onChange={e => setNewTitle(e.target.value)}
-              placeholder="Conversation title"
+              placeholder={t('ai.conversationTitle')}
               className="w-full border border-gray-300 rounded px-3 py-2 text-sm mb-3"
             />
             <select
@@ -220,17 +222,17 @@ export default function AIAssistant() {
               onChange={e => setNewModel(e.target.value)}
               className="w-full border border-gray-300 rounded px-3 py-2 text-sm mb-4"
             >
-              <option value="">Default model</option>
+              <option value="">{t('ai.defaultModelOption')}</option>
               {models.map(m => (
                 <option key={m.id} value={m.name}>{m.name} ({m.provider})</option>
               ))}
             </select>
             <div className="flex justify-end gap-2">
               <button onClick={() => setShowNewConv(false)} className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded">
-                Cancel
+                {t('common:cancel')}
               </button>
               <button onClick={handleCreateConversation} className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
-                Create
+                {t('common:create')}
               </button>
             </div>
           </div>
@@ -242,20 +244,20 @@ export default function AIAssistant() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-[32rem] shadow-xl max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">AI Models</h3>
+              <h3 className="text-lg font-semibold">{t('ai.aiModels')}</h3>
               <button onClick={() => setShowModels(false)} className="p-1 hover:bg-gray-100 rounded">
                 <X className="h-4 w-4" />
               </button>
             </div>
             {models.length === 0 ? (
-              <p className="text-gray-500 text-sm">No models configured</p>
+              <p className="text-gray-500 text-sm">{t('ai.noModels')}</p>
             ) : (
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    <th className="text-left py-2">Name</th>
-                    <th className="text-left py-2">Provider</th>
-                    <th className="text-left py-2">Status</th>
+                    <th className="text-left py-2">{t('common:name')}</th>
+                    <th className="text-left py-2">{t('ai.provider')}</th>
+                    <th className="text-left py-2">{t('common:status')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -265,7 +267,7 @@ export default function AIAssistant() {
                       <td className="py-2 text-gray-600">{m.provider}</td>
                       <td className="py-2">
                         <span className={`px-2 py-0.5 rounded text-xs ${m.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                          {m.is_active ? 'Active' : 'Inactive'}
+                          {m.is_active ? t('common:active') : t('common:inactive')}
                         </span>
                       </td>
                     </tr>

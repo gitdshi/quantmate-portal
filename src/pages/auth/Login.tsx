@@ -1,11 +1,13 @@
 import { useMutation } from '@tanstack/react-query'
 import { LogIn } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import { authAPI } from '../../lib/api'
 import { useAuthStore } from '../../stores/auth'
 
 export default function Login() {
+  const { t } = useTranslation('auth')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -28,7 +30,7 @@ export default function Login() {
     },
     onError: (err: unknown) => {
       const error = err as { response?: { data?: { detail?: string; error?: { message?: string } } } }
-      setError(error.response?.data?.error?.message || error.response?.data?.detail || 'Login failed')
+      setError(error.response?.data?.error?.message || error.response?.data?.detail || t('loginFailed'))
     },
   })
 
@@ -51,9 +53,9 @@ export default function Login() {
             <img src="/logo.svg" alt="QuantMate" className="h-10 w-auto" />
           </div>
 
-          <h1 className="text-2xl font-bold text-center mb-2">Welcome to QuantMate</h1>
+          <h1 className="text-2xl font-bold text-center mb-2">{t('welcome')}</h1>
           <p className="text-muted-foreground text-center mb-8">
-            Sign in to access your trading platform
+            {t('signInPrompt')}
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -65,7 +67,7 @@ export default function Login() {
 
             <div>
               <label htmlFor="username" className="block text-sm font-medium mb-2">
-                Username
+                {t('username')}
               </label>
               <input
                 id="username"
@@ -79,7 +81,7 @@ export default function Login() {
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium mb-2">
-                Password
+                {t('password')}
               </label>
               <input
                 id="password"
@@ -96,14 +98,14 @@ export default function Login() {
               disabled={loginMutation.isPending}
               className="w-full py-2 px-4 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
             >
-              {loginMutation.isPending ? 'Signing in...' : 'Sign in'}
+              {loginMutation.isPending ? t('signingIn') : t('signIn')}
             </button>
           </form>
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
-            Don't have an account?{' '}
+            {t('noAccount')}{' '}
             <Link to="/register" className="text-primary hover:underline font-medium">
-              Sign up
+              {t('signUp')}
             </Link>
           </p>
         </div>

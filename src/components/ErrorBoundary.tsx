@@ -1,4 +1,5 @@
 import React from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
   children: React.ReactNode
@@ -26,14 +27,19 @@ export default class ErrorBoundary extends React.Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
-      return (
-        <div className="p-4 bg-destructive/10 text-destructive rounded">
-          <strong>Something went wrong loading this component.</strong>
-          <div className="mt-2 text-sm">{String(this.state.error)}</div>
-        </div>
-      )
+      return <ErrorFallback error={this.state.error} />
     }
 
     return this.props.children
   }
+}
+
+function ErrorFallback({ error }: { error?: Error | null }) {
+  const { t } = useTranslation('common')
+  return (
+    <div className="p-4 bg-destructive/10 text-destructive rounded">
+      <strong>{t('errorBoundary')}</strong>
+      <div className="mt-2 text-sm">{String(error)}</div>
+    </div>
+  )
 }

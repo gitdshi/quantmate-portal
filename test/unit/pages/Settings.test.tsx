@@ -136,7 +136,7 @@ describe('Settings Page', () => {
     const toggleBtn = screen.getByLabelText('Toggle 十大股东')
     await user.click(toggleBtn)
 
-    expect(dataSourceAPI.updateItem).toHaveBeenCalledWith('top10_holders', { enabled: true })
+    expect(dataSourceAPI.updateItem).toHaveBeenCalledWith('top10_holders', { enabled: true, source: 'tushare' })
   })
 
   it('calls batchUpdate when Enable All is clicked', async () => {
@@ -152,9 +152,9 @@ describe('Settings Page', () => {
 
     expect(dataSourceAPI.batchUpdate).toHaveBeenCalledWith({
       items: [
-        { item_key: 'stock_basic', enabled: true },
-        { item_key: 'stock_daily', enabled: true },
-        { item_key: 'top10_holders', enabled: true },
+        { item_key: 'stock_basic', enabled: true, source: 'tushare' },
+        { item_key: 'stock_daily', enabled: true, source: 'tushare' },
+        { item_key: 'top10_holders', enabled: true, source: 'tushare' },
       ],
     })
   })

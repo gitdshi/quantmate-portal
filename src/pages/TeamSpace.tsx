@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   Loader2, Plus, RefreshCw, Share2, Trash2, UserPlus, Users, X
 } from 'lucide-react'
@@ -13,6 +14,7 @@ const ROLE_COLORS: Record<string, string> = {
 }
 
 export default function TeamSpace() {
+  const { t } = useTranslation(['social', 'common'])
   const [workspaces, setWorkspaces] = useState<TeamWorkspace[]>([])
   const [members, setMembers] = useState<WorkspaceMember[]>([])
   const [shares, setShares] = useState<StrategyShare[]>([])
@@ -33,7 +35,7 @@ export default function TeamSpace() {
       const result = data as any
       setWorkspaces(result.data || result || [])
     } catch {
-      setError('Failed to load workspaces')
+      setError(t('teamSpace.loadFailed'))
     } finally {
       setLoading(false)
     }
@@ -54,7 +56,7 @@ export default function TeamSpace() {
       const { data } = await teamAPI.listMembers(ws.id)
       setMembers(Array.isArray(data) ? data : data.data || [])
     } catch {
-      setError('Failed to load members')
+      setError(t('teamSpace.loadMembersFailed'))
     }
   }
 
@@ -66,7 +68,7 @@ export default function TeamSpace() {
       setShowCreate(false)
       fetchWorkspaces()
     } catch (err: any) {
-      setError(err?.response?.data?.message || 'Failed to create workspace')
+      setError(err?.response?.data?.message || t('teamSpace.createFailed'))
     }
   }
 
@@ -75,7 +77,7 @@ export default function TeamSpace() {
       await teamAPI.deleteWorkspace(id)
       if (selectedWs?.id === id) { setSelectedWs(null); setMembers([]) }
       fetchWorkspaces()
-    } catch { setError('Failed to delete workspace') }
+    } catch { setError(t('teamSpace.deleteFailed')) }
   }
 
   const handleAddMember = async () => {
@@ -89,7 +91,7 @@ export default function TeamSpace() {
       const { data } = await teamAPI.listMembers(selectedWs.id)
       setMembers(Array.isArray(data) ? data : data.data || [])
     } catch (err: any) {
-      setError(err?.response?.data?.message || 'Failed to add member')
+      setError(err?.response?.data?.message || t('teamSpace.addMemberFailed'))
     }
   }
 
@@ -100,7 +102,7 @@ export default function TeamSpace() {
       const { data } = await teamAPI.listMembers(selectedWs.id)
       setMembers(Array.isArray(data) ? data : data.data || [])
     } catch (err: any) {
-      setError(err?.response?.data?.message || 'Failed to remove member')
+      setError(err?.response?.data?.message || t('teamSpace.removeMemberFailed'))
     }
   }
 
@@ -116,7 +118,7 @@ export default function TeamSpace() {
       setShowShareStrategy(false)
       fetchShares()
     } catch (err: any) {
-      setError(err?.response?.data?.message || 'Failed to share strategy')
+      setError(err?.response?.data?.message || t('teamSpace.shareFailed'))
     }
   }
 
@@ -124,21 +126,21 @@ export default function TeamSpace() {
     try {
       await teamAPI.revokeShare(id)
       fetchShares()
-    } catch { setError('Failed to revoke share') }
+    } catch { setError(t('teamSpace.revokeFailed')) }
   }
 
   return (
     <div className="p-6" data-testid="team-space-page">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-          <Users className="h-7 w-7" /> Team Space
+          <Users className="h-7 w-7" /> {t('teamSpace.title')}
         </h1>
         <div className="flex gap-2">
           <button onClick={() => setShowShareStrategy(true)} className="flex items-center gap-1 px-3 py-1.5 border border-gray-300 rounded text-sm hover:bg-gray-50">
-            <Share2 className="h-4 w-4" /> Share Strategy
+            <Share2 className="h-4 w-4" /> {t('teamSpace.shareStrategy')}
           </button>
           <button onClick={() => setShowCreate(true)} className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
-            <Plus className="h-4 w-4" /> New Workspace
+            <Plus className="h-4 w-4" /> {t('teamSpace.newWorkspace')}
           </button>
         </div>
       </div>
@@ -155,7 +157,7 @@ export default function TeamSpace() {
         <div className="lg:col-span-1">
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
             <div className="p-3 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="font-semibold text-sm text-gray-700">Workspaces ({workspaces.length})</h2>
+              <h2 className="font-semibold text-sm text-gray-700">{t('teamSpace.workspaces')} ({workspaces.length})</h2>
               <button onClick={fetchWorkspaces} className="p-1 hover:bg-gray-100 rounded">
                 <RefreshCw className="h-4 w-4 text-gray-500" />
               </button>
@@ -163,7 +165,7 @@ export default function TeamSpace() {
             {loading ? (
               <div className="p-8 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto text-gray-400" /></div>
             ) : workspaces.length === 0 ? (
-              <div className="p-8 text-center text-gray-400 text-sm">No workspaces yet</div>
+              <div className="p-8 text-center text-gray-400 text-sm">{t('teamSpace.noWorkspaces')}</div>
             ) : (
               <div className="divide-y divide-gray-100">
                 {workspaces.map(ws => (
@@ -176,7 +178,7 @@ export default function TeamSpace() {
                   >
                     <div>
                       <p className="text-sm font-medium text-gray-900">{ws.name}</p>
-                      <p className="text-xs text-gray-500">{ws.description || 'No description'}</p>
+                      <p className="text-xs text-gray-500">{ws.description || t('common:noDescription')}</p>
                     </div>
                     <button onClick={e => { e.stopPropagation(); handleDeleteWorkspace(ws.id) }}
                       className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded">
@@ -191,17 +193,17 @@ export default function TeamSpace() {
           {/* Shared With Me */}
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm mt-4">
             <div className="p-3 border-b border-gray-200">
-              <h2 className="font-semibold text-sm text-gray-700">Shared With Me ({shares.length})</h2>
+              <h2 className="font-semibold text-sm text-gray-700">{t('teamSpace.sharedWithMe')} ({shares.length})</h2>
             </div>
             {shares.length === 0 ? (
-              <div className="p-4 text-center text-gray-400 text-sm">No shared strategies</div>
+              <div className="p-4 text-center text-gray-400 text-sm">{t('teamSpace.noSharedStrategies')}</div>
             ) : (
               <div className="divide-y divide-gray-100">
                 {shares.map(s => (
                   <div key={s.id} className="p-3 flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-gray-900">Strategy #{s.strategy_id}</p>
-                      <p className="text-xs text-gray-500">Permission: {s.permission}</p>
+                      <p className="text-sm text-gray-900">{t('teamSpace.strategyId', { id: s.strategy_id })}</p>
+                      <p className="text-xs text-gray-500">{t('teamSpace.permission', { permission: s.permission })}</p>
                     </div>
                     <button onClick={() => handleRevokeShare(s.id)} className="p-1 hover:bg-red-100 rounded">
                       <X className="h-3 w-3 text-red-500" />
@@ -218,7 +220,7 @@ export default function TeamSpace() {
           {!selectedWs ? (
             <div className="bg-white rounded-lg border border-gray-200 p-12 text-center text-gray-400">
               <Users className="h-10 w-10 mx-auto mb-3" />
-              <p>Select a workspace to manage</p>
+              <p>{t('teamSpace.selectWorkspace')}</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -229,15 +231,15 @@ export default function TeamSpace() {
                     {selectedWs.status}
                   </span>
                 </div>
-                <p className="text-sm text-gray-500">{selectedWs.description || 'No description'}</p>
-                <p className="text-xs text-gray-400 mt-2">Max members: {selectedWs.max_members}</p>
+                <p className="text-sm text-gray-500">{selectedWs.description || t('common:noDescription')}</p>
+                <p className="text-xs text-gray-400 mt-2">{t('teamSpace.maxMembers', { count: selectedWs.max_members })}</p>
               </div>
 
               <div className="bg-white rounded-lg border border-gray-200">
                 <div className="p-3 border-b border-gray-200 flex items-center justify-between">
-                  <h3 className="font-semibold text-sm text-gray-700">Members ({members.length})</h3>
+                  <h3 className="font-semibold text-sm text-gray-700">{t('teamSpace.members')} ({members.length})</h3>
                   <button onClick={() => setShowAddMember(true)} className="flex items-center gap-1 px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700">
-                    <UserPlus className="h-3 w-3" /> Add
+                    <UserPlus className="h-3 w-3" /> {t('common:add')}
                   </button>
                 </div>
                 <div className="divide-y divide-gray-100">
@@ -270,18 +272,18 @@ export default function TeamSpace() {
       {showCreate && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-96 shadow-xl">
-            <h3 className="text-lg font-semibold mb-4">New Workspace</h3>
+            <h3 className="text-lg font-semibold mb-4">{t('teamSpace.newWorkspace')}</h3>
             <div className="space-y-3">
               <input type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                placeholder="Workspace name" className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+                placeholder={t('teamSpace.workspaceName')} className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
               <input type="text" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                placeholder="Description" className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+                placeholder={t('common:description')} className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
               <input type="number" value={form.max_members} onChange={e => setForm(f => ({ ...f, max_members: parseInt(e.target.value) || 10 }))}
                 className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
             </div>
             <div className="flex justify-end gap-2 mt-4">
-              <button onClick={() => setShowCreate(false)} className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded">Cancel</button>
-              <button onClick={handleCreate} className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">Create</button>
+              <button onClick={() => setShowCreate(false)} className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded">{t('common:cancel')}</button>
+              <button onClick={handleCreate} className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">{t('common:create')}</button>
             </div>
           </div>
         </div>
@@ -291,20 +293,20 @@ export default function TeamSpace() {
       {showAddMember && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-96 shadow-xl">
-            <h3 className="text-lg font-semibold mb-4">Add Member</h3>
+            <h3 className="text-lg font-semibold mb-4">{t('teamSpace.addMember')}</h3>
             <div className="space-y-3">
               <input type="number" value={memberForm.user_id} onChange={e => setMemberForm(f => ({ ...f, user_id: e.target.value }))}
-                placeholder="User ID" className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+                placeholder={t('teamSpace.userId')} className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
               <select value={memberForm.role} onChange={e => setMemberForm(f => ({ ...f, role: e.target.value }))}
                 className="w-full border border-gray-300 rounded px-3 py-2 text-sm">
-                <option value="member">Member</option>
-                <option value="admin">Admin</option>
-                <option value="viewer">Viewer</option>
+                <option value="member">{t('teamSpace.roleMember')}</option>
+                <option value="admin">{t('teamSpace.roleAdmin')}</option>
+                <option value="viewer">{t('teamSpace.roleViewer')}</option>
               </select>
             </div>
             <div className="flex justify-end gap-2 mt-4">
-              <button onClick={() => setShowAddMember(false)} className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded">Cancel</button>
-              <button onClick={handleAddMember} className="px-3 py-1.5 text-sm bg-green-600 text-white rounded hover:bg-green-700">Add</button>
+              <button onClick={() => setShowAddMember(false)} className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded">{t('common:cancel')}</button>
+              <button onClick={handleAddMember} className="px-3 py-1.5 text-sm bg-green-600 text-white rounded hover:bg-green-700">{t('common:add')}</button>
             </div>
           </div>
         </div>
@@ -314,22 +316,22 @@ export default function TeamSpace() {
       {showShareStrategy && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-96 shadow-xl">
-            <h3 className="text-lg font-semibold mb-4">Share Strategy</h3>
+            <h3 className="text-lg font-semibold mb-4">{t('teamSpace.shareStrategy')}</h3>
             <div className="space-y-3">
               <input type="number" value={shareForm.strategy_id} onChange={e => setShareForm(f => ({ ...f, strategy_id: e.target.value }))}
-                placeholder="Strategy ID" className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+                placeholder={t('teamSpace.strategyIdInput')} className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
               <input type="number" value={shareForm.shared_with_user_id} onChange={e => setShareForm(f => ({ ...f, shared_with_user_id: e.target.value }))}
-                placeholder="Share with User ID" className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
+                placeholder={t('teamSpace.shareWithUserId')} className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
               <select value={shareForm.permission} onChange={e => setShareForm(f => ({ ...f, permission: e.target.value }))}
                 className="w-full border border-gray-300 rounded px-3 py-2 text-sm">
-                <option value="view">View</option>
-                <option value="edit">Edit</option>
-                <option value="execute">Execute</option>
+                <option value="view">{t('common:view')}</option>
+                <option value="edit">{t('common:edit')}</option>
+                <option value="execute">{t('teamSpace.executePermission')}</option>
               </select>
             </div>
             <div className="flex justify-end gap-2 mt-4">
-              <button onClick={() => setShowShareStrategy(false)} className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded">Cancel</button>
-              <button onClick={handleShareStrategy} className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">Share</button>
+              <button onClick={() => setShowShareStrategy(false)} className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded">{t('common:cancel')}</button>
+              <button onClick={handleShareStrategy} className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">{t('teamSpace.share')}</button>
             </div>
           </div>
         </div>

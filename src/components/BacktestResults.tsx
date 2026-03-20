@@ -12,6 +12,7 @@ import {
     X,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { marketDataAPI, queueAPI } from '../lib/api'
 import EquityCurveChart from './EquityCurveChart'
 import TradingChart from './TradingChart'
@@ -22,6 +23,7 @@ interface BacktestResultsProps {
 }
 
 export default function BacktestResults({ jobId, onClose }: BacktestResultsProps) {
+  const { t } = useTranslation(['backtest', 'common'])
   const [activeTab, setActiveTab] = useState<'performance' | 'trades' | 'config'>('performance')
   
   const { data: resultData, isLoading } = useQuery({
@@ -95,7 +97,7 @@ export default function BacktestResults({ jobId, onClose }: BacktestResultsProps
         <div className="bg-card border border-border rounded-lg shadow-lg w-full max-w-6xl p-8">
           <div className="flex items-center justify-center gap-3">
             <Loader className="h-6 w-6 animate-spin" />
-            <span>Loading results...</span>
+            <span>{t('results.loading')}</span>
           </div>
         </div>
       </div>
@@ -107,7 +109,7 @@ export default function BacktestResults({ jobId, onClose }: BacktestResultsProps
       <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <div className="bg-card border border-border rounded-lg shadow-lg w-full max-w-6xl p-8">
           <div className="text-center">
-            <p className="text-muted-foreground">No results available</p>
+            <p className="text-muted-foreground">{t('results.noResults')}</p>
           </div>
         </div>
       </div>
@@ -120,7 +122,7 @@ export default function BacktestResults({ jobId, onClose }: BacktestResultsProps
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
           <div>
-            <h2 className="text-xl font-semibold">Backtest Results</h2>
+            <h2 className="text-xl font-semibold">{t('results.title')}</h2>
             <p className="text-sm text-muted-foreground mt-1 font-medium">
               {strategyName ? `${strategyName}${strategyVersion ? ` v${strategyVersion}` : ''} • ${symbolDisplay} • ${result.start_date} to ${result.end_date} • ${getBenchmarkLabel(benchmark)}` : `${symbolDisplay} • ${result.start_date} to ${result.end_date} • ${getBenchmarkLabel(benchmark)}`}
             </p>
@@ -141,7 +143,7 @@ export default function BacktestResults({ jobId, onClose }: BacktestResultsProps
             }`}
           >
             <BarChart3 className="h-4 w-4" />
-            Performance
+            {t('results.performance')}
           </button>
           <button
             onClick={() => setActiveTab('trades')}
@@ -152,7 +154,7 @@ export default function BacktestResults({ jobId, onClose }: BacktestResultsProps
             }`}
           >
             <List className="h-4 w-4" />
-            Trades ({result?.trades?.length || 0})
+            {t('results.trades')} ({result?.trades?.length || 0})
           </button>
           <button
             onClick={() => setActiveTab('config')}
@@ -163,7 +165,7 @@ export default function BacktestResults({ jobId, onClose }: BacktestResultsProps
             }`}
           >
             <Calendar className="h-4 w-4" />
-            Configuration
+            {t('results.configuration')}
           </button>
         </div>
 
@@ -175,7 +177,7 @@ export default function BacktestResults({ jobId, onClose }: BacktestResultsProps
               {/* Primary Metrics */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <StatCard
-                  title="Total Return"
+                  title={t('metrics.totalReturn')}
                   value={`${(stats.total_return || 0).toFixed(2)}%`}
                   icon={
                     (stats.total_return || 0) >= 0 ? (
@@ -187,44 +189,46 @@ export default function BacktestResults({ jobId, onClose }: BacktestResultsProps
                   positive={(stats.total_return || 0) >= 0}
                 />
                 <StatCard
-                  title="Annual Return"
+                  title={t('metrics.annualReturn')}
                   value={`${(stats.annual_return || 0).toFixed(2)}%`}
                   icon={<Percent className="h-5 w-5 text-blue-500" />}
                 />
                 <StatCard
-                  title="Sharpe Ratio"
+                  title={t('metrics.sharpeRatio')}
                   value={(stats.sharpe_ratio || 0).toFixed(2)}
                   icon={<BarChart3 className="h-5 w-5 text-purple-500" />}
                 />
                 <StatCard
-                  title="Max Drawdown"
+                  title={t('metrics.maxDrawdown')}
                   value={`${(stats.max_drawdown_percent || stats.max_drawdown || 0).toFixed(2)}%`}
                   icon={<TrendingDown className="h-5 w-5 text-green-500" />}
                 />
               </div>
 
               {/* Benchmark Comparison (Alpha/Beta) */}
-              {(stats.alpha !== null && stats.alpha !== undefined) || (stats.beta !== null && stats.beta !== undefined) ? (
+              {(stats.alpha !== null && stats.alpha !== undefined) ||
+              (stats.beta !== null && stats.beta !== undefined) ||
+              (stats.benchmark_return !== null && stats.benchmark_return !== undefined) ? (
                 <div className="bg-muted/30 rounded-lg p-4">
                   <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
                     <Target className="h-4 w-4" />
-                    Benchmark Comparison ({getBenchmarkLabel(benchmark)})
+                    {t('comparison.title')} ({getBenchmarkLabel(benchmark)})
                   </h3>
                   <div className="grid grid-cols-3 gap-4">
                     <div>
-                      <div className="text-sm text-muted-foreground mb-1">Alpha (Annualized)</div>
+                      <div className="text-sm text-muted-foreground mb-1">{t('metrics.alpha')}</div>
                       <div className={`text-2xl font-bold ${(stats.alpha || 0) >= 0 ? 'text-red-500' : 'text-green-500'}`}>
                         {stats.alpha !== null && stats.alpha !== undefined ? `${(stats.alpha * 100).toFixed(2)}%` : 'N/A'}
                       </div>
                     </div>
                     <div>
-                      <div className="text-sm text-muted-foreground mb-1">Beta</div>
+                      <div className="text-sm text-muted-foreground mb-1">{t('metrics.beta')}</div>
                       <div className="text-2xl font-bold">
                         {stats.beta !== null && stats.beta !== undefined ? stats.beta.toFixed(2) : 'N/A'}
                       </div>
                     </div>
                     <div>
-                      <div className="text-sm text-muted-foreground mb-1">Benchmark Return</div>
+                      <div className="text-sm text-muted-foreground mb-1">{t('metrics.benchmarkReturn')}</div>
                       <div className={`text-2xl font-bold ${(stats.benchmark_return || 0) >= 0 ? 'text-red-500' : 'text-green-500'}`}>
                         {stats.benchmark_return !== null && stats.benchmark_return !== undefined ? `${stats.benchmark_return.toFixed(2)}%` : 'N/A'}
                       </div>
@@ -238,7 +242,7 @@ export default function BacktestResults({ jobId, onClose }: BacktestResultsProps
                 <div className="bg-muted/30 rounded-lg p-4">
                   <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
                     <Activity className="h-4 w-4" />
-                    Equity Curve
+                    {t('results.equity')}
                   </h3>
                   <EquityCurveChart
                     data={result.equity_curve}
@@ -252,21 +256,21 @@ export default function BacktestResults({ jobId, onClose }: BacktestResultsProps
               {/* Trading Statistics */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-muted/50 rounded-lg p-4">
-                  <div className="text-sm text-muted-foreground mb-1">Total Trades</div>
+                  <div className="text-sm text-muted-foreground mb-1">{t('metrics.totalTrades')}</div>
                   <div className="text-2xl font-bold">{stats.total_trades || 0}</div>
                 </div>
                 <div className="bg-muted/50 rounded-lg p-4">
-                  <div className="text-sm text-muted-foreground mb-1">Win Rate</div>
+                  <div className="text-sm text-muted-foreground mb-1">{t('metrics.winRate')}</div>
                   <div className="text-2xl font-bold">
                     {((stats.winning_rate || 0) * 100).toFixed(1)}%
                   </div>
                 </div>
                 <div className="bg-muted/50 rounded-lg p-4">
-                  <div className="text-sm text-muted-foreground mb-1">Profit Factor</div>
+                  <div className="text-sm text-muted-foreground mb-1">{t('metrics.profitFactor')}</div>
                   <div className="text-2xl font-bold">{(stats.profit_factor || 0).toFixed(2)}</div>
                 </div>
                 <div className="bg-muted/50 rounded-lg p-4">
-                  <div className="text-sm text-muted-foreground mb-1">End Balance</div>
+                  <div className="text-sm text-muted-foreground mb-1">{t('metrics.endBalance')}</div>
                   <div className="text-2xl font-bold">
                     ${(stats.end_balance || 0).toLocaleString()}
                   </div>
@@ -276,15 +280,15 @@ export default function BacktestResults({ jobId, onClose }: BacktestResultsProps
               {/* Period Statistics */}
               <div className="grid grid-cols-3 gap-4">
                 <div className="bg-muted/50 rounded-lg p-4">
-                  <div className="text-sm text-muted-foreground mb-1">Total Days</div>
+                  <div className="text-sm text-muted-foreground mb-1">{t('metrics.totalDays')}</div>
                   <div className="text-xl font-bold">{stats.total_days || 0}</div>
                 </div>
                 <div className="bg-muted/50 rounded-lg p-4">
-                  <div className="text-sm text-muted-foreground mb-1">Profit Days</div>
+                  <div className="text-sm text-muted-foreground mb-1">{t('metrics.profitDays')}</div>
                   <div className="text-xl font-bold text-red-500">{stats.profit_days || 0}</div>
                 </div>
                 <div className="bg-muted/50 rounded-lg p-4">
-                  <div className="text-sm text-muted-foreground mb-1">Loss Days</div>
+                  <div className="text-sm text-muted-foreground mb-1">{t('metrics.lossDays')}</div>
                   <div className="text-xl font-bold text-green-500">{stats.loss_days || 0}</div>
                 </div>
               </div>
@@ -298,19 +302,19 @@ export default function BacktestResults({ jobId, onClose }: BacktestResultsProps
               <div className="bg-muted/30 rounded-lg p-4">
                 <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
                   <List className="h-4 w-4" />
-                  Trade Summary
+                  {t('results.tradeSummary')}
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                   <div>
-                    <span className="text-muted-foreground">Symbol:</span>
+                    <span className="text-muted-foreground">{t('symbol')}:</span>
                     <span className="ml-2 font-medium">{symbolDisplay}</span>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Total Trades:</span>
+                    <span className="text-muted-foreground">{t('metrics.totalTrades')}:</span>
                     <span className="ml-2 font-medium">{result?.trades?.length || 0}</span>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Period:</span>
+                    <span className="text-muted-foreground">{t('common:period')}:</span>
                     <span className="ml-2 font-medium">{result?.start_date} to {result?.end_date}</span>
                   </div>
                 </div>
@@ -321,7 +325,7 @@ export default function BacktestResults({ jobId, onClose }: BacktestResultsProps
                 <div className="bg-muted/30 rounded-lg p-4">
                   <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
                     <Activity className="h-4 w-4" />
-                    Price Chart with Trade Signals
+                    {t('results.priceChart')}
                   </h3>
                   <TradingChart
                     stockPriceData={result.stock_price_curve}
@@ -335,10 +339,10 @@ export default function BacktestResults({ jobId, onClose }: BacktestResultsProps
                 <div className="bg-muted/30 rounded-lg p-4">
                   <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
                     <Activity className="h-4 w-4" />
-                    Price Chart with Trade Signals
+                    {t('results.priceChart')}
                   </h3>
                   <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
-                    Price data not available. Run a new backtest to see the chart.
+                    {t('results.noPriceData')}
                   </div>
                 </div>
               )}
@@ -346,17 +350,17 @@ export default function BacktestResults({ jobId, onClose }: BacktestResultsProps
               {/* Trade List */}
               {result?.trades && result.trades.length > 0 ? (
                 <div>
-                  <h3 className="text-sm font-medium mb-3">Trade History ({result.trades.length} trades)</h3>
+                  <h3 className="text-sm font-medium mb-3">{t('results.tradeHistory', { count: result.trades.length })}</h3>
                   <div className="bg-muted/50 rounded-lg overflow-hidden">
                     <div className="max-h-[calc(95vh-300px)] overflow-y-auto">
                       <table className="w-full text-sm">
                         <thead className="bg-muted sticky top-0">
                           <tr>
-                            <th className="text-left p-3">Date/Time</th>
-                            <th className="text-left p-3">Direction</th>
-                            <th className="text-left p-3">Offset</th>
-                            <th className="text-right p-3">Price</th>
-                            <th className="text-right p-3">Volume</th>
+                            <th className="text-left p-3">{t('common:time')}</th>
+                            <th className="text-left p-3">{t('common:direction')}</th>
+                            <th className="text-left p-3">{t('results.offset')}</th>
+                            <th className="text-right p-3">{t('common:price')}</th>
+                            <th className="text-right p-3">{t('common:quantity')}</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -384,7 +388,7 @@ export default function BacktestResults({ jobId, onClose }: BacktestResultsProps
                 </div>
               ) : (
                 <div className="flex items-center justify-center h-64 bg-muted/30 rounded-lg">
-                  <p className="text-muted-foreground">No trades available</p>
+                  <p className="text-muted-foreground">{t('results.noTrades')}</p>
                 </div>
               )}
             </div>
@@ -396,32 +400,32 @@ export default function BacktestResults({ jobId, onClose }: BacktestResultsProps
               <div className="bg-muted/50 rounded-lg p-4">
                 <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
-                  Backtest Configuration
+                  {t('configuration')}
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                   <div>
-                    <span className="text-muted-foreground">Symbol:</span>
+                    <span className="text-muted-foreground">{t('symbol')}:</span>
                     <span className="ml-2 font-medium">{symbolDisplay}</span>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Initial Capital:</span>
+                    <span className="text-muted-foreground">{t('initialCapital')}:</span>
                     <span className="ml-2 font-medium">
                       ${(result.initial_capital || 100000).toLocaleString()}
                     </span>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Start Date:</span>
+                    <span className="text-muted-foreground">{t('startDate')}:</span>
                     <span className="ml-2 font-medium">{result.start_date}</span>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">End Date:</span>
+                    <span className="text-muted-foreground">{t('endDate')}:</span>
                     <span className="ml-2 font-medium">{result.end_date}</span>
                   </div>
                 </div>
                 {/* Parameters JSON */}
                 <div className="mt-3">
                   <div className="flex items-center justify-between">
-                    <div className="text-sm text-muted-foreground">Parameters</div>
+                    <div className="text-sm text-muted-foreground">{t('common:parameters')}</div>
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => {
@@ -430,7 +434,7 @@ export default function BacktestResults({ jobId, onClose }: BacktestResultsProps
                         }}
                         className="text-xs text-muted-foreground hover:text-foreground"
                       >
-                        Copy
+                        {t('common:copy')}
                       </button>
                     </div>
                   </div>
@@ -447,7 +451,7 @@ export default function BacktestResults({ jobId, onClose }: BacktestResultsProps
             onClick={onClose}
             className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
           >
-            Close
+            {t('common:close')}
           </button>
         </div>
       </div>

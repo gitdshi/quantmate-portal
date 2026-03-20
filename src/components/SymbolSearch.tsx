@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Check, Search, TrendingUp } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { marketDataAPI } from '../lib/api'
 
 interface Stock {
@@ -21,7 +22,8 @@ interface SymbolSearchProps {
 	placeholder?: string
 }
 
-export default function SymbolSearch({ onSelect, onChoose, onToggle, multi = false, selected, placeholder = 'Search symbols (e.g., AAPL, MSFT)...' }: SymbolSearchProps) {
+export default function SymbolSearch({ onSelect, onChoose, onToggle, multi = false, selected, placeholder }: SymbolSearchProps) {
+	const { t } = useTranslation(['market', 'common'])
 	const [searchTerm, setSearchTerm] = useState('')
 	const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
 	const [showDropdown, setShowDropdown] = useState(false)
@@ -87,7 +89,7 @@ export default function SymbolSearch({ onSelect, onChoose, onToggle, multi = fal
 						type="text"
 						value={searchTerm}
 					onChange={(e) => { setSearchTerm(e.target.value); setShowDropdown(true) }}
-						placeholder={placeholder}
+						placeholder={placeholder ?? t('search.placeholder')}
 						autoComplete="off"
 						className="w-full pl-10 pr-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
 					/>
@@ -97,22 +99,22 @@ export default function SymbolSearch({ onSelect, onChoose, onToggle, multi = fal
 					onChange={(e) => setSelectedMarket(e.target.value)}
 					className="px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
 				>
-					<option value="">All Markets</option>
-					<option value="US">US Markets</option>
-					<option value="CN">China Markets</option>
-					<option value="HK">Hong Kong</option>
+					<option value="">{t('search.allMarkets')}</option>
+					<option value="US">{t('search.usMarkets')}</option>
+					<option value="CN">{t('search.chinaMarkets')}</option>
+					<option value="HK">{t('search.hongKong')}</option>
 				</select>
 			</div>
 
 			{showDropdown && (
 				<>
 					{isLoading && (
-						<div className="text-center py-8 text-muted-foreground">Loading symbols...</div>
+						<div className="text-center py-8 text-muted-foreground">{t('search.loadingSymbols')}</div>
 					)}
 						{!isLoading && debouncedSearchTerm && (
 						<div className="bg-card border border-border rounded-lg overflow-hidden max-h-96 overflow-y-auto">
 							{symbols.length === 0 ? (
-								<div className="p-8 text-center text-muted-foreground">No symbols found matching "{debouncedSearchTerm}"</div>
+								<div className="p-8 text-center text-muted-foreground">{t('search.noResults', { term: debouncedSearchTerm })}</div>
 							) : (
 								<div className="divide-y divide-border">
 									{symbols.slice(0, 20).map((sym: any) => (

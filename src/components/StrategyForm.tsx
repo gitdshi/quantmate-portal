@@ -2,6 +2,7 @@ import Editor from '@monaco-editor/react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Maximize2, Minimize2, Save, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { strategiesAPI, strategyFilesAPI } from '../lib/api'
 import type { Strategy } from '../types'
 
@@ -11,6 +12,7 @@ interface StrategyFormProps {
 }
 
 export default function StrategyForm({ strategy, onClose }: StrategyFormProps) {
+  const { t } = useTranslation(['strategies', 'common'])
   const queryClient = useQueryClient()
   const isEdit = !!strategy
   const [editorFullScreen, setEditorFullScreen] = useState(false)
@@ -164,7 +166,7 @@ export default function StrategyForm({ strategy, onClose }: StrategyFormProps) {
 
       if (parts.length === 0) {
         // fallback to generic message or JS error
-        parts.push(e?.message || 'Failed to save strategy')
+        parts.push(e?.message || t('form.saveFailed'))
       }
 
       setError(parts.join(' — '))
@@ -176,7 +178,7 @@ export default function StrategyForm({ strategy, onClose }: StrategyFormProps) {
     setError('')
 
     if (!name.trim()) {
-      setError('Strategy name is required')
+      setError(t('nameRequired'))
       return
     }
 
@@ -188,11 +190,11 @@ export default function StrategyForm({ strategy, onClose }: StrategyFormProps) {
       try {
         parsedParams = JSON.parse(parameters)
         if (typeof parsedParams !== 'object' || Array.isArray(parsedParams)) {
-          setError('Parameters must be a JSON object')
+          setError(t('form.paramsJsonInvalid'))
           return
         }
       } catch (err: any) {
-        setError('Parameters JSON invalid: ' + (err?.message || String(err)))
+        setError(t('form.paramsJsonError', { error: err?.message || String(err) }))
         return
       }
     }
@@ -224,7 +226,7 @@ export default function StrategyForm({ strategy, onClose }: StrategyFormProps) {
     const f = e.target.files && e.target.files[0]
     if (!f) return
     if (!f.name.endsWith('.py')) {
-      setError('Please select a .py file')
+      setError(t('files.selectPyFile'))
       return
     }
     try {
@@ -234,7 +236,7 @@ export default function StrategyForm({ strategy, onClose }: StrategyFormProps) {
       const data = resp.data || {}
       const classes = data.classes || []
       if (classes.length === 0) {
-        setError('No classes found in file')
+        setError(t('files.noClassesFound'))
         return
       }
       if (classes.length > 1) {
@@ -286,7 +288,7 @@ export default function StrategyForm({ strategy, onClose }: StrategyFormProps) {
       const classes = data.classes || []
       const chosen = classes.find((c: any) => c.name === classNamePicked)
       if (!chosen) {
-        setError('Selected class not found')
+        setError(t('form.selectedClassNotFound'))
         setClassOptions(null)
         return
       }
@@ -328,7 +330,7 @@ export default function StrategyForm({ strategy, onClose }: StrategyFormProps) {
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-xl font-semibold">
-            {isEdit ? `Edit Strategy${strategy?.version ? ` (v${strategy.version})` : ''}` : 'Create New Strategy'}
+            {isEdit ? `${t('editStrategy')}${strategy?.version ? ` (v${strategy.version})` : ''}` : t('createStrategy')}
           </h2>
           <div className="flex items-center gap-2">
             <button
@@ -354,7 +356,7 @@ export default function StrategyForm({ strategy, onClose }: StrategyFormProps) {
           <div className={`flex-1 flex flex-col border-r border-gray-200 dark:border-gray-700 ${editorFullScreen ? '' : ''}`}>
             <div className="p-4 border-b border-gray-200 dark:border-gray-700">
               <label className="block text-sm font-medium">
-                {isEdit ? 'Strategy Code *' : 'Strategy Code (optional)'}
+                {isEdit ? t('form.codeRequired') : t('form.codeOptional')}
               </label>
             </div>
             <div className="flex-1 relative">
@@ -398,7 +400,7 @@ export default function StrategyForm({ strategy, onClose }: StrategyFormProps) {
             </div>
             <div className="px-4 py-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
               <p className="text-xs text-gray-600 dark:text-gray-400">
-                {isEdit ? 'Enter your VnPy strategy code here' : 'Optional strategy code — you can add code later.'}
+                {isEdit ? t('form.codeEditHint') : t('form.codeCreateHint')}
               </p>
             </div>
           </div>
@@ -416,7 +418,7 @@ export default function StrategyForm({ strategy, onClose }: StrategyFormProps) {
                 {classOptions && (
                   <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-40" role="dialog">
                     <div className="bg-white dark:bg-gray-800 rounded shadow-lg w-full max-w-md p-4">
-                      <div className="mb-3 font-semibold">Multiple classes found — choose one</div>
+                      <div className="mb-3 font-semibold">{t('form.multipleClassesFound')}</div>
                       <div className="space-y-2 max-h-60 overflow-auto">
                         {classOptions.map((n) => (
                           <button
@@ -429,7 +431,7 @@ export default function StrategyForm({ strategy, onClose }: StrategyFormProps) {
                         ))}
                       </div>
                       <div className="mt-3 text-right">
-                        <button onClick={() => handleClassPick(null)} className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200">Cancel</button>
+                        <button onClick={() => handleClassPick(null)} className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200">{t('common:cancel')}</button>
                       </div>
                     </div>
                   </div>
@@ -437,7 +439,7 @@ export default function StrategyForm({ strategy, onClose }: StrategyFormProps) {
 
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium mb-2">
-                    Strategy Name *
+                    {t('form.name')} *
                   </label>
                   <div className="flex gap-2">
                     <input
@@ -446,7 +448,7 @@ export default function StrategyForm({ strategy, onClose }: StrategyFormProps) {
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="My Trading Strategy"
+                      placeholder={t('form.namePlaceholder')}
                       required
                     />
                     <button
@@ -454,7 +456,7 @@ export default function StrategyForm({ strategy, onClose }: StrategyFormProps) {
                       onClick={handleLoadFromFileClick}
                       className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-800 text-sm whitespace-nowrap"
                     >
-                      Load from file
+                      {t('form.loadFromFile')}
                     </button>
                     <input ref={fileInputRef} type="file" accept=".py" className="hidden" onChange={handleFileSelected} />
                   </div>
@@ -462,7 +464,7 @@ export default function StrategyForm({ strategy, onClose }: StrategyFormProps) {
 
                 <div>
                   <label htmlFor="className" className="block text-sm font-medium mb-2">
-                    Class Name *
+                    {t('form.className')} *
                   </label>
                   <input
                     id="className"
@@ -470,29 +472,29 @@ export default function StrategyForm({ strategy, onClose }: StrategyFormProps) {
                     value={className}
                     onChange={(e) => setClassName(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="MyStrategyClass"
+                    placeholder={t('form.classNamePlaceholder')}
                     required
                   />
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Python class name in the code</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{t('form.classNameHelp')}</p>
                 </div>
 
                 <div>
                   <label htmlFor="description" className="block text-sm font-medium mb-2">
-                    Description
+                    {t('form.description')}
                   </label>
                   <textarea
                     id="description"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Strategy description..."
+                    placeholder={t('form.descriptionPlaceholder')}
                     rows={3}
                   />
                 </div>
 
                 <div>
                   <label htmlFor="parameters" className="block text-sm font-medium mb-2">
-                    Default Parameters (JSON)
+                    {t('form.defaultParametersJson')}
                   </label>
                   <textarea
                     id="parameters"
@@ -503,7 +505,7 @@ export default function StrategyForm({ strategy, onClose }: StrategyFormProps) {
                     placeholder='{"fast_window": 5, "slow_window": 20}'
                   />
                   <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                    Strategy parameters as JSON. These will be used as defaults in backtests.
+                    {t('form.parametersJsonHelp')}
                   </p>
                 </div>
 
@@ -517,7 +519,7 @@ export default function StrategyForm({ strategy, onClose }: StrategyFormProps) {
                       className="h-4 w-4 rounded border-gray-300 dark:border-gray-600"
                     />
                     <label htmlFor="isActive" className="text-sm font-medium">
-                      Active
+                      {t('common:active')}
                     </label>
                   </div>
                 )}
@@ -530,7 +532,7 @@ export default function StrategyForm({ strategy, onClose }: StrategyFormProps) {
                   onClick={onClose}
                   className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 >
-                  Cancel
+                  {t('common:cancel')}
                 </button>
                 <button
                   onClick={handleSubmit}
@@ -538,7 +540,7 @@ export default function StrategyForm({ strategy, onClose }: StrategyFormProps) {
                   className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
                 >
                   <Save className="h-4 w-4" />
-                  {saveMutation.isPending ? 'Saving...' : isEdit ? 'Update' : 'Create'}
+                  {saveMutation.isPending ? t('form.saving') : isEdit ? t('common:update') : t('common:create')}
                 </button>
               </div>
             </form>

@@ -1,0 +1,22 @@
+{
+  "title": "仪表盘",
+  "subtitle": "交易系统状态总览",
+  "activeJobs": "活跃任务",
+  "queuedJobs": "排队任务",
+  "completed": "已完成",
+  "failed": "失败",
+  "queueStatus": "队列状态",
+  "loadingQueue": "加载队列状态中...",
+  "jobs": "{{count}} 个任务",
+  "systemStatus": "系统状态",
+  "backendApi": "后端 API",
+  "redisQueue": "Redis 队列",
+  "workers": "Workers",
+  "dataSyncStatus": "数据同步状态",
+  "daemon": "守护进程",
+  "consistency": "一致性",
+  "missingDates": "缺失日期",
+  "lastRun": "上次运行",
+  "latestSync": "最近一次同步",
+  "noSyncHistory": "暂无同步记录"
+}

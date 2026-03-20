@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Layers, Play, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { marketDataAPI, queueAPI, strategiesAPI } from '../lib/api'
 import SymbolSearch from './SymbolSearch'
 
@@ -21,6 +22,7 @@ interface Stock {
 type SelectionMode = 'industry' | 'exchange' | 'manual'
 
 export default function BulkBacktestForm({ onClose, onSubmitSuccess }: BulkBacktestFormProps) {
+  const { t } = useTranslation(['backtest', 'common'])
   const queryClient = useQueryClient()
 
   const [strategyId, setStrategyId] = useState<string>('')
@@ -200,7 +202,7 @@ export default function BulkBacktestForm({ onClose, onSubmitSuccess }: BulkBackt
     },
     onError: (err: any) => {
       const resp = err?.response?.data
-      let msg = 'Failed to submit bulk backtest'
+      let msg = t('bulk.submitFailed')
       if (resp?.detail) {
         msg = typeof resp.detail === 'string' ? resp.detail : JSON.stringify(resp.detail)
       }
@@ -212,17 +214,17 @@ export default function BulkBacktestForm({ onClose, onSubmitSuccess }: BulkBackt
     e.preventDefault()
     setError('')
 
-    if (!strategyId) { setError('Please select a strategy'); return }
-    if (selectedSymbols.size === 0) { setError('Please select at least one symbol'); return }
-    if (!startDate || !endDate) { setError('Please select start and end dates'); return }
-    if (new Date(startDate) >= new Date(endDate)) { setError('End date must be after start date'); return }
+    if (!strategyId) { setError(t('form.selectStrategyError')); return }
+    if (selectedSymbols.size === 0) { setError(t('bulk.selectSymbolError')); return }
+    if (!startDate || !endDate) { setError(t('form.selectDatesError')); return }
+    if (new Date(startDate) >= new Date(endDate)) { setError(t('form.dateRangeError')); return }
 
     // Parse parameters
     let paramsObj: Record<string, unknown> = {}
     try {
       paramsObj = parameters && parameters.trim() ? JSON.parse(parameters) : {}
     } catch (e) {
-      setError('Parameters must be valid JSON')
+      setError(t('form.invalidJson'))
       return
     }
 
@@ -258,7 +260,7 @@ export default function BulkBacktestForm({ onClose, onSubmitSuccess }: BulkBackt
         <div className="flex items-center justify-between p-4 border-b border-border">
           <div className="flex items-center gap-2">
             <Layers className="h-5 w-5 text-primary" />
-            <h2 className="text-xl font-semibold">Bulk Backtest</h2>
+            <h2 className="text-xl font-semibold">{t('bulk.title')}</h2>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-muted rounded-md transition-colors">
             <X className="h-5 w-5" />
@@ -276,7 +278,7 @@ export default function BulkBacktestForm({ onClose, onSubmitSuccess }: BulkBackt
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            Basic Settings
+            {t('form.basicSettings')}
           </button>
           <button
             type="button"
@@ -287,7 +289,7 @@ export default function BulkBacktestForm({ onClose, onSubmitSuccess }: BulkBackt
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            Symbols ({selectedSymbols.size})
+            {t('symbol')} ({selectedSymbols.size})
           </button>
           <button
             type="button"
@@ -298,7 +300,7 @@ export default function BulkBacktestForm({ onClose, onSubmitSuccess }: BulkBackt
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            Strategy Parameters
+            {t('form.strategyParameters')}
           </button>
         </div>
 
@@ -313,7 +315,7 @@ export default function BulkBacktestForm({ onClose, onSubmitSuccess }: BulkBackt
 
           {/* Strategy */}
           <div>
-            <label className="block text-sm font-medium mb-2">Strategy *</label>
+            <label className="block text-sm font-medium mb-2">{t('strategy')} *</label>
             <select
               value={strategyId}
               onChange={(e) => setStrategyId(e.target.value)}
@@ -321,7 +323,7 @@ export default function BulkBacktestForm({ onClose, onSubmitSuccess }: BulkBackt
               required
               disabled={isLoadingStrategies}
             >
-              <option value="">{isLoadingStrategies ? 'Loading...' : 'Select a strategy'}</option>
+              <option value="">{isLoadingStrategies ? t('common:loading') : t('selectStrategy')}</option>
               {strategies.map((s: any) => (
                 <option key={s.id} value={s.id}>
                   {s.name} v{s.version || 1} ({s.class_name})
@@ -333,12 +335,12 @@ export default function BulkBacktestForm({ onClose, onSubmitSuccess }: BulkBackt
           {/* Dates */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-2">Start Date *</label>
+              <label className="block text-sm font-medium mb-2">{t('startDate')} *</label>
               <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)}
                 className="w-full px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring" required />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">End Date *</label>
+              <label className="block text-sm font-medium mb-2">{t('endDate')} *</label>
               <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)}
                 className="w-full px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring" required />
             </div>
@@ -346,7 +348,7 @@ export default function BulkBacktestForm({ onClose, onSubmitSuccess }: BulkBackt
 
           {/* Capital */}
           <div>
-            <label className="block text-sm font-medium mb-2">Initial Capital *</label>
+            <label className="block text-sm font-medium mb-2">{t('initialCapital')} *</label>
             <input type="number" value={initialCapital} onChange={(e) => setInitialCapital(e.target.value)}
               className="w-full px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
               min="0" step="1000" required />
@@ -355,13 +357,13 @@ export default function BulkBacktestForm({ onClose, onSubmitSuccess }: BulkBackt
           {/* Rate / slippage */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-2">Commission Rate</label>
+              <label className="block text-sm font-medium mb-2">{t('commission')}</label>
               <input type="number" value={rate} onChange={(e) => setRate(e.target.value)}
                 className="w-full px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                 min="0" step="0.0001" />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Slippage</label>
+              <label className="block text-sm font-medium mb-2">{t('slippage')}</label>
               <input type="number" value={slippage} onChange={(e) => setSlippage(e.target.value)}
                 className="w-full px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                 min="0" step="0.0001" />
@@ -370,7 +372,7 @@ export default function BulkBacktestForm({ onClose, onSubmitSuccess }: BulkBackt
 
           {/* Benchmark */}
           <div>
-            <label className="block text-sm font-medium mb-2">Benchmark *</label>
+            <label className="block text-sm font-medium mb-2">{t('form.benchmark')} *</label>
               <select value={benchmark} onChange={(e) => setBenchmark(e.target.value)}
               className="w-full px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring" required>
                 {dynamicBenchmarkOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -385,7 +387,7 @@ export default function BulkBacktestForm({ onClose, onSubmitSuccess }: BulkBackt
 
           {/* Symbol Selection Mode */}
           <div>
-            <label className="block text-sm font-medium mb-2">Symbol Selection *</label>
+            <label className="block text-sm font-medium mb-2">{t('bulk.symbolSelection')} *</label>
             <div className="flex gap-1 mb-3">
               {(['industry', 'exchange', 'manual'] as const).map(mode => (
                 <button
@@ -398,7 +400,7 @@ export default function BulkBacktestForm({ onClose, onSubmitSuccess }: BulkBackt
                       : 'bg-muted hover:bg-muted/80'
                   }`}
                 >
-                  {mode === 'industry' ? 'By Industry' : mode === 'exchange' ? 'By Exchange' : 'Manual'}
+                  {mode === 'industry' ? t('bulk.byIndustry') : mode === 'exchange' ? t('bulk.byExchange') : t('bulk.manual')}
                 </button>
               ))}
             </div>
@@ -412,7 +414,7 @@ export default function BulkBacktestForm({ onClose, onSubmitSuccess }: BulkBackt
                     onChange={(e) => setSelectedIndustry(e.target.value)}
                     className="w-full px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                   >
-                    <option value="">Select industry...</option>
+                    <option value="">{t('bulk.selectIndustry')}</option>
                     {sectors.map(s => (
                       <option key={s.name} value={s.name}>
                         {s.name} ({s.count})
@@ -484,14 +486,14 @@ export default function BulkBacktestForm({ onClose, onSubmitSuccess }: BulkBackt
               <div className="mt-2">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-xs font-medium text-muted-foreground">
-                    {selectedSymbols.size} symbol{selectedSymbols.size !== 1 ? 's' : ''} selected
+                    {t('bulk.selected', { count: selectedSymbols.size })}
                   </span>
                   <button
                     type="button"
                     onClick={() => setSelectedSymbols(new Map())}
                     className="text-xs text-destructive hover:underline"
                   >
-                    Clear all
+                    {t('common:clearAll')}
                   </button>
                 </div>
                 <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
@@ -517,7 +519,7 @@ export default function BulkBacktestForm({ onClose, onSubmitSuccess }: BulkBackt
           {activeTab === 'parameters' && (
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Strategy Parameters (JSON)</label>
+                <label className="block text-sm font-medium mb-2">{t('form.strategyParametersJson')}</label>
                 <textarea
                   value={parameters}
                   onChange={(e) => setParameters(e.target.value)}
@@ -526,7 +528,7 @@ export default function BulkBacktestForm({ onClose, onSubmitSuccess }: BulkBackt
                   placeholder='{\n  "param1": "value1",\n  "param2": 123\n}'
                 />
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Override strategy default parameters. Must be valid JSON format.
+                  {t('form.parametersHintBulk')}
                 </p>
               </div>
             </div>
@@ -537,13 +539,13 @@ export default function BulkBacktestForm({ onClose, onSubmitSuccess }: BulkBackt
         <div className="flex items-center justify-end gap-3 p-4 border-t border-border">
           <button type="button" onClick={onClose}
             className="px-4 py-2 border border-input rounded-md hover:bg-muted transition-colors">
-            Cancel
+            {t('common:cancel')}
           </button>
           <div className="flex items-center gap-3">
             <button onClick={handleSubmit} disabled={submitMutation.isPending}
               className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 transition-colors flex items-center gap-2">
               <Play className="h-4 w-4" />
-              {submitMutation.isPending ? 'Submitting...' : `Bulk Test (${selectedSymbols.size})`}
+              {submitMutation.isPending ? t('common:submitting') : `${t('bulkTest')} (${selectedSymbols.size})`}
             </button>
           </div>
         </div>
@@ -565,8 +567,9 @@ function SymbolCheckboxList({
   onSelectAll: () => void
   onDeselectAll: () => void
 }) {
-  if (loading) return <div className="text-sm text-muted-foreground py-2">Loading symbols...</div>
-  if (stocks.length === 0) return <div className="text-sm text-muted-foreground py-2">No symbols found</div>
+  const { t } = useTranslation(['backtest', 'common'])
+  if (loading) return <div className="text-sm text-muted-foreground py-2">{t('bulk.loadingSymbols')}</div>
+  if (stocks.length === 0) return <div className="text-sm text-muted-foreground py-2">{t('bulk.noSymbols')}</div>
 
   return (
     <div className="border border-border rounded-md">
@@ -577,7 +580,7 @@ function SymbolCheckboxList({
           onClick={allSelected ? onDeselectAll : onSelectAll}
           className="text-xs text-primary hover:underline"
         >
-          {allSelected ? 'Deselect All' : 'Select All'}
+          {allSelected ? t('common:deselectAll') : t('common:selectAll')}
         </button>
       </div>
       <div className="max-h-48 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 gap-0">

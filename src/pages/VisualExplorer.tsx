@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   BarChart3, Loader2, RefreshCw, Search, TrendingUp
 } from 'lucide-react'
@@ -7,6 +8,7 @@ import { marketDataAPI } from '../lib/api'
 type ChartData = { date: string; close: number; volume: number }
 
 export default function VisualExplorer() {
+  const { t } = useTranslation(['social', 'common'])
   const [symbol, setSymbol] = useState('')
   const [startDate, setStartDate] = useState('2023-01-01')
   const [endDate, setEndDate] = useState('2024-01-01')
@@ -35,16 +37,16 @@ export default function VisualExplorer() {
         const min = Math.min(...closes)
         const totalReturn = ((last - first) / first * 100).toFixed(2)
         setStats({
-          'Days': rows.length,
-          'Start Price': first.toFixed(2),
-          'End Price': last.toFixed(2),
-          'High': max.toFixed(2),
-          'Low': min.toFixed(2),
-          'Return': `${totalReturn}%`,
+          'statDays': rows.length,
+          'statStartPrice': first.toFixed(2),
+          'statEndPrice': last.toFixed(2),
+          'statHigh': max.toFixed(2),
+          'statLow': min.toFixed(2),
+          'statReturn': `${totalReturn}%`,
         })
       }
     } catch {
-      setError('Failed to load market data')
+      setError(t('visualExplorer.loadFailed'))
     } finally {
       setLoading(false)
     }
@@ -58,7 +60,7 @@ export default function VisualExplorer() {
     <div className="p-6" data-testid="visual-explorer-page">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-          <BarChart3 className="h-7 w-7" /> Visual Explorer
+          <BarChart3 className="h-7 w-7" /> {t('visualExplorer.title')}
         </h1>
       </div>
 
@@ -66,24 +68,24 @@ export default function VisualExplorer() {
       <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
         <div className="flex flex-wrap gap-3 items-end">
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Symbol</label>
+            <label className="block text-xs text-gray-500 mb-1">{t('common:symbol')}</label>
             <input type="text" value={symbol} onChange={e => setSymbol(e.target.value)}
-              placeholder="e.g. 000001.SZ" className="border border-gray-300 rounded px-3 py-1.5 text-sm w-40" />
+              placeholder={t('visualExplorer.symbolPlaceholder')} className="border border-gray-300 rounded px-3 py-1.5 text-sm w-40" />
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Start</label>
+            <label className="block text-xs text-gray-500 mb-1">{t('visualExplorer.start')}</label>
             <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
               className="border border-gray-300 rounded px-3 py-1.5 text-sm" />
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1">End</label>
+            <label className="block text-xs text-gray-500 mb-1">{t('visualExplorer.end')}</label>
             <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
               className="border border-gray-300 rounded px-3 py-1.5 text-sm" />
           </div>
           <button onClick={fetchData} disabled={loading || !symbol.trim()}
             className="flex items-center gap-1 px-4 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 disabled:opacity-50">
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-            Load
+            {t('visualExplorer.load')}
           </button>
         </div>
       </div>
@@ -97,7 +99,7 @@ export default function VisualExplorer() {
         <div className="grid grid-cols-3 md:grid-cols-6 gap-3 mb-6">
           {Object.entries(stats).map(([key, val]) => (
             <div key={key} className="bg-white rounded-lg border border-gray-200 p-3 text-center">
-              <p className="text-xs text-gray-500">{key}</p>
+              <p className="text-xs text-gray-500">{t(`visualExplorer.${key}`)}</p>
               <p className="text-lg font-semibold text-gray-900">{val}</p>
             </div>
           ))}
@@ -108,7 +110,7 @@ export default function VisualExplorer() {
       {data.length > 0 && (
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <h3 className="font-semibold text-sm text-gray-700 mb-3 flex items-center gap-1">
-            <TrendingUp className="h-4 w-4" /> Price Chart — {symbol}
+            <TrendingUp className="h-4 w-4" /> {t('visualExplorer.priceChart')} — {symbol}
           </h3>
           <div className="overflow-x-auto">
             <svg viewBox={`0 0 ${Math.max(data.length, 100)} 200`} className="w-full h-64" preserveAspectRatio="none">
@@ -140,7 +142,7 @@ export default function VisualExplorer() {
       {!loading && data.length === 0 && !error && (
         <div className="bg-white rounded-lg border border-gray-200 p-12 text-center text-gray-400">
           <BarChart3 className="h-10 w-10 mx-auto mb-3" />
-          <p>Enter a symbol and date range to explore market data</p>
+          <p>{t('visualExplorer.emptyState')}</p>
         </div>
       )}
     </div>

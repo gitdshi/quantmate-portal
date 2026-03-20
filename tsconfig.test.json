@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "types": ["vitest", "vite/client", "node"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@test/*": ["test/*"]
+    }
+  },
+  "include": ["test/**/*.ts", "test/**/*.tsx"],
+  "exclude": ["node_modules", "dist"]
+}

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   ArrowDownCircle, ArrowUpCircle, Clock, Filter, Loader2,
   PlayCircle, RefreshCw, XCircle
@@ -32,6 +33,7 @@ const STATUS_COLORS: Record<string, string> = {
 }
 
 export default function Trading() {
+  const { t } = useTranslation(['trading', 'common'])
   const [orders, setOrders] = useState<Order[]>([])
   const [gateways, setGateways] = useState<GatewayInfo[]>([])
   const [loading, setLoading] = useState(true)
@@ -51,7 +53,7 @@ export default function Trading() {
       const result = data as any
       setOrders(result.data || result || [])
     } catch {
-      setError('Failed to load orders')
+      setError(t('live.loadFailed'))
     } finally {
       setLoading(false)
     }
@@ -86,7 +88,7 @@ export default function Trading() {
       setForm(f => ({ ...f, symbol: '', quantity: 100, price: undefined }))
       fetchOrders()
     } catch (err: any) {
-      setError(err?.response?.data?.message || 'Order submission failed')
+      setError(err?.response?.data?.message || t('live.orderFailed'))
     } finally {
       setSubmitting(false)
     }
@@ -97,20 +99,20 @@ export default function Trading() {
       await tradingAPI.cancelOrder(id)
       fetchOrders()
     } catch {
-      setError('Failed to cancel order')
+      setError(t('live.cancelFailed'))
     }
   }
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Live Trading</h1>
+      <h1 className="text-2xl font-bold">{t('live.title')}</h1>
 
       {/* Order Form */}
       <div className="bg-card border rounded-lg p-6">
-        <h2 className="text-lg font-semibold mb-4">New Order</h2>
+        <h2 className="text-lg font-semibold mb-4">{t('live.newOrder')}</h2>
         <form onSubmit={handleSubmit} className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Symbol</label>
+            <label className="block text-sm font-medium mb-1">{t('order.symbol')}</label>
             <input
               type="text" placeholder="000001.SZ" value={form.symbol}
               onChange={e => setForm(f => ({ ...f, symbol: e.target.value }))}
@@ -119,25 +121,25 @@ export default function Trading() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Direction</label>
+            <label className="block text-sm font-medium mb-1">{t('order.direction')}</label>
             <select value={form.direction} onChange={e => setForm(f => ({ ...f, direction: e.target.value as any }))}
               className="w-full border rounded px-3 py-2 text-sm">
-              <option value="buy">Buy</option>
-              <option value="sell">Sell</option>
+              <option value="buy">{t('order.buy')}</option>
+              <option value="sell">{t('order.sell')}</option>
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Type</label>
+            <label className="block text-sm font-medium mb-1">{t('order.type')}</label>
             <select value={form.order_type} onChange={e => setForm(f => ({ ...f, order_type: e.target.value as any }))}
               className="w-full border rounded px-3 py-2 text-sm">
-              <option value="market">Market</option>
-              <option value="limit">Limit</option>
-              <option value="stop">Stop</option>
-              <option value="stop_limit">Stop Limit</option>
+              <option value="market">{t('order.market')}</option>
+              <option value="limit">{t('order.limit')}</option>
+              <option value="stop">{t('order.stop')}</option>
+              <option value="stop_limit">{t('order.stopLimit')}</option>
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Quantity</label>
+            <label className="block text-sm font-medium mb-1">{t('order.quantity')}</label>
             <input
               type="number" min={1} value={form.quantity}
               onChange={e => setForm(f => ({ ...f, quantity: Number(e.target.value) }))}
@@ -147,7 +149,7 @@ export default function Trading() {
           </div>
           {form.order_type !== 'market' && (
             <div>
-              <label className="block text-sm font-medium mb-1">Price</label>
+              <label className="block text-sm font-medium mb-1">{t('order.price')}</label>
               <input
                 type="number" step="0.01" value={form.price || ''}
                 onChange={e => setForm(f => ({ ...f, price: Number(e.target.value) || undefined }))}
@@ -156,13 +158,13 @@ export default function Trading() {
             </div>
           )}
           <div>
-            <label className="block text-sm font-medium mb-1">Gateway</label>
+            <label className="block text-sm font-medium mb-1">{t('order.gateway')}</label>
             <select
               value={form.gateway_name}
               onChange={e => setForm(f => ({ ...f, gateway_name: e.target.value }))}
               className="w-full border rounded px-3 py-2 text-sm"
             >
-              <option value="">Select gateway...</option>
+              <option value="">{t('order.selectGateway')}</option>
               {gateways.map(g => (
                 <option key={g.name} value={g.name}>
                   {g.name} ({g.type}) {g.connected ? '●' : '○'}
@@ -174,7 +176,7 @@ export default function Trading() {
             <button type="submit" disabled={submitting}
               className="bg-primary text-primary-foreground px-6 py-2 rounded text-sm font-medium disabled:opacity-50 flex items-center gap-2">
               {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlayCircle className="h-4 w-4" />}
-              Submit Order
+              {t('live.submitOrder')}
             </button>
           </div>
         </form>
@@ -188,16 +190,16 @@ export default function Trading() {
       <div className="bg-card border rounded-lg">
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="font-semibold flex items-center gap-2">
-            <Clock className="h-4 w-4" /> Orders
+            <Clock className="h-4 w-4" /> {t('order.orders')}
           </h2>
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-muted-foreground" />
             <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
               className="border rounded px-2 py-1 text-sm">
               <option value="">All</option>
-              <option value="created">Created</option>
-              <option value="filled">Filled</option>
-              <option value="cancelled">Cancelled</option>
+              <option value="created">{t('status.created')}</option>
+              <option value="filled">{t('status.filled')}</option>
+              <option value="cancelled">{t('status.cancelled')}</option>
             </select>
             <button onClick={fetchOrders} className="p-1 hover:bg-accent rounded">
               <RefreshCw className="h-4 w-4" />
@@ -209,21 +211,21 @@ export default function Trading() {
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : orders.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">No orders yet</div>
+          <div className="text-center py-12 text-muted-foreground">{t('order.noOrders')}</div>
         ) : (
           <>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-muted/50">
                   <tr>
-                    <th className="text-left px-4 py-2">Symbol</th>
-                    <th className="text-left px-4 py-2">Direction</th>
-                    <th className="text-left px-4 py-2">Type</th>
-                    <th className="text-right px-4 py-2">Qty</th>
-                    <th className="text-right px-4 py-2">Price</th>
-                    <th className="text-left px-4 py-2">Status</th>
-                    <th className="text-left px-4 py-2">Time</th>
-                    <th className="text-right px-4 py-2">Actions</th>
+                    <th className="text-left px-4 py-2">{t('order.symbol')}</th>
+                    <th className="text-left px-4 py-2">{t('order.direction')}</th>
+                    <th className="text-left px-4 py-2">{t('order.type')}</th>
+                    <th className="text-right px-4 py-2">{t('order.quantity')}</th>
+                    <th className="text-right px-4 py-2">{t('order.price')}</th>
+                    <th className="text-left px-4 py-2">{t('order.status')}</th>
+                    <th className="text-left px-4 py-2">{t('order.time')}</th>
+                    <th className="text-right px-4 py-2">{t('order.actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -259,7 +261,7 @@ export default function Trading() {
               </table>
             </div>
             <div className="p-4 border-t text-sm text-muted-foreground">
-              {orders.length} order(s)
+              {t('order.orderCount', { count: orders.length })}
             </div>
           </>
         )}

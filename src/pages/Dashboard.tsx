@@ -1,8 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import { Activity, AlertCircle, Clock, TrendingUp } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { queueAPI, systemAPI } from '../lib/api'
 
 export default function Dashboard() {
+  const { t } = useTranslation('dashboard')
   const { data: queueStats } = useQuery({
     queryKey: ['queueStats'],
     queryFn: () => queueAPI.getStats(),
@@ -24,36 +26,36 @@ export default function Dashboard() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Dashboard</h1>
+        <h1 className="text-3xl font-bold">{t('title')}</h1>
         <p className="text-muted-foreground mt-2">
-          Overview of your trading system status
+          {t('subtitle')}
         </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          title="Active Jobs"
+          title={t('activeJobs')}
           value={stats?.active || 0}
           icon={<Activity className="h-5 w-5" />}
           color="text-blue-500"
           bgColor="bg-blue-500/10"
         />
         <StatCard
-          title="Queued Jobs"
+          title={t('queuedJobs')}
           value={stats?.queued || 0}
           icon={<Clock className="h-5 w-5" />}
           color="text-yellow-500"
           bgColor="bg-yellow-500/10"
         />
         <StatCard
-          title="Completed"
+          title={t('completed')}
           value={stats?.completed || 0}
           icon={<TrendingUp className="h-5 w-5" />}
           color="text-green-500"
           bgColor="bg-green-500/10"
         />
         <StatCard
-          title="Failed"
+          title={t('failed')}
           value={stats?.failed || 0}
           icon={<AlertCircle className="h-5 w-5" />}
           color="text-red-500"
@@ -63,7 +65,7 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="bg-card p-6 rounded-lg border border-border">
-          <h2 className="text-xl font-semibold mb-4">Queue Status</h2>
+          <h2 className="text-xl font-semibold mb-4">{t('queueStatus')}</h2>
           {stats ? (
             <div className="space-y-3">
               {Object.entries(stats.by_queue || {}).map(([queueName, count]) => (
@@ -74,48 +76,48 @@ export default function Dashboard() {
               ))}
             </div>
           ) : (
-            <p className="text-muted-foreground">Loading queue status...</p>
+            <p className="text-muted-foreground">{t('loadingQueue')}</p>
           )}
         </div>
 
         <div className="bg-card p-6 rounded-lg border border-border">
-          <h2 className="text-xl font-semibold mb-4">System Status</h2>
+          <h2 className="text-xl font-semibold mb-4">{t('systemStatus')}</h2>
           <div className="space-y-3">
             <StatusItem
-              label="Backend API"
+              label={t('backendApi')}
               status="online"
             />
             <StatusItem
-              label="Redis Queue"
+              label={t('redisQueue')}
               status={stats ? 'online' : 'checking'}
             />
             <StatusItem
-              label="Workers"
+              label={t('workers')}
               status={stats && stats.active > 0 ? 'online' : 'idle'}
             />
           </div>
         </div>
 
         <div className="bg-card p-6 rounded-lg border border-border">
-          <h2 className="text-xl font-semibold mb-4">Data Sync Status</h2>
+          <h2 className="text-xl font-semibold mb-4">{t('dataSyncStatus')}</h2>
           <div className="space-y-3">
             <StatusItem
-              label="Daemon"
+              label={t('daemon')}
               status={daemonStatus?.status || 'checking'}
             />
             <StatusItem
-              label="Consistency"
+              label={t('consistency')}
               status={consistency ? (consistency.is_consistent ? 'online' : 'warning') : 'checking'}
             />
             <div className="text-sm text-muted-foreground">
-              Missing dates: <span className="font-medium text-foreground">{consistency?.missing_count ?? '—'}</span>
+              {t('missingDates')}: <span className="font-medium text-foreground">{consistency?.missing_count ?? '—'}</span>
             </div>
             <div className="text-sm text-muted-foreground">
-              Last run: <span className="font-medium text-foreground">{daemonStatus?.last_run_at ? new Date(daemonStatus.last_run_at).toLocaleString() : '—'}</span>
+              {t('lastRun')}: <span className="font-medium text-foreground">{daemonStatus?.last_run_at ? new Date(daemonStatus.last_run_at).toLocaleString() : '—'}</span>
             </div>
           </div>
           <div className="mt-4 pt-4 border-t border-border">
-            <div className="text-sm font-medium mb-2">Latest Sync</div>
+            <div className="text-sm font-medium mb-2">{t('latestSync')}</div>
             <div className="space-y-2">
               {Object.entries(latestSync).map(([endpoint, info]) => (
                 <div key={endpoint} className="flex items-center justify-between text-sm">
@@ -124,7 +126,7 @@ export default function Dashboard() {
                 </div>
               ))}
               {Object.keys(latestSync).length === 0 && (
-                <div className="text-sm text-muted-foreground">No sync history available</div>
+                <div className="text-sm text-muted-foreground">{t('noSyncHistory')}</div>
               )}
             </div>
           </div>

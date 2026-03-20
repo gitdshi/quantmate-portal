@@ -1,5 +1,6 @@
 import { AlertCircle, CheckCircle2, Loader2, RefreshCw, Settings as SettingsIcon, ToggleLeft, ToggleRight, Wifi } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { dataSourceAPI, systemAPI } from '../lib/api'
 
 interface DataSourceItem {
@@ -31,6 +32,7 @@ function getPermissionBadgeClass(level: string): string {
 }
 
 export default function Settings() {
+  const { t } = useTranslation(['settings', 'common'])
   const [items, setItems] = useState<DataSourceItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -59,7 +61,7 @@ export default function Settings() {
       const payload = response?.data?.data ?? response?.data ?? []
       setItems(Array.isArray(payload) ? payload : [])
     } catch {
-      setError('Failed to load data source items')
+      setError(t('loadFailed'))
     } finally {
       setLoading(false)
     }
@@ -126,13 +128,13 @@ export default function Settings() {
         [source]: {
           source,
           status,
-          message: response.data?.message || (status === 'success' ? 'Connected' : 'Connection failed'),
+          message: response.data?.message || (status === 'success' ? t('dataItems.connected') : t('dataItems.connectionFailed')),
         },
       }))
     } catch {
       setConnectionTests((prev) => ({
         ...prev,
-        [source]: { source, status: 'error', message: 'Connection failed' },
+        [source]: { source, status: 'error', message: t('dataItems.connectionFailed') },
       }))
     }
   }
@@ -146,13 +148,13 @@ export default function Settings() {
   }
 
   const rtMarketList = useMemo(() => ([
-    { key: 'CN', label: 'CN A-shares' },
-    { key: 'HK', label: 'HK stocks (delayed)' },
-    { key: 'US', label: 'US stocks (delayed)' },
-    { key: 'FUTURES', label: 'Futures (CN)' },
-    { key: 'FX', label: 'FX' },
-    { key: 'CRYPTO', label: 'Crypto' },
-  ]), [])
+    { key: 'CN', label: t('realtime.markets.CN') },
+    { key: 'HK', label: t('realtime.markets.HK') },
+    { key: 'US', label: t('realtime.markets.US') },
+    { key: 'FUTURES', label: t('realtime.markets.FUTURES') },
+    { key: 'FX', label: t('realtime.markets.FX') },
+    { key: 'CRYPTO', label: t('realtime.markets.CRYPTO') },
+  ]), [t])
 
   const parseBool = (value: any, fallback: boolean) => {
     if (value === undefined || value === null) return fallback
@@ -187,7 +189,7 @@ export default function Settings() {
         },
       }))
     } catch {
-      setRtError('Failed to load realtime settings')
+      setRtError(t('realtime.loadFailed'))
     } finally {
       setRtLoading(false)
     }
@@ -226,7 +228,7 @@ export default function Settings() {
       ])
       setRtError(null)
     } catch {
-      setRtError('Failed to save realtime settings')
+      setRtError(t('realtime.saveFailed'))
     }
   }
 
@@ -234,9 +236,9 @@ export default function Settings() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Settings</h1>
+          <h1 className="text-3xl font-bold">{t('title')}</h1>
           <p className="text-muted-foreground mt-2">
-            Manage data sources and system configuration
+            {t('subtitle')}
           </p>
         </div>
         <button
@@ -245,7 +247,7 @@ export default function Settings() {
             loadRealtimeConfig()
           }}
           className="p-2 rounded-md hover:bg-accent transition-colors"
-          title="Refresh"
+          title={t('common:refresh')}
         >
           <RefreshCw className="h-5 w-5" />
         </button>
@@ -263,7 +265,7 @@ export default function Settings() {
             onClick={fetchItems}
             className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
           >
-            Retry
+            {t('common:retry')}
           </button>
         </div>
       ) : (
@@ -274,9 +276,9 @@ export default function Settings() {
         <div className="flex items-center gap-3">
           <SettingsIcon className="h-5 w-5 text-primary" />
           <div>
-            <h2 className="text-lg font-semibold">Realtime Quote Settings</h2>
+            <h2 className="text-lg font-semibold">{t('realtime.title')}</h2>
             <p className="text-sm text-muted-foreground">
-              Control realtime quotes and intraday caching for Market Data.
+              {t('realtime.subtitle')}
             </p>
           </div>
         </div>
@@ -284,7 +286,7 @@ export default function Settings() {
         {rtLoading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
-            Loading realtime settings...
+            {t('realtime.loading')}
           </div>
         ) : rtError ? (
           <div className="text-sm text-red-500">{rtError}</div>
@@ -292,9 +294,9 @@ export default function Settings() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm font-medium">Enable realtime quotes</div>
+                <div className="text-sm font-medium">{t('realtime.enableQuotes')}</div>
                 <div className="text-xs text-muted-foreground">
-                  Turns realtime quote fetching on/off globally.
+                  {t('realtime.enableQuotesDesc')}
                 </div>
               </div>
               <button
@@ -307,9 +309,9 @@ export default function Settings() {
 
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm font-medium">Cache intraday series</div>
+                <div className="text-sm font-medium">{t('realtime.cacheIntraday')}</div>
                 <div className="text-xs text-muted-foreground">
-                  Store 24h realtime points in Redis for charts.
+                  {t('realtime.cacheIntradayDesc')}
                 </div>
               </div>
               <button
@@ -321,7 +323,7 @@ export default function Settings() {
             </div>
 
             <div>
-              <div className="text-sm font-medium mb-2">Enabled markets</div>
+              <div className="text-sm font-medium mb-2">{t('realtime.enabledMarkets')}</div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {rtMarketList.map((market) => (
                   <label key={market.key} className="flex items-center justify-between border border-border rounded-md px-3 py-2">
@@ -352,14 +354,14 @@ export default function Settings() {
         <div className="p-6 border-b border-border">
           <div className="flex items-center gap-3">
             <SettingsIcon className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold">Data Item Toggle Management</h2>
+            <h2 className="text-lg font-semibold">{t('dataItems.title')}</h2>
           </div>
           <p className="text-sm text-muted-foreground mt-1">
-            Disabled items will not consume API quota. Existing data is not affected.
+            {t('dataItems.subtitle')}
           </p>
           <div className="mt-2">
             <span className="text-sm font-medium">
-              Enabled: {items.filter((i) => i.enabled).length} / {items.length} items
+              {t('dataItems.enabledCount', { enabled: items.filter((i) => i.enabled).length, total: items.length })}
             </span>
           </div>
         </div>
@@ -376,11 +378,11 @@ export default function Settings() {
                 <div className="flex items-center gap-3">
                   <h3 className="font-semibold capitalize">{source}</h3>
                   <span className="text-sm text-muted-foreground">
-                    ({stats.enabled}/{stats.total} enabled)
+                    {t('dataItems.sourceStats', { enabled: stats.enabled, total: stats.total })}
                   </span>
                   {connTest?.status === 'success' && (
                     <span className="inline-flex items-center gap-1 text-xs bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 px-2 py-0.5 rounded-full">
-                      <CheckCircle2 className="h-3 w-3" /> Connected
+                      <CheckCircle2 className="h-3 w-3" /> {t('dataItems.connected')}
                     </span>
                   )}
                   {connTest?.status === 'error' && (
@@ -400,19 +402,19 @@ export default function Settings() {
                     ) : (
                       <Wifi className="h-3 w-3" />
                     )}
-                    Test Connection
+                    {t('dataItems.testConnection')}
                   </button>
                   <button
                     onClick={() => toggleAllForSource(source, true)}
                     className="px-3 py-1.5 text-xs font-medium rounded-md border border-border hover:bg-accent transition-colors"
                   >
-                    Enable All
+                    {t('dataItems.enableAll')}
                   </button>
                   <button
                     onClick={() => toggleAllForSource(source, false)}
                     className="px-3 py-1.5 text-xs font-medium rounded-md border border-border hover:bg-accent transition-colors"
                   >
-                    Disable All
+                    {t('dataItems.disableAll')}
                   </button>
                 </div>
               </div>
@@ -422,12 +424,12 @@ export default function Settings() {
                 <table className="w-full">
                   <thead>
                     <tr className="text-left text-xs text-muted-foreground border-b border-border">
-                      <th className="px-6 py-3 w-16">Toggle</th>
-                      <th className="px-6 py-3">Data Item</th>
-                      <th className="px-6 py-3">API Identifier</th>
-                      <th className="px-6 py-3">Permission</th>
-                      <th className="px-6 py-3">Last Sync</th>
-                      <th className="px-6 py-3">Status</th>
+                      <th className="px-6 py-3 w-16">{t('dataItems.toggle')}</th>
+                      <th className="px-6 py-3">{t('dataItems.dataItem')}</th>
+                      <th className="px-6 py-3">{t('dataItems.apiIdentifier')}</th>
+                      <th className="px-6 py-3">{t('dataItems.permission')}</th>
+                      <th className="px-6 py-3">{t('dataItems.lastSync')}</th>
+                      <th className="px-6 py-3">{t('common:status')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -474,7 +476,7 @@ export default function Settings() {
                                 : 'bg-muted text-muted-foreground'
                             }`}
                           >
-                            {item.enabled ? 'Enabled' : 'Disabled'}
+                            {item.enabled ? t('common:enabled') : t('common:disabled')}
                           </span>
                         </td>
                       </tr>
@@ -488,7 +490,7 @@ export default function Settings() {
 
         {items.length === 0 && (
           <div className="p-12 text-center text-muted-foreground">
-            No data source items configured
+            {t('dataItems.noItems')}
           </div>
         )}
       </div>

@@ -139,24 +139,5 @@ describe('Trading Page (Live-Only)', () => {
     })
   })
 })
-      expect(screen.getByText('Failed to load orders')).toBeInTheDocument()
-    })
-  })
-
-  it('toggles between paper and live mode', () => {
-    render(<Trading />)
-    const liveBtn = screen.getByText('Live')
-    fireEvent.click(liveBtn)
-    expect(liveBtn.className).toContain('bg-red-600')
-  })
-
-  it('shows empty state when no orders', async () => {
-    ;(tradingAPI.listOrders as any).mockResolvedValue({ data: [] })
-    render(<Trading />)
-    await waitFor(() => {
-      expect(screen.getByText('No orders yet')).toBeInTheDocument()
-    })
-  })
-})
 
 

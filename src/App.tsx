@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import Layout from './components/Layout'
 import { authAPI } from './lib/api'
@@ -27,6 +28,7 @@ import { useAuthStore } from './stores/auth'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, setAuth, logout } = useAuthStore()
+  const { t } = useTranslation('auth')
   const accessToken = localStorage.getItem('access_token')
   const refreshToken = localStorage.getItem('refresh_token')
   const [checking, setChecking] = useState(!!accessToken)
@@ -44,11 +46,17 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
     }
 
     let cancelled = false
+    const timeoutId = window.setTimeout(() => {
+      if (cancelled) return
+      logout()
+      setChecking(false)
+    }, 8000)
     authAPI.me()
       .then((response) => {
         if (cancelled) {
           return
         }
+        window.clearTimeout(timeoutId)
         const user = response.data
         setAuth(user, accessToken, refreshToken || '')
         setMustChangePassword(false)
@@ -58,6 +66,7 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
         if (cancelled) {
           return
         }
+        window.clearTimeout(timeoutId)
         const detail = err?.response?.data?.detail
         const detailText = typeof detail === 'string' ? detail.toLowerCase() : ''
         if (err?.response?.status === 403 && detailText.includes('password change required')) {
@@ -71,13 +80,14 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 
     return () => {
       cancelled = true
+      window.clearTimeout(timeoutId)
     }
   }, [accessToken, refreshToken, isAuthenticated, setAuth, logout])
 
   if (checking) {
     return (
       <div className="min-h-screen flex items-center justify-center text-muted-foreground">
-        Checking session...
+        {t('checkingSession')}
       </div>
     )
   }

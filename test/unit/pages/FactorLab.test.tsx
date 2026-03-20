@@ -98,7 +98,7 @@ describe('FactorLab Page', () => {
     render(<FactorLab />)
     fireEvent.click(screen.getByText('New Factor'))
     await waitFor(() => {
-      expect(screen.getByPlaceholderText('Factor name')).toBeInTheDocument()
+      expect(screen.getByPlaceholderText('Factor Name')).toBeInTheDocument()
     })
   })
 

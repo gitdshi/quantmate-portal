@@ -8,6 +8,7 @@ import {
   XCircle,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { paperTradingAPI, strategiesAPI } from '../lib/api'
 
@@ -76,6 +77,7 @@ const STATUS_COLORS: Record<string, string> = {
 }
 
 export default function PaperTrading() {
+  const { t } = useTranslation(['trading', 'common'])
   const [searchParams] = useSearchParams()
   const prefilledStrategyId = searchParams.get('strategy_id')
 
@@ -128,7 +130,7 @@ export default function PaperTrading() {
       const { data } = await paperTradingAPI.listDeployments()
       setDeployments(Array.isArray(data) ? data : (data.deployments ?? []))
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to load deployments')
+      setError(err.response?.data?.detail || t('paper.loadDeploymentsFailed'))
     } finally {
       setLoading(false)
     }
@@ -141,7 +143,7 @@ export default function PaperTrading() {
       const { data } = await paperTradingAPI.listPaperOrders()
       setOrders(Array.isArray(data) ? data : (data.orders ?? []))
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to load orders')
+      setError(err.response?.data?.detail || t('paper.loadOrdersFailed'))
     } finally {
       setLoading(false)
     }
@@ -154,7 +156,7 @@ export default function PaperTrading() {
       const { data } = await paperTradingAPI.getPaperPositions()
       setPositions(Array.isArray(data) ? data : (data.positions ?? []))
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to load positions')
+      setError(err.response?.data?.detail || t('paper.loadPositionsFailed'))
     } finally {
       setLoading(false)
     }
@@ -167,7 +169,7 @@ export default function PaperTrading() {
       const { data } = await paperTradingAPI.getPaperPerformance()
       setPerformance(data)
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to load performance')
+      setError(err.response?.data?.detail || t('paper.loadPerformanceFailed'))
     } finally {
       setLoading(false)
     }
@@ -189,7 +191,7 @@ export default function PaperTrading() {
       setDeployParams('{}')
       loadDeployments()
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Deploy failed')
+      setError(err.response?.data?.detail || t('paper.deploy.deployFailed'))
     }
   }
 
@@ -198,7 +200,7 @@ export default function PaperTrading() {
       await paperTradingAPI.stopDeployment(id)
       loadDeployments()
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Stop failed')
+      setError(err.response?.data?.detail || t('paper.deployment.stopFailed'))
     }
   }
 
@@ -219,7 +221,7 @@ export default function PaperTrading() {
       setOrderPrice(undefined)
       if (activeTab === 'orders') loadOrders()
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Order failed')
+      setError(err.response?.data?.detail || t('paper.manualOrder.orderFailed'))
     }
   }
 
@@ -228,21 +230,21 @@ export default function PaperTrading() {
       await paperTradingAPI.cancelPaperOrder(id)
       loadOrders()
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Cancel failed')
+      setError(err.response?.data?.detail || t('paper.cancelFailed'))
     }
   }
 
   const tabs: { key: TabType; label: string }[] = [
-    { key: 'deployments', label: 'Deployments' },
-    { key: 'orders', label: 'Orders' },
-    { key: 'positions', label: 'Positions' },
-    { key: 'performance', label: 'Performance' },
+    { key: 'deployments', label: t('paper.tabs.deployments') },
+    { key: 'orders', label: t('paper.tabs.orders') },
+    { key: 'positions', label: t('paper.tabs.positions') },
+    { key: 'performance', label: t('paper.tabs.performance') },
   ]
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white">Paper Trading</h1>
+        <h1 className="text-2xl font-bold text-white">{t('paper.title')}</h1>
         <button
           onClick={() => {
             loadDeployments()
@@ -253,7 +255,7 @@ export default function PaperTrading() {
           className="flex items-center gap-2 rounded bg-gray-700 px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-600"
         >
           <RefreshCw size={14} />
-          Refresh
+          {t('common:refresh')}
         </button>
       </div>
 
@@ -266,23 +268,23 @@ export default function PaperTrading() {
 
       {/* Deploy Strategy Panel */}
       <div className="rounded-lg border border-gray-700 bg-gray-800 p-4">
-        <h2 className="mb-3 text-lg font-semibold text-white">Deploy Strategy to Paper</h2>
+        <h2 className="mb-3 text-lg font-semibold text-white">{t('paper.deploy.title')}</h2>
         <form onSubmit={handleDeploy} className="flex flex-wrap items-end gap-3">
           <div>
-            <label className="mb-1 block text-xs text-gray-400">Strategy</label>
+            <label className="mb-1 block text-xs text-gray-400">{t('paper.deploy.strategy')}</label>
             <select
               value={deployStrategyId}
               onChange={(e) => setDeployStrategyId(e.target.value)}
               className="rounded bg-gray-700 px-3 py-2 text-sm text-white"
             >
-              <option value="">Select strategy...</option>
+              <option value="">{t('paper.deploy.selectStrategy')}</option>
               {strategies.map((s) => (
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs text-gray-400">Symbol</label>
+            <label className="mb-1 block text-xs text-gray-400">{t('paper.deploy.symbol')}</label>
             <input
               type="text"
               value={deploySymbol}
@@ -292,7 +294,7 @@ export default function PaperTrading() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-gray-400">Parameters (JSON)</label>
+            <label className="mb-1 block text-xs text-gray-400">{t('paper.deploy.parameters')}</label>
             <input
               type="text"
               value={deployParams}
@@ -306,17 +308,17 @@ export default function PaperTrading() {
             className="flex items-center gap-1 rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500"
           >
             <Play size={14} />
-            Deploy
+            {t('paper.deploy.deploy')}
           </button>
         </form>
       </div>
 
       {/* Manual Paper Order */}
       <div className="rounded-lg border border-gray-700 bg-gray-800 p-4">
-        <h2 className="mb-3 text-lg font-semibold text-white">Manual Paper Order</h2>
+        <h2 className="mb-3 text-lg font-semibold text-white">{t('paper.manualOrder.title')}</h2>
         <form onSubmit={handleSubmitOrder} className="flex flex-wrap items-end gap-3">
           <div>
-            <label className="mb-1 block text-xs text-gray-400">Symbol</label>
+            <label className="mb-1 block text-xs text-gray-400">{t('order.symbol')}</label>
             <input
               type="text"
               value={orderSymbol}
@@ -326,29 +328,29 @@ export default function PaperTrading() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-gray-400">Direction</label>
+            <label className="mb-1 block text-xs text-gray-400">{t('order.direction')}</label>
             <select
               value={orderDirection}
               onChange={(e) => setOrderDirection(e.target.value as 'buy' | 'sell')}
               className="rounded bg-gray-700 px-3 py-2 text-sm text-white"
             >
-              <option value="buy">Buy</option>
-              <option value="sell">Sell</option>
+              <option value="buy">{t('order.buy')}</option>
+              <option value="sell">{t('order.sell')}</option>
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs text-gray-400">Type</label>
+            <label className="mb-1 block text-xs text-gray-400">{t('order.type')}</label>
             <select
               value={orderType}
               onChange={(e) => setOrderType(e.target.value as 'market' | 'limit')}
               className="rounded bg-gray-700 px-3 py-2 text-sm text-white"
             >
-              <option value="market">Market</option>
-              <option value="limit">Limit</option>
+              <option value="market">{t('order.market')}</option>
+              <option value="limit">{t('order.limit')}</option>
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs text-gray-400">Quantity</label>
+            <label className="mb-1 block text-xs text-gray-400">{t('order.quantity')}</label>
             <input
               type="number"
               value={orderQuantity}
@@ -359,7 +361,7 @@ export default function PaperTrading() {
           </div>
           {orderType === 'limit' && (
             <div>
-              <label className="mb-1 block text-xs text-gray-400">Price</label>
+              <label className="mb-1 block text-xs text-gray-400">{t('order.price')}</label>
               <input
                 type="number"
                 step="0.01"
@@ -374,30 +376,30 @@ export default function PaperTrading() {
             className="flex items-center gap-1 rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500"
           >
             <Send size={14} />
-            Submit Paper Order
+            {t('paper.manualOrder.submit')}
           </button>
         </form>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-1 border-b border-gray-700">
-        {tabs.map((t) => (
+        {tabs.map((tab) => (
           <button
-            key={t.key}
-            onClick={() => setActiveTab(t.key)}
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
             className={`px-4 py-2 text-sm font-medium ${
-              activeTab === t.key
+              activeTab === tab.key
                 ? 'border-b-2 border-blue-500 text-white'
                 : 'text-gray-400 hover:text-gray-200'
             }`}
           >
-            {t.label}
+            {tab.label}
           </button>
         ))}
       </div>
 
       {/* Tab Content */}
-      {loading && <p className="text-gray-400">Loading...</p>}
+      {loading && <p className="text-gray-400">{t('common:loading')}</p>}
 
       {activeTab === 'deployments' && !loading && (
         <div className="overflow-x-auto">
@@ -405,12 +407,12 @@ export default function PaperTrading() {
             <thead className="border-b border-gray-700 text-gray-400">
               <tr>
                 <th className="px-3 py-2">ID</th>
-                <th className="px-3 py-2">Strategy</th>
-                <th className="px-3 py-2">Symbol</th>
-                <th className="px-3 py-2">Status</th>
-                <th className="px-3 py-2">P&L</th>
-                <th className="px-3 py-2">Started</th>
-                <th className="px-3 py-2">Actions</th>
+                <th className="px-3 py-2">{t('paper.deploy.strategy')}</th>
+                <th className="px-3 py-2">{t('order.symbol')}</th>
+                <th className="px-3 py-2">{t('order.status')}</th>
+                <th className="px-3 py-2">{t('position.pnl')}</th>
+                <th className="px-3 py-2">{t('paper.deployment.startedAt')}</th>
+                <th className="px-3 py-2">{t('order.actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-700/50">
@@ -442,7 +444,7 @@ export default function PaperTrading() {
                 </tr>
               ))}
               {deployments.length === 0 && (
-                <tr><td colSpan={7} className="px-3 py-8 text-center text-gray-500">No paper deployments yet</td></tr>
+                <tr><td colSpan={7} className="px-3 py-8 text-center text-gray-500">{t('paper.deployment.noDeployments')}</td></tr>
               )}
             </tbody>
           </table>
@@ -455,16 +457,16 @@ export default function PaperTrading() {
             <thead className="border-b border-gray-700 text-gray-400">
               <tr>
                 <th className="px-3 py-2">ID</th>
-                <th className="px-3 py-2">Symbol</th>
-                <th className="px-3 py-2">Direction</th>
-                <th className="px-3 py-2">Type</th>
-                <th className="px-3 py-2">Qty</th>
-                <th className="px-3 py-2">Price</th>
-                <th className="px-3 py-2">Status</th>
-                <th className="px-3 py-2">Filled</th>
-                <th className="px-3 py-2">Fee</th>
-                <th className="px-3 py-2">Time</th>
-                <th className="px-3 py-2">Actions</th>
+                <th className="px-3 py-2">{t('order.symbol')}</th>
+                <th className="px-3 py-2">{t('order.direction')}</th>
+                <th className="px-3 py-2">{t('order.type')}</th>
+                <th className="px-3 py-2">{t('order.quantity')}</th>
+                <th className="px-3 py-2">{t('order.price')}</th>
+                <th className="px-3 py-2">{t('order.status')}</th>
+                <th className="px-3 py-2">{t('common:filled')}</th>
+                <th className="px-3 py-2">{t('common:fee')}</th>
+                <th className="px-3 py-2">{t('order.time')}</th>
+                <th className="px-3 py-2">{t('order.actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-700/50">
@@ -504,7 +506,7 @@ export default function PaperTrading() {
                 </tr>
               ))}
               {orders.length === 0 && (
-                <tr><td colSpan={11} className="px-3 py-8 text-center text-gray-500">No paper orders yet</td></tr>
+                <tr><td colSpan={11} className="px-3 py-8 text-center text-gray-500">{t('order.noOrders')}</td></tr>
               )}
             </tbody>
           </table>
@@ -516,13 +518,13 @@ export default function PaperTrading() {
           <table className="w-full text-left text-sm">
             <thead className="border-b border-gray-700 text-gray-400">
               <tr>
-                <th className="px-3 py-2">Symbol</th>
-                <th className="px-3 py-2">Direction</th>
-                <th className="px-3 py-2">Quantity</th>
-                <th className="px-3 py-2">Avg Cost</th>
-                <th className="px-3 py-2">Current</th>
-                <th className="px-3 py-2">P&L</th>
-                <th className="px-3 py-2">P&L %</th>
+                <th className="px-3 py-2">{t('position.symbol')}</th>
+                <th className="px-3 py-2">{t('position.direction')}</th>
+                <th className="px-3 py-2">{t('position.quantity')}</th>
+                <th className="px-3 py-2">{t('position.avgCost')}</th>
+                <th className="px-3 py-2">{t('position.currentPrice')}</th>
+                <th className="px-3 py-2">{t('position.pnl')}</th>
+                <th className="px-3 py-2">{t('position.pnlPct')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-700/50">
@@ -546,7 +548,7 @@ export default function PaperTrading() {
                 </tr>
               ))}
               {positions.length === 0 && (
-                <tr><td colSpan={7} className="px-3 py-8 text-center text-gray-500">No paper positions</td></tr>
+                <tr><td colSpan={7} className="px-3 py-8 text-center text-gray-500">{t('positions.noPositions')}</td></tr>
               )}
             </tbody>
           </table>
@@ -557,11 +559,11 @@ export default function PaperTrading() {
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
             {[
-              { label: 'Total P&L', value: performance.total_pnl.toFixed(2), color: performance.total_pnl >= 0 ? 'text-green-400' : 'text-red-400' },
-              { label: 'Total Trades', value: String(performance.total_trades), color: 'text-white' },
-              { label: 'Win Rate', value: `${(performance.win_rate * 100).toFixed(1)}%`, color: 'text-white' },
-              { label: 'Max Drawdown', value: `${(performance.max_drawdown * 100).toFixed(2)}%`, color: 'text-red-400' },
-              { label: 'Sharpe Ratio', value: performance.sharpe_ratio?.toFixed(2) ?? 'N/A', color: 'text-white' },
+              { label: t('performance.totalPnl'), value: performance.total_pnl.toFixed(2), color: performance.total_pnl >= 0 ? 'text-green-400' : 'text-red-400' },
+              { label: t('performance.totalTrades'), value: String(performance.total_trades), color: 'text-white' },
+              { label: t('performance.winRate'), value: `${(performance.win_rate * 100).toFixed(1)}%`, color: 'text-white' },
+              { label: t('performance.maxDrawdown'), value: `${(performance.max_drawdown * 100).toFixed(2)}%`, color: 'text-red-400' },
+              { label: t('performance.sharpeRatio'), value: performance.sharpe_ratio?.toFixed(2) ?? 'N/A', color: 'text-white' },
             ].map((m) => (
               <div key={m.label} className="rounded-lg border border-gray-700 bg-gray-800 p-3">
                 <p className="text-xs text-gray-400">{m.label}</p>
@@ -582,7 +584,7 @@ export default function PaperTrading() {
       )}
 
       {activeTab === 'performance' && !loading && !performance && (
-        <p className="py-8 text-center text-gray-500">No performance data available</p>
+        <p className="py-8 text-center text-gray-500">{t('performance.noData')}</p>
       )}
     </div>
   )

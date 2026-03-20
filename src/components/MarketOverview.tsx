@@ -1,15 +1,17 @@
 import { useQuery } from '@tanstack/react-query'
 import { Activity, TrendingDown, TrendingUp } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { marketDataAPI } from '../lib/api'
 
 export default function MarketOverview() {
+  const { t } = useTranslation(['market', 'common'])
   const { data: overviewData, isLoading } = useQuery({
     queryKey: ['market-overview'],
     queryFn: () => marketDataAPI.overview(),
     refetchInterval: 60000, // Refresh every minute
   })
 
-  const overview = overviewData?.data || {}
+  const overview = overviewData?.data?.indexes || {}
 
   if (isLoading) {
     return (
@@ -26,29 +28,35 @@ export default function MarketOverview() {
 
   const markets = [
     {
-      name: 'S&P 500',
-      value: overview.sp500?.value || 0,
-      change: overview.sp500?.change || 0,
-      changePercent: overview.sp500?.changePercent || 0,
+      name: overview.csi300?.display_name || 'CSI 300',
+      value: overview.csi300?.price || 0,
+      change: overview.csi300?.change || 0,
+      changePercent: overview.csi300?.change_percent || 0,
     },
     {
-      name: 'NASDAQ',
-      value: overview.nasdaq?.value || 0,
-      change: overview.nasdaq?.change || 0,
-      changePercent: overview.nasdaq?.changePercent || 0,
+      name: overview.sse?.display_name || 'SSE Composite',
+      value: overview.sse?.price || 0,
+      change: overview.sse?.change || 0,
+      changePercent: overview.sse?.change_percent || 0,
     },
     {
-      name: 'DOW JONES',
-      value: overview.dow?.value || 0,
-      change: overview.dow?.change || 0,
-      changePercent: overview.dow?.changePercent || 0,
+      name: overview.szse?.display_name || 'SZSE Component',
+      value: overview.szse?.price || 0,
+      change: overview.szse?.change || 0,
+      changePercent: overview.szse?.change_percent || 0,
+    },
+    {
+      name: overview.chinext?.display_name || 'ChiNext',
+      value: overview.chinext?.price || 0,
+      change: overview.chinext?.change || 0,
+      changePercent: overview.chinext?.change_percent || 0,
     },
   ]
 
   return (
     <div>
-      <h2 className="text-lg font-semibold mb-4">Market Overview</h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <h2 className="text-lg font-semibold mb-4">{t('overview.title')}</h2>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {markets.map((market) => (
           <div key={market.name} className="bg-card border border-border rounded-lg p-4">
             <div className="flex items-center justify-between mb-2">
@@ -56,7 +64,7 @@ export default function MarketOverview() {
               <Activity className="h-4 w-4 text-muted-foreground" />
             </div>
             <div className="text-2xl font-bold mb-1">
-              {market.value > 0 ? market.value.toLocaleString() : 'N/A'}
+              {market.value > 0 ? market.value.toLocaleString() : t('common:na')}
             </div>
             {market.value > 0 && (
               <div className={`text-sm flex items-center gap-1 ${

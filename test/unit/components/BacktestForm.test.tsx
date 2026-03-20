@@ -63,10 +63,10 @@ describe('BacktestForm Component', () => {
     render(<BacktestForm />)
     
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /submit backtest/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /run backtest/i })).toBeInTheDocument()
     })
     
-    const submitButton = screen.getByRole('button', { name: /submit backtest/i })
+    const submitButton = screen.getByRole('button', { name: /run backtest/i })
     await user.click(submitButton)
     
     // Should not submit without required fields

@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
     CartesianGrid,
     Legend,
@@ -46,6 +47,7 @@ export default function EquityCurveChart({
   stockSymbol = 'Stock',
   annualReturn
 }: EquityCurveChartProps) {
+  const { t } = useTranslation(['backtest', 'common'])
   const chartData = useMemo(() => {
     if (!data || data.length === 0) return []
     
@@ -104,7 +106,7 @@ export default function EquityCurveChart({
   if (chartData.length === 0) {
     return (
       <div className="flex items-center justify-center h-64 bg-muted/30 rounded-lg">
-        <p className="text-muted-foreground">No equity curve data available</p>
+        <p className="text-muted-foreground">{t('results.noEquityData')}</p>
       </div>
     )
   }
@@ -159,22 +161,22 @@ export default function EquityCurveChart({
             formatter={(value: any, name: any) => {
               if (value === undefined) return ['N/A', name]
               if (name === 'balance') {
-                return [`$${value.toLocaleString()}`, 'Strategy Equity']
+                return [`$${value.toLocaleString()}`, t('results.strategyEquity')]
               }
               if (name === 'benchmark') {
-                return [`$${value.toLocaleString()}`, `Buy & Hold ${benchmarkSymbol}`]
+                return [`$${value.toLocaleString()}`, t('results.buyAndHold', { symbol: benchmarkSymbol })]
               }
               if (name === 'stockPriceNormalized') {
-                return [`$${value.toLocaleString()}`, `${stockSymbol} Price (Normalized)`]
+                return [`$${value.toLocaleString()}`, t('results.priceNormalized', { symbol: stockSymbol })]
               }
               if (name === 'benchmarkPrice') {
-                return [`${value.toFixed(2)}`, `${benchmarkSymbol} Price`]
+                return [`${value.toFixed(2)}`, `${benchmarkSymbol}`]
               }
               if (name === 'stockPrice') {
-                return [`${value.toFixed(2)}`, `${stockSymbol} Price`]
+                return [`${value.toFixed(2)}`, `${stockSymbol}`]
               }
               if (name === 'annualTrend') {
-                return [`$${value.toLocaleString()}`, 'Annual Trend']
+                return [`$${value.toLocaleString()}`, t('results.annualTrend')]
               }
               return [value, name]
             }}
@@ -194,7 +196,7 @@ export default function EquityCurveChart({
             stroke="hsl(var(--muted-foreground))"
             strokeDasharray="5 5"
             label={{
-              value: 'Initial',
+              value: t('results.initial'),
               position: 'right',
               fill: 'hsl(var(--muted-foreground))',
               fontSize: 12,
@@ -203,7 +205,7 @@ export default function EquityCurveChart({
           <Line
             type="monotone"
             dataKey="balance"
-            name="Strategy Equity"
+            name={t('results.strategyEquity')}
             stroke="hsl(var(--primary))"
             strokeWidth={2}
             dot={false}
@@ -213,7 +215,7 @@ export default function EquityCurveChart({
             <Line
               type="monotone"
               dataKey="stockPriceNormalized"
-              name={`${stockSymbol} Price (Normalized)`}
+              name={t('results.priceNormalized', { symbol: stockSymbol })}
               stroke="#10b981"
               strokeWidth={2}
               dot={false}
@@ -224,7 +226,7 @@ export default function EquityCurveChart({
             <Line
               type="monotone"
               dataKey="benchmark"
-              name={`Buy & Hold ${benchmarkSymbol}`}
+              name={t('results.buyAndHold', { symbol: benchmarkSymbol })}
               stroke="#f59e0b"
               strokeWidth={2}
               dot={false}
@@ -236,7 +238,7 @@ export default function EquityCurveChart({
             <Line
               type="monotone"
               dataKey="annualTrend"
-              name="Annual Trend"
+              name={t('results.annualTrend')}
               stroke="#8b5cf6"
               strokeWidth={1.5}
               strokeDasharray="5 5"

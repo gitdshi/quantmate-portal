@@ -1,4 +1,5 @@
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 interface PaginationProps {
   page: number
@@ -17,6 +18,7 @@ export default function Pagination({
   onPageSizeChange,
   pageSizeOptions = [10, 20, 50],
 }: PaginationProps) {
+  const { t } = useTranslation('common')
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
   const start = total === 0 ? 0 : (page - 1) * pageSize + 1
   const end = Math.min(page * pageSize, total)
@@ -40,7 +42,7 @@ export default function Pagination({
   return (
     <div className="flex items-center justify-between gap-4 py-3">
       <div className="text-sm text-muted-foreground">
-        Showing {start}-{end} of {total}
+        {t('pagination.showing', { start, end, total })}
       </div>
 
       <div className="flex items-center gap-1">
@@ -48,7 +50,7 @@ export default function Pagination({
           onClick={() => onPageChange(1)}
           disabled={page <= 1}
           className="p-1.5 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
-          title="First page"
+          title={t('pagination.firstPage')}
         >
           <ChevronsLeft className="h-4 w-4" />
         </button>
@@ -56,7 +58,7 @@ export default function Pagination({
           onClick={() => onPageChange(page - 1)}
           disabled={page <= 1}
           className="p-1.5 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
-          title="Previous page"
+          title={t('pagination.prevPage')}
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
@@ -85,7 +87,7 @@ export default function Pagination({
           onClick={() => onPageChange(page + 1)}
           disabled={page >= totalPages}
           className="p-1.5 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
-          title="Next page"
+          title={t('pagination.nextPage')}
         >
           <ChevronRight className="h-4 w-4" />
         </button>
@@ -93,7 +95,7 @@ export default function Pagination({
           onClick={() => onPageChange(totalPages)}
           disabled={page >= totalPages}
           className="p-1.5 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
-          title="Last page"
+          title={t('pagination.lastPage')}
         >
           <ChevronsRight className="h-4 w-4" />
         </button>
@@ -101,7 +103,7 @@ export default function Pagination({
 
       {onPageSizeChange && (
         <div className="flex items-center gap-2 text-sm">
-          <span className="text-muted-foreground">Per page:</span>
+          <span className="text-muted-foreground">{t('pagination.perPage')}</span>
           <select
             value={pageSize}
             onChange={(e) => onPageSizeChange(Number(e.target.value))}

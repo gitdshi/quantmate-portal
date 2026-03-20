@@ -1,0 +1,34 @@
+{
+  "sections": {
+    "overview": "概览",
+    "strategyDev": "策略开发",
+    "liveTrading": "实盘交易",
+    "researchAI": "研究 & AI",
+    "community": "社区",
+    "system": "系统管理"
+  },
+  "items": {
+    "dashboard": "Dashboard",
+    "strategies": "策略研究",
+    "backtest": "回测评估",
+    "paperTrading": "模拟交易",
+    "marketData": "行情数据",
+    "trading": "交易执行",
+    "positions": "持仓管理",
+    "portfolio": "组合管理",
+    "analytics": "分析中心",
+    "monitoring": "监控告警",
+    "reports": "报告复盘",
+    "factorLab": "因子研究",
+    "aiAssistant": "AI 助手",
+    "visualExplorer": "可视化探索",
+    "marketplace": "模板市场",
+    "teamSpace": "团队空间",
+    "accountSecurity": "账户安全",
+    "settings": "系统设置"
+  },
+  "toggleSidebar": "切换侧边栏",
+  "logout": "退出登录",
+  "language": "语言",
+  "switchLang": "切换语言"
+}

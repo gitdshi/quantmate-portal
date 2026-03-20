@@ -4,6 +4,7 @@ import {
   Wallet,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { tradingAPI } from '../lib/api'
 
 interface GatewayPosition {
@@ -32,6 +33,7 @@ interface GatewayInfo {
 }
 
 export default function Positions() {
+  const { t } = useTranslation(['trading', 'common'])
   const [gateways, setGateways] = useState<GatewayInfo[]>([])
   const [positions, setPositions] = useState<GatewayPosition[]>([])
   const [account, setAccount] = useState<GatewayAccount | null>(null)
@@ -59,7 +61,7 @@ export default function Positions() {
       if (connected) setSelectedGateway(connected.name)
       else if (gws.length > 0) setSelectedGateway(gws[0].name)
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to load gateways')
+      setError(err.response?.data?.detail || t('positions.loadGatewaysFailed'))
     }
   }
 
@@ -70,7 +72,7 @@ export default function Positions() {
       const { data } = await tradingAPI.getGatewayPositions({ gateway_name: selectedGateway })
       setPositions(data.positions ?? [])
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to load positions')
+      setError(err.response?.data?.detail || t('positions.loadFailed'))
     } finally {
       setLoading(false)
     }
@@ -92,7 +94,7 @@ export default function Positions() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Wallet size={24} className="text-blue-400" />
-          <h1 className="text-2xl font-bold text-white">Positions</h1>
+          <h1 className="text-2xl font-bold text-white">{t('positions.title')}</h1>
         </div>
         <div className="flex items-center gap-3">
           <select
@@ -100,7 +102,7 @@ export default function Positions() {
             onChange={(e) => setSelectedGateway(e.target.value)}
             className="rounded bg-gray-700 px-3 py-1.5 text-sm text-white"
           >
-            {gateways.length === 0 && <option value="">No gateways</option>}
+            {gateways.length === 0 && <option value="">{t('positions.noGateways')}</option>}
             {gateways.map((g) => (
               <option key={g.name} value={g.name}>
                 {g.name} ({g.type}) {g.connected ? '●' : '○'}
@@ -112,7 +114,7 @@ export default function Positions() {
             className="flex items-center gap-2 rounded bg-gray-700 px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-600"
           >
             <RefreshCw size={14} />
-            Refresh
+            {t('common:refresh')}
           </button>
         </div>
       </div>
@@ -128,11 +130,11 @@ export default function Positions() {
       {account && (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
           {[
-            { label: 'Balance', value: account.balance.toFixed(2) },
-            { label: 'Available', value: account.available.toFixed(2) },
-            { label: 'Frozen', value: account.frozen.toFixed(2) },
-            { label: 'Margin', value: account.margin.toFixed(2) },
-            { label: 'Total P&L', value: totalPnl.toFixed(2), color: totalPnl >= 0 ? 'text-green-400' : 'text-red-400' },
+            { label: t('account.balance'), value: account.balance.toFixed(2) },
+            { label: t('account.available'), value: account.available.toFixed(2) },
+            { label: t('account.frozen'), value: account.frozen.toFixed(2) },
+            { label: t('account.margin'), value: account.margin.toFixed(2) },
+            { label: t('account.totalPnl'), value: totalPnl.toFixed(2), color: totalPnl >= 0 ? 'text-green-400' : 'text-red-400' },
           ].map((m) => (
             <div key={m.label} className="rounded-lg border border-gray-700 bg-gray-800 p-3">
               <p className="text-xs text-gray-400">{m.label}</p>
@@ -143,20 +145,20 @@ export default function Positions() {
       )}
 
       {/* Positions Table */}
-      {loading && <p className="text-gray-400">Loading...</p>}
+      {loading && <p className="text-gray-400">{t('common:loading')}</p>}
 
       {!loading && (
         <div className="overflow-x-auto rounded-lg border border-gray-700">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-gray-700 bg-gray-800/50 text-gray-400">
               <tr>
-                <th className="px-4 py-3">Symbol</th>
-                <th className="px-4 py-3">Direction</th>
-                <th className="px-4 py-3">Volume</th>
-                <th className="px-4 py-3">Frozen</th>
-                <th className="px-4 py-3">Price</th>
-                <th className="px-4 py-3">P&L</th>
-                <th className="px-4 py-3">Gateway</th>
+                <th className="px-4 py-3">{t('position.symbol')}</th>
+                <th className="px-4 py-3">{t('position.direction')}</th>
+                <th className="px-4 py-3">{t('position.volume')}</th>
+                <th className="px-4 py-3">{t('position.frozen')}</th>
+                <th className="px-4 py-3">{t('position.price')}</th>
+                <th className="px-4 py-3">{t('position.pnl')}</th>
+                <th className="px-4 py-3">{t('position.gateway')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-700/50">
@@ -180,7 +182,7 @@ export default function Positions() {
               {positions.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-4 py-12 text-center text-gray-500">
-                    {selectedGateway ? 'No positions for this gateway' : 'Select a gateway to view positions'}
+                    {selectedGateway ? t('positions.noPositions') : t('positions.selectGateway')}
                   </td>
                 </tr>
               )}

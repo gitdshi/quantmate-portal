@@ -1,0 +1,34 @@
+{
+  "sections": {
+    "overview": "Overview",
+    "strategyDev": "Strategy Dev",
+    "liveTrading": "Live Trading",
+    "researchAI": "Research & AI",
+    "community": "Community",
+    "system": "System"
+  },
+  "items": {
+    "dashboard": "Dashboard",
+    "strategies": "Strategies",
+    "backtest": "Backtesting",
+    "paperTrading": "Paper Trading",
+    "marketData": "Market Data",
+    "trading": "Trading",
+    "positions": "Positions",
+    "portfolio": "Portfolio",
+    "analytics": "Analytics",
+    "monitoring": "Monitoring",
+    "reports": "Reports",
+    "factorLab": "Factor Lab",
+    "aiAssistant": "AI Assistant",
+    "visualExplorer": "Visual Explorer",
+    "marketplace": "Marketplace",
+    "teamSpace": "Team Space",
+    "accountSecurity": "Account Security",
+    "settings": "Settings"
+  },
+  "toggleSidebar": "Toggle sidebar",
+  "logout": "Logout",
+  "language": "Language",
+  "switchLang": "Switch language"
+}

@@ -1,0 +1,93 @@
+{
+  "title": "系统设置",
+  "subtitle": "管理数据源和系统配置",
+  "accountSecurity": {
+    "title": "账户安全",
+    "subtitle": "管理账户安全设置",
+    "changePassword": "修改密码",
+    "twoFactor": "两步验证",
+    "sessions": "登录会话",
+    "apiKeys": "API 密钥",
+    "createApiKey": "创建 API 密钥",
+    "deleteApiKey": "删除 API 密钥",
+    "keyName": "密钥名称",
+    "permissions": "权限",
+    "lastUsed": "最近使用",
+    "created": "创建时间",
+    "noApiKeys": "暂无 API 密钥"
+  },
+  "general": {
+    "title": "通用设置",
+    "language": "语言",
+    "timezone": "时区",
+    "dateFormat": "日期格式",
+    "theme": "主题",
+    "darkMode": "深色模式",
+    "lightMode": "浅色模式",
+    "system": "跟随系统"
+  },
+  "notifications": {
+    "title": "通知设置",
+    "email": "邮件通知",
+    "browser": "浏览器通知",
+    "tradingAlerts": "交易提醒",
+    "systemAlerts": "系统提醒",
+    "marketAlerts": "行情提醒"
+  },
+  "trading": {
+    "title": "交易设置",
+    "defaultAccount": "默认账户",
+    "confirmOrders": "订单确认",
+    "riskLimits": "风控限制",
+    "maxOrderSize": "最大下单量",
+    "maxDailyLoss": "最大日亏损"
+  },
+  "data": {
+    "title": "数据设置",
+    "syncInterval": "同步间隔",
+    "dataSource": "数据源",
+    "cacheSettings": "缓存设置"
+  },
+  "realtime": {
+    "title": "实时行情设置",
+    "subtitle": "控制实时行情和日内缓存。",
+    "loading": "加载实时设置...",
+    "enableQuotes": "启用实时行情",
+    "enableQuotesDesc": "全局开启/关闭实时行情获取。",
+    "cacheIntraday": "缓存日内序列",
+    "cacheIntradayDesc": "将24小时实时数据存入Redis用于图表。",
+    "enabledMarkets": "启用市场",
+    "loadFailed": "加载实时设置失败",
+    "saveFailed": "保存实时设置失败",
+    "markets": {
+      "CN": "A股",
+      "HK": "港股（延迟）",
+      "US": "美股（延迟）",
+      "FUTURES": "期货（国内）",
+      "FX": "外汇",
+      "CRYPTO": "加密货币"
+    }
+  },
+  "dataItems": {
+    "title": "数据项开关管理",
+    "subtitle": "禁用的数据项不会消耗 API 配额。已有数据不受影响。",
+    "enabledCount": "已启用：{{enabled}} / {{total}} 项",
+    "sourceStats": "（{{enabled}}/{{total}} 已启用）",
+    "testConnection": "测试连接",
+    "enableAll": "全部启用",
+    "disableAll": "全部禁用",
+    "noItems": "暂无数据源配置",
+    "connected": "已连接",
+    "connectionFailed": "连接失败",
+    "toggle": "开关",
+    "dataItem": "数据项",
+    "apiIdentifier": "API 标识",
+    "permission": "权限",
+    "lastSync": "最近同步"
+  },
+  "save": "保存设置",
+  "saving": "保存中...",
+  "saved": "设置已保存",
+  "saveFailed": "保存设置失败",
+  "loadFailed": "加载数据源失败"
+}

@@ -11,6 +11,7 @@ import {
   X
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
@@ -23,6 +24,7 @@ import type { Strategy, StrategyComparison, StrategyFile, StrategyFileContent, S
 type TabType = 'files' | 'optimize'
 
 export default function Strategies() {
+  const { t } = useTranslation(['strategies', 'common'])
   const [activeTab, setActiveTab] = useState<TabType>('files')
   
   // DB-backed strategy state
@@ -208,7 +210,7 @@ class MyStrategy(CtaTemplate):
         navigate('/login')
         return
       }
-      setError(error.response?.data?.detail || 'Failed to load strategies')
+      setError(error.response?.data?.detail || t('loadDbFailed'))
     } finally {
       setLoading(false)
     }
@@ -222,7 +224,7 @@ class MyStrategy(CtaTemplate):
       setFileStrategies(data)
     } catch (err: unknown) {
       const error = err as { response?: { data?: { detail?: string } } }
-      setError(error.response?.data?.detail || 'Failed to load strategies')
+      setError(error.response?.data?.detail || t('loadFileFailed'))
     } finally {
       setLoading(false)
     }
@@ -236,7 +238,7 @@ class MyStrategy(CtaTemplate):
       setComparisons(data)
     } catch (err: unknown) {
       const error = err as { response?: { data?: { detail?: string } } }
-      setError(error.response?.data?.detail || 'Failed to load comparisons')
+      setError(error.response?.data?.detail || t('loadComparisonFailed'))
     } finally {
       setLoading(false)
     }
@@ -251,7 +253,7 @@ class MyStrategy(CtaTemplate):
     const f = e.target.files && e.target.files[0]
     if (!f) return
     if (!f.name.endsWith('.py')) {
-      setError('Please select a .py file')
+      setError(t('files.selectPyFile'))
       return
     }
     try {
@@ -260,7 +262,7 @@ class MyStrategy(CtaTemplate):
       const data = resp.data || {}
       const classes = data.classes || []
       if (classes.length === 0) {
-        setError('No classes found in file')
+        setError(t('files.noClassesFound'))
         return
       }
       if (classes.length > 1) {
@@ -306,7 +308,7 @@ class MyStrategy(CtaTemplate):
       setIsEditing(false)
     } catch (err: unknown) {
       const error = err as { response?: { data?: { detail?: string } } }
-      setError(error.response?.data?.detail || 'Failed to load strategy content')
+      setError(error.response?.data?.detail || t('loadContentFailed'))
     }
   }
 
@@ -324,7 +326,7 @@ class MyStrategy(CtaTemplate):
       const classes = data.classes || []
       const chosen = classes.find((c: any) => c.name === classNamePicked)
       if (!chosen) {
-        setError('Selected class not found')
+        setError(t('form.selectedClassNotFound'))
         setClassOptionsEdit(null)
         return
       }
@@ -384,7 +386,7 @@ class MyStrategy(CtaTemplate):
       setHistoryModalContent({ name, versionName, content: data.content, strategyName: data.strategy_name ?? null, className: data.class_name ?? null, historyVersion: data.version ?? null, parameters: formatParameters(data.parameters ?? null) })
       setShowHistoryModal(true)
     } catch (err) {
-      setError('Failed to load history version')
+      setError(t('history.loadFailed'))
     }
   }
 
@@ -392,7 +394,7 @@ class MyStrategy(CtaTemplate):
     try {
       const { data } = await strategyCodeAPI.getCodeHistory(strategyId, historyId)
       // Prefer metadata returned from history row; fallback to strategies.version or history id
-      let versionLabel = `Version #${historyId}`
+      let versionLabel = t('history.versionNumber', { id: historyId })
       if (data?.version) {
         versionLabel = `v${data.version}`
       } else {
@@ -407,7 +409,7 @@ class MyStrategy(CtaTemplate):
       setHistoryModalContent({ name, versionName: versionLabel, content: data.code, strategyName: data.strategy_name ?? null, className: data.class_name ?? null, historyVersion: data.version ?? null, parameters: formatParameters(data.parameters ?? null) })
       setShowHistoryModal(true)
     } catch (err) {
-      setError('Failed to load history version')
+      setError(t('history.loadFailed'))
     }
   }
 
@@ -421,10 +423,10 @@ class MyStrategy(CtaTemplate):
     } catch (e) {
       // fallback
     }
-    if (!confirm(`Restore version ${versionLabel} to '${strategyName}'?`)) return
+    if (!confirm(t('history.restoreConfirm', { version: versionLabel, name: strategyName }))) return
     try {
       await strategyCodeAPI.restoreCodeHistory(strategyId, historyId)
-      setSuccess('Version restored successfully')
+      setSuccess(t('history.restored'))
       // Reload strategy and history
       await loadDbStrategies()
       const res = await strategiesAPI.get(strategyId)
@@ -432,21 +434,21 @@ class MyStrategy(CtaTemplate):
       await loadDbStrategyHistory(strategyId)
       setTimeout(() => setSuccess(null), 3000)
     } catch (err) {
-      setError('Failed to restore version')
+      setError(t('history.restoreFailed'))
     }
   }
 
   const recoverHistoryVersion = async (name: string, versionName: string, source: 'data' | 'project' = 'data') => {
-    if (!confirm(`Restore version ${versionName} to '${name}.py'?`)) return
+    if (!confirm(t('history.restoreConfirm', { version: versionName, name: name + '.py' }))) return
     try {
       await strategyFilesAPI.recoverHistory(name, versionName, source)
-      setSuccess('Recovered version successfully')
+      setSuccess(t('history.restored'))
       await loadFileStrategies()
       await viewFileStrategy(name, source)
       await loadHistory(name, source)
       setTimeout(() => setSuccess(null), 3000)
     } catch (err) {
-      setError('Failed to recover version')
+      setError(t('history.restoreFailed'))
     }
   }
 
@@ -456,7 +458,7 @@ class MyStrategy(CtaTemplate):
     try {
       setError(null)
       await strategyFilesAPI.update(selectedStrategy, { content: editContent, source: 'data' })
-      setSuccess('Strategy updated successfully')
+      setSuccess(t('updated'))
       setIsEditing(false)
       setEditorFullScreen(false)
       await loadFileStrategies()
@@ -464,13 +466,13 @@ class MyStrategy(CtaTemplate):
       setTimeout(() => setSuccess(null), 3000)
     } catch (err: unknown) {
       const error = err as { response?: { data?: { detail?: string } } }
-      setError(error.response?.data?.detail || 'Failed to update strategy')
+      setError(error.response?.data?.detail || t('updateFailed'))
     }
   }
 
   const createFileStrategy = async () => {
     if (!newStrategyName.trim()) {
-      setError('Strategy name is required')
+      setError(t('nameRequired'))
       return
     }
 
@@ -481,7 +483,7 @@ class MyStrategy(CtaTemplate):
         content: newStrategyContent,
         source: 'data'
       })
-      setSuccess('Strategy created successfully')
+      setSuccess(t('created'))
       setIsCreating(false)
       setEditorFullScreen(false)
       setNewStrategyName('')
@@ -490,40 +492,40 @@ class MyStrategy(CtaTemplate):
       setTimeout(() => setSuccess(null), 3000)
     } catch (err: unknown) {
       const error = err as { response?: { data?: { detail?: string } } }
-      setError(error.response?.data?.detail || 'Failed to create strategy')
+      setError(error.response?.data?.detail || t('createFailed'))
     }
   }
 
   const deleteFileStrategy = async (name: string, source: 'data' | 'project' = 'data') => {
-    if (!confirm(`Are you sure you want to delete "${name}"?`)) return
+    if (!confirm(t('deleteConfirm', { name }))) return
 
     try {
       setError(null)
       await strategyFilesAPI.delete(name, source)
-      setSuccess('Strategy deleted successfully')
+      setSuccess(t('deleted'))
       setSelectedStrategy(null)
       setStrategyContent(null)
       await loadFileStrategies()
       setTimeout(() => setSuccess(null), 3000)
     } catch (err: unknown) {
       const error = err as { response?: { data?: { detail?: string } } }
-      setError(error.response?.data?.detail || 'Failed to delete strategy')
+      setError(error.response?.data?.detail || t('deleteFailed'))
     }
   }
 
   const deleteDbStrategy = async (id: number, name: string) => {
-    if (!confirm(`Are you sure you want to delete "${name}"? This will delete the strategy and all associated files.`)) return
+    if (!confirm(t('deleteConfirm', { name }))) return
 
     try {
       setError(null)
       await strategiesAPI.delete(id)
-      setSuccess('Strategy deleted successfully')
+      setSuccess(t('deleted'))
       setSelectedDbStrategy(null)
       await loadDbStrategies()
       setTimeout(() => setSuccess(null), 3000)
     } catch (err: unknown) {
       const error = err as { response?: { data?: { detail?: string } } }
-      setError(error.response?.data?.detail || 'Failed to delete strategy')
+      setError(error.response?.data?.detail || t('deleteFailed'))
     }
   }
 
@@ -532,14 +534,14 @@ class MyStrategy(CtaTemplate):
       setSyncing(true)
       setError(null)
       const { data }: { data: SyncResult } = await strategyFilesAPI.sync(direction)
-      const msg = `Synced: ${data.copied_to_data} to data, ${data.copied_to_project} to project, ${data.unchanged} unchanged`
+      const msg = t('sync.syncedMessage', { toData: data.copied_to_data, toProject: data.copied_to_project, unchanged: data.unchanged })
       setSuccess(msg)
       await loadFileStrategies()
       if (fileView === 'compare') await loadComparisons()
       setTimeout(() => setSuccess(null), 5000)
     } catch (err: unknown) {
       const error = err as { response?: { data?: { detail?: string } } }
-      setError(error.response?.data?.detail || 'Failed to sync strategies')
+      setError(error.response?.data?.detail || t('sync.syncFailed'))
     } finally {
       setSyncing(false)
     }
@@ -578,9 +580,9 @@ class MyStrategy(CtaTemplate):
       {!editorFullScreen && (
         <div className="flex items-center justify-between mb-6 page-header">
         <div>
-          <h1 className="text-3xl font-bold">Strategies</h1>
+          <h1 className="text-3xl font-bold">{t('title')}</h1>
           <p className="text-muted-foreground mt-2">
-            Manage your trading strategies
+            {t('subtitle')}
           </p>
         </div>
         </div>
@@ -598,7 +600,7 @@ class MyStrategy(CtaTemplate):
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
           >
-            Strategies
+            {t('tabs.files')}
           </button>
           <button
             onClick={() => setActiveTab('optimize')}
@@ -609,7 +611,7 @@ class MyStrategy(CtaTemplate):
             }`}
           >
             <TrendingUp className="h-4 w-4" />
-            Optimize
+            {t('tabs.optimize')}
           </button>
         </nav>
         </div>
@@ -629,7 +631,7 @@ class MyStrategy(CtaTemplate):
       {classOptionsEdit && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-40" role="dialog">
           <div className="bg-white dark:bg-gray-800 rounded shadow-lg w-full max-w-md p-4">
-            <div className="mb-3 font-semibold">Multiple classes found �?choose one</div>
+            <div className="mb-3 font-semibold">{t('form.multipleClassesFound')}</div>
             <div className="space-y-2 max-h-60 overflow-auto">
               {classOptionsEdit.map((n) => (
                 <button key={n} onClick={() => handleEditClassPick(n)} className="w-full text-left px-3 py-2 border rounded hover:bg-gray-100 dark:hover:bg-gray-700">
@@ -638,7 +640,7 @@ class MyStrategy(CtaTemplate):
               ))}
             </div>
             <div className="mt-3 text-right">
-              <button onClick={() => handleEditClassPick(null)} className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200">Cancel</button>
+              <button onClick={() => handleEditClassPick(null)} className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200">{t('common:cancel')}</button>
             </div>
           </div>
         </div>
@@ -658,7 +660,7 @@ class MyStrategy(CtaTemplate):
               className="px-4 py-2 bg-green-600 text-white rounded flex items-center gap-2 hover:bg-green-700"
             >
               <Plus size={16} />
-              New Strategy
+              {t('newStrategy')}
             </button>
 
             <button
@@ -667,7 +669,7 @@ class MyStrategy(CtaTemplate):
               className="px-4 py-2 bg-gray-100 text-gray-700 rounded flex items-center gap-2 hover:bg-gray-200 disabled:opacity-50"
             >
               <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-              Refresh
+              {t('common:refresh')}
             </button>
 
           </div>
@@ -679,11 +681,11 @@ class MyStrategy(CtaTemplate):
             <div className={`bg-white rounded-lg shadow lg:col-span-4 overflow-hidden flex flex-col ${editorFullScreen ? 'hidden' : ''}`}>
               {fileView === 'list' ? (
                 <div className="p-4 flex flex-col h-full overflow-hidden">
-                  <h2 className="text-lg font-semibold mb-4 flex-shrink-0">Strategies ({dbStrategies.length})</h2>
+                  <h2 className="text-lg font-semibold mb-4 flex-shrink-0">{t('fileList.strategyCount', { count: dbStrategies.length })}</h2>
                   {loading ? (
-                    <div className="text-center py-8 text-gray-500">Loading...</div>
+                    <div className="text-center py-8 text-gray-500">{t('common:loading')}</div>
                   ) : dbStrategies.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">No strategies found</div>
+                    <div className="text-center py-8 text-gray-500">{t('common:noData')}</div>
                   ) : (
                     <div className="space-y-2 overflow-y-auto flex-1">
                       {dbStrategies.map((strategy) => (
@@ -701,7 +703,7 @@ class MyStrategy(CtaTemplate):
                                 await loadDbStrategyHistory(strategy.id)
                               } catch (err) {
                                 console.error('[Strategies] Failed to load strategy details:', err)
-                                setError('Failed to load strategy details')
+                                setError(t('loadDetailsFailed'))
                               }
                             }}
                           >
@@ -727,7 +729,7 @@ class MyStrategy(CtaTemplate):
                                     navigate(`/paper-trading?strategy_id=${strategy.id}`)
                                   }}
                                   className="p-2 text-green-600 hover:bg-green-50 rounded"
-                                  title="Deploy to Paper Trading"
+                                  title={t('deployPaperTrading')}
                                 >
                                   <Play size={16} />
                                 </button>
@@ -741,11 +743,11 @@ class MyStrategy(CtaTemplate):
                                       setShowDbForm(true)
                                     } catch (err) {
                                       console.error('[Strategies] Failed to load strategy for edit:', err)
-                                      setError('Failed to load strategy details')
+                                      setError(t('loadDetailsFailed'))
                                     }
                                   }}
                                   className="p-2 text-blue-600 hover:bg-blue-50 rounded"
-                                  title="Edit"
+                                  title={t('common:edit')}
                                 >
                                   <Edit2 size={16} />
                                 </button>
@@ -755,7 +757,7 @@ class MyStrategy(CtaTemplate):
                                     deleteDbStrategy(strategy.id, strategy.name)
                                   }}
                                   className="p-2 text-red-600 hover:bg-red-50 rounded"
-                                  title="Delete"
+                                  title={t('common:delete')}
                                 >
                                   <Trash2 size={16} />
                                 </button>
@@ -767,15 +769,15 @@ class MyStrategy(CtaTemplate):
                           {selectedDbStrategy?.id === strategy.id && (
                             <div className="mt-2 p-3 border-l-2 border-blue-300 bg-blue-50 rounded-r">
                               {dbStrategyHistory.length === 0 ? (
-                                <div className="text-sm text-gray-500 italic">No history versions available</div>
+                                <div className="text-sm text-gray-500 italic">{t('history.noHistory')}</div>
                               ) : (
                                 <>
-                                  <h4 className="text-sm font-medium mb-2">History Versions</h4>
+                                  <h4 className="text-sm font-medium mb-2">{t('history.title')}</h4>
                                   <div className="space-y-2 text-sm text-gray-700">
                                     {dbStrategyHistory.map((v) => (
                                       <div key={v.id} className="flex items-center justify-between">
                                         <div>
-                                          <div className="font-mono text-xs">{v.version !== null && v.version !== undefined ? `v${v.version}` : `Version #${v.id}`}</div>
+                                          <div className="font-mono text-xs">{v.version !== null && v.version !== undefined ? `v${v.version}` : t('history.versionNumber', { id: v.id })}</div>
                                           <div className="text-xs text-gray-500">{new Date(v.created_at).toLocaleString()}</div>
                                         </div>
                                         <div className="flex items-center gap-2">
@@ -783,13 +785,13 @@ class MyStrategy(CtaTemplate):
                                             onClick={() => viewDbHistoryVersion(strategy.id, strategy.name, v.id)}
                                             className="px-2 py-1 bg-white border rounded text-xs hover:bg-gray-50"
                                           >
-                                            View
+                                            {t('common:view')}
                                           </button>
                                           <button
                                             onClick={() => restoreDbHistoryVersion(strategy.id, v.id, strategy.name)}
                                             className="px-2 py-1 bg-blue-600 text-white border rounded text-xs hover:bg-blue-700"
                                           >
-                                            Restore
+                                            {t('history.restore')}
                                           </button>
                                         </div>
                                       </div>
@@ -834,7 +836,7 @@ class MyStrategy(CtaTemplate):
                             className="px-3 py-2 bg-blue-600 text-white rounded flex items-center gap-2 hover:bg-blue-700"
                           >
                             <Edit2 size={16} />
-                            Edit
+                            {t('common:edit')}
                           </button>
                         </>
                       ) : (
@@ -861,7 +863,7 @@ class MyStrategy(CtaTemplate):
                                   try {
                                     const parsed = JSON.parse(newString)
                                     if (typeof parsed !== 'object' || Array.isArray(parsed)) {
-                                      setError('Parameters must be a JSON object')
+                                      setError(t('form.paramsJsonInvalid'))
                                       return
                                     }
                                     // Compare normalized JSON to detect changes
@@ -871,7 +873,7 @@ class MyStrategy(CtaTemplate):
                                       updatePayload.parameters = parsed
                                     }
                                   } catch (pe) {
-                                    setError('Parameters JSON invalid: ' + ((pe as any)?.message || String(pe)))
+                                    setError(t('form.paramsJsonError', { error: (pe as any)?.message || String(pe) }))
                                     return
                                   }
                                 } else {
@@ -901,7 +903,7 @@ class MyStrategy(CtaTemplate):
                                 console.log('[Save] Update payload:', updatePayload)
                                 
                                 await strategiesAPI.update(selectedDbStrategy.id, updatePayload)
-                                setSuccess('Strategy updated successfully')
+                                setSuccess(t('updated'))
                                 setIsEditing(false)
                                 setEditorFullScreen(false)
                                 await loadDbStrategies()
@@ -914,7 +916,7 @@ class MyStrategy(CtaTemplate):
                                 const error = err as { response?: { data?: { detail?: string | any[] } } }
                                 console.error('[Save] Error:', err)
                                 console.error('[Save] Error response:', error.response)
-                                let errorMessage = 'Failed to update strategy'
+                                let errorMessage = t('updateFailed')
                                 if (error.response?.data?.detail) {
                                   if (Array.isArray(error.response.data.detail)) {
                                     errorMessage = error.response.data.detail.map((e: any) => 
@@ -930,7 +932,7 @@ class MyStrategy(CtaTemplate):
                             className="px-3 py-2 bg-green-600 text-white rounded flex items-center gap-2 hover:bg-green-700"
                           >
                             <Save size={16} />
-                            Save
+                            {t('common:save')}
                           </button>
                           <button
                             onClick={() => {
@@ -944,7 +946,7 @@ class MyStrategy(CtaTemplate):
                             }}
                             className="px-3 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
                           >
-                            Cancel
+                            {t('common:cancel')}
                           </button>
                         </div>
                       )}
@@ -966,13 +968,13 @@ class MyStrategy(CtaTemplate):
                       {/* Class Name, Description, Status on one line */}
                       <div className="flex items-center gap-4 pb-3 border-b flex-shrink-0">
                         <div className="flex-shrink-0">
-                          <span className="text-sm font-medium text-gray-500">Class:</span>
+                          <span className="text-sm font-medium text-gray-500">{t('view.class')}:</span>
                           <span className="ml-2 text-base font-medium text-gray-900">{selectedDbStrategy.class_name}</span>
                         </div>
                         
                         {selectedDbStrategy.description && (
                           <div className="flex-1 min-w-0">
-                            <span className="text-sm font-medium text-gray-500">Description:</span>
+                            <span className="text-sm font-medium text-gray-500">{t('view.description')}:</span>
                             <span className="ml-2 text-base text-gray-700 truncate">{selectedDbStrategy.description}</span>
                           </div>
                         )}
@@ -980,7 +982,7 @@ class MyStrategy(CtaTemplate):
 
                       {(selectedDbStrategy.parameters && ((typeof selectedDbStrategy.parameters === 'string' && (selectedDbStrategy.parameters as string).trim() !== '') || (typeof selectedDbStrategy.parameters === 'object' && Object.keys(selectedDbStrategy.parameters).length > 0))) && (
                         <div>
-                          <label className="text-sm font-medium text-gray-600">Parameters</label>
+                          <label className="text-sm font-medium text-gray-600">{t('form.parameters')}</label>
                           <pre className="mt-2 p-3 bg-gray-50 rounded border border-gray-200 overflow-x-auto text-xs">
                             <code>{typeof selectedDbStrategy.parameters === 'string' ? selectedDbStrategy.parameters : JSON.stringify(selectedDbStrategy.parameters, null, 2)}</code>
                           </pre>
@@ -989,7 +991,7 @@ class MyStrategy(CtaTemplate):
 
                       {selectedDbStrategy.code ? (
                         <div className="flex-shrink-0">
-                          <label className="text-sm font-medium text-gray-600 mb-2 block">Code</label>
+                          <label className="text-sm font-medium text-gray-600 mb-2 block">{t('code')}</label>
                           <div className="border border-gray-300 rounded overflow-auto max-h-[500px]">
                             <SyntaxHighlighter
                               language="python"
@@ -1003,9 +1005,9 @@ class MyStrategy(CtaTemplate):
                         </div>
                       ) : (
                         <div>
-                          <label className="text-sm font-medium text-gray-600 mb-2 block">Code</label>
+                          <label className="text-sm font-medium text-gray-600 mb-2 block">{t('code')}</label>
                           <div className="p-8 text-center text-gray-500 border border-gray-200 rounded bg-gray-50">
-                            <p>No code available for this strategy.</p>
+                            <p>{t('view.noCode')}</p>
                             <button
                               onClick={() => {
                                 setIsEditing(true)
@@ -1018,7 +1020,7 @@ class MyStrategy(CtaTemplate):
                               }}
                               className="mt-3 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
                             >
-                              Add Code
+                              {t('view.addCode')}
                             </button>
                           </div>
                         </div>
@@ -1026,11 +1028,11 @@ class MyStrategy(CtaTemplate):
 
                       <div className="grid grid-cols-2 gap-4 pt-4 border-t text-sm">
                         <div>
-                          <label className="text-xs font-medium text-gray-500">Created</label>
+                          <label className="text-xs font-medium text-gray-500">{t('common:created')}</label>
                           <p className="text-gray-800">{new Date(selectedDbStrategy.created_at).toLocaleString()}</p>
                         </div>
                         <div>
-                          <label className="text-xs font-medium text-gray-500">Updated</label>
+                          <label className="text-xs font-medium text-gray-500">{t('view.updated')}</label>
                           <p className="text-gray-800">{new Date(selectedDbStrategy.updated_at).toLocaleString()}</p>
                         </div>
                       </div>
@@ -1040,7 +1042,7 @@ class MyStrategy(CtaTemplate):
                       {/* Left: Code Editor */}
                       <div className="flex-1 flex flex-col border-r border-gray-300 overflow-hidden">
                         <div className="px-4 py-2 border-b border-gray-200 flex-shrink-0">
-                          <label className="text-sm font-medium text-gray-700">Code</label>
+                          <label className="text-sm font-medium text-gray-700">{t('code')}</label>
                         </div>
                         <div className="flex-1 relative overflow-auto">
                           <div className="relative" style={{minHeight: '100%'}}>
@@ -1057,7 +1059,7 @@ class MyStrategy(CtaTemplate):
                               customStyle={{ margin: 0, fontSize: '13px', pointerEvents: 'none', minHeight: '100%' }}
                               showLineNumbers
                             >
-                              {editContent || '# Enter your strategy code here'}
+                              {editContent || t('editor.codeHint')}
                             </SyntaxHighlighter>
                           </div>
                         </div>
@@ -1067,7 +1069,7 @@ class MyStrategy(CtaTemplate):
                       <div className="w-96 flex flex-col overflow-hidden flex-shrink-0 bg-gray-50 border-l border-gray-300">
                         <div className="flex-1 overflow-y-auto p-4 space-y-4">
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">Strategy Name</label>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">{t('form.name')}</label>
                               <div className="flex gap-2">
                                 <input
                                   type="text"
@@ -1080,25 +1082,25 @@ class MyStrategy(CtaTemplate):
                                   onClick={handleEditLoadFromFileClick}
                                   className="px-3 py-2 border border-gray-300 rounded bg-white hover:bg-gray-100 text-sm whitespace-nowrap"
                                 >
-                                  Load from file
+                                  {t('form.loadFromFile')}
                                 </button>
                                 <input ref={editFileInputRef} type="file" accept=".py" className="hidden" onChange={handleEditFileSelected} />
                               </div>
                             </div>
 
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">Class Name</label>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">{t('form.className')}</label>
                               <input
                                 type="text"
                                 value={editClassName}
                                 onChange={(e) => setEditClassName(e.target.value)}
                                 className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="e.g., MyStrategy"
+                                placeholder={t('form.classNamePlaceholder')}
                               />
                             </div>
 
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">{t('form.description')}</label>
                               <textarea
                                 value={editDescription}
                                 onChange={(e) => setEditDescription(e.target.value)}
@@ -1108,7 +1110,7 @@ class MyStrategy(CtaTemplate):
                             </div>
 
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">Default Parameters (JSON)</label>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">{t('form.defaultParametersJson')}</label>
                               <textarea
                                 value={editParameters}
                                 onChange={(e) => setEditParameters(e.target.value)}
@@ -1116,7 +1118,7 @@ class MyStrategy(CtaTemplate):
                                 rows={10}
                                 placeholder='{"fast_window": 5, "slow_window": 20}'
                               />
-                              <p className="text-xs text-gray-500 mt-1">Strategy parameters as JSON. Used as defaults in backtests.</p>
+                              <p className="text-xs text-gray-500 mt-1">{t('form.parametersJsonHelp')}</p>
                             </div>
                           </div>
                         </div>
@@ -1125,7 +1127,7 @@ class MyStrategy(CtaTemplate):
                 </div>
               ) : (
                 <div className="p-4 h-full flex items-center justify-center text-gray-500">
-                  Select a strategy to view or create a new one
+                  {t('selectOrCreate')}
                 </div>
               )}
             </div>
@@ -1168,15 +1170,15 @@ class MyStrategy(CtaTemplate):
             <div className="flex items-center justify-between p-4 border-b">
               <div>
                 <h2 className="text-xl font-semibold">{historyModalContent.name}</h2>
-                <p className="text-sm text-gray-500">Version: {historyModalContent.versionName}</p>
+                <p className="text-sm text-gray-500">{t('history.version')}: {historyModalContent.versionName}</p>
                 <div className="text-sm text-gray-500 mt-1">
-                  {historyModalContent.strategyName && <div>Strategy: {historyModalContent.strategyName}</div>}
-                  {historyModalContent.className && <div>Class: {historyModalContent.className}</div>}
-                  {historyModalContent.historyVersion && <div>History: {historyModalContent.historyVersion}</div>}
+                  {historyModalContent.strategyName && <div>{t('strategyName')}: {historyModalContent.strategyName}</div>}
+                  {historyModalContent.className && <div>{t('className')}: {historyModalContent.className}</div>}
+                  {historyModalContent.historyVersion && <div>{t('history.historyLabel')}: {historyModalContent.historyVersion}</div>}
                 </div>
                 {historyModalContent.parameters && (
                   <div className="mt-2">
-                    <div className="text-xs font-medium text-gray-700">Parameters</div>
+                    <div className="text-xs font-medium text-gray-700">{t('form.parameters')}</div>
                     <pre className="text-xs font-mono whitespace-pre-wrap bg-gray-50 p-2 rounded mt-1">{typeof historyModalContent.parameters === 'string' ? historyModalContent.parameters : JSON.stringify(historyModalContent.parameters, null, 2)}</pre>
                   </div>
                 )}
@@ -1187,7 +1189,7 @@ class MyStrategy(CtaTemplate):
                   className={`px-3 py-1 rounded flex items-center gap-2 ${showDiff ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
                 >
                   <GitCompare size={16} />
-                  {showDiff ? 'Hide Diff' : 'Show Diff'}
+                  {showDiff ? t('hideDiff') : t('showDiff')}
                 </button>
                 <button
                   onClick={() => setShowHistoryModal(false)}
@@ -1200,7 +1202,7 @@ class MyStrategy(CtaTemplate):
             <div className="flex-1 overflow-auto">
               {showDiff && (strategyContent || selectedDbStrategy) ? (
                 <div className="p-4">
-                  <div className="mb-2 text-sm font-medium text-gray-700">Changes from current version:</div>
+                  <div className="mb-2 text-sm font-medium text-gray-700">{t('history.diffLabel')}</div>
                   <div className="border rounded overflow-hidden">
                     {diffLines(
                       strategyContent?.content || selectedDbStrategy?.code || '', 
@@ -1235,7 +1237,7 @@ class MyStrategy(CtaTemplate):
                 onClick={() => setShowHistoryModal(false)}
                 className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
               >
-                Close
+                {t('common:close')}
               </button>
             </div>
           </div>

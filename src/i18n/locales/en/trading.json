@@ -1,0 +1,125 @@
+{
+  "live": {
+    "title": "Live Trading",
+    "subtitle": "Live trading execution",
+    "newOrder": "New Order",
+    "submitOrder": "Submit Order",
+    "submitting": "Submitting...",
+    "orderSubmitted": "Order submitted",
+    "orderFailed": "Order submission failed",
+    "loadFailed": "Failed to load orders",
+    "cancelFailed": "Failed to cancel order"
+  },
+  "paper": {
+    "title": "Paper Trading",
+    "subtitle": "Strategy deployment and trading in simulated environment",
+    "tabs": {
+      "deployments": "Deployments",
+      "orders": "Orders",
+      "positions": "Positions",
+      "performance": "Performance"
+    },
+    "deploy": {
+      "title": "Deploy Strategy to Paper",
+      "strategy": "Strategy",
+      "selectStrategy": "Select strategy...",
+      "symbol": "Symbol",
+      "symbolPlaceholder": "e.g. rb2501.SHFE",
+      "parameters": "Parameters (JSON)",
+      "deploy": "Deploy",
+      "deployFailed": "Deploy failed"
+    },
+    "manualOrder": {
+      "title": "Manual Paper Order",
+      "submit": "Submit Paper Order",
+      "orderFailed": "Order failed"
+    },
+    "deployment": {
+      "running": "Running",
+      "stopped": "Stopped",
+      "error": "Error",
+      "startedAt": "Started at",
+      "pnl": "P&L",
+      "stop": "Stop",
+      "stopFailed": "Stop failed",
+      "noDeployments": "No deployments yet"
+    },
+    "cancelFailed": "Failed to cancel order",
+    "loadDeploymentsFailed": "Failed to load deployments",
+    "loadOrdersFailed": "Failed to load orders",
+    "loadPositionsFailed": "Failed to load positions",
+    "loadPerformanceFailed": "Failed to load performance"
+  },
+  "positions": {
+    "title": "Positions",
+    "subtitle": "View and manage live positions",
+    "loadFailed": "Failed to load positions",
+    "loadGatewaysFailed": "Failed to load gateways",
+    "noPositions": "No positions for this gateway",
+    "noGateways": "No gateways",
+    "selectGateway": "Select a gateway to view positions"
+  },
+  "order": {
+    "symbol": "Symbol",
+    "direction": "Direction",
+    "type": "Type",
+    "quantity": "Qty",
+    "price": "Price",
+    "status": "Status",
+    "time": "Time",
+    "actions": "Actions",
+    "cancel": "Cancel",
+    "gateway": "Gateway",
+    "selectGateway": "Select gateway...",
+    "buy": "Buy",
+    "sell": "Sell",
+    "market": "Market",
+    "limit": "Limit",
+    "stop": "Stop",
+    "stopLimit": "Stop Limit",
+    "orders": "Orders",
+    "noOrders": "No orders yet",
+    "orderCount": "{{count}} order(s)"
+  },
+  "status": {
+    "created": "Created",
+    "submitted": "Submitted",
+    "partialFilled": "Partial Filled",
+    "filled": "Filled",
+    "cancelled": "Cancelled",
+    "rejected": "Rejected",
+    "expired": "Expired"
+  },
+  "performance": {
+    "totalPnl": "Total P&L",
+    "totalTrades": "Total Trades",
+    "winRate": "Win Rate",
+    "maxDrawdown": "Max Drawdown",
+    "sharpeRatio": "Sharpe Ratio",
+    "equityCurve": "Equity Curve",
+    "noData": "No performance data"
+  },
+  "position": {
+    "symbol": "Symbol",
+    "direction": "Direction",
+    "quantity": "Quantity",
+    "avgCost": "Avg Cost",
+    "currentPrice": "Current Price",
+    "pnl": "P&L",
+    "pnlPct": "P&L %",
+    "gateway": "Gateway",
+    "long": "Long",
+    "short": "Short",
+    "net": "Net",
+    "volume": "Volume",
+    "frozen": "Frozen",
+    "price": "Price"
+  },
+  "account": {
+    "balance": "Balance",
+    "available": "Available",
+    "frozen": "Frozen",
+    "margin": "Margin",
+    "totalPnl": "Total P&L"
+  }
+}

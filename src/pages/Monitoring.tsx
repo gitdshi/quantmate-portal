@@ -3,12 +3,14 @@ import {
   Bell, BellOff, BellRing, CheckCircle, Loader2, Mail, Plus, RefreshCw,
   Trash2, Webhook, X
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { alertsAPI } from '../lib/api'
 import type { AlertRule, AlertHistory, NotificationChannel } from '../types'
 
 type Tab = 'rules' | 'history' | 'channels'
 
 export default function Monitoring() {
+  const { t } = useTranslation(['monitoring', 'common'])
   const [tab, setTab] = useState<Tab>('rules')
   const [rules, setRules] = useState<AlertRule[]>([])
   const [history, setHistory] = useState<AlertHistory[]>([])
@@ -35,7 +37,7 @@ export default function Monitoring() {
         setChannels(Array.isArray(data) ? data : data.data || [])
       }
     } catch {
-      setError('Failed to load data')
+      setError(t('loadFailed'))
     } finally {
       setLoading(false)
     }
@@ -51,7 +53,7 @@ export default function Monitoring() {
       setRuleForm({ name: '', metric: '', comparator: '>', threshold: 0, level: 'warning' })
       fetchData()
     } catch {
-      setError('Failed to create rule')
+      setError(t('rules.createFailed'))
     }
   }
 
@@ -60,7 +62,7 @@ export default function Monitoring() {
       await alertsAPI.deleteRule(id)
       fetchData()
     } catch {
-      setError('Failed to delete rule')
+      setError(t('rules.deleteFailed'))
     }
   }
 
@@ -69,7 +71,7 @@ export default function Monitoring() {
       await alertsAPI.acknowledgeAlert(id)
       fetchData()
     } catch {
-      setError('Failed to acknowledge alert')
+      setError(t('history.acknowledgeFailed'))
     }
   }
 
@@ -84,7 +86,7 @@ export default function Monitoring() {
       setChannelForm({ channel_type: 'email', target: '' })
       fetchData()
     } catch {
-      setError('Failed to create channel')
+      setError(t('channels.createFailed'))
     }
   }
 
@@ -93,7 +95,7 @@ export default function Monitoring() {
       await alertsAPI.deleteChannel(id)
       fetchData()
     } catch {
-      setError('Failed to delete channel')
+      setError(t('channels.deleteFailed'))
     }
   }
 
@@ -105,13 +107,13 @@ export default function Monitoring() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Monitoring & Alerts</h1>
+      <h1 className="text-2xl font-bold">{t('title')}</h1>
 
       {/* Tabs */}
       <div className="flex gap-1 border-b">
-        {([['rules', 'Alert Rules', Bell], ['history', 'Alert History', BellRing], ['channels', 'Channels', Mail]] as const).map(
+        {([['rules', t('tabs.rules'), Bell], ['history', t('tabs.history'), BellRing], ['channels', t('tabs.channels'), Mail]] as [Tab, string, typeof Bell][]).map(
           ([key, label, Icon]) => (
-            <button key={key} onClick={() => setTab(key as Tab)}
+            <button key={key} onClick={() => setTab(key)}
               className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
                 tab === key ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}>
@@ -138,22 +140,22 @@ export default function Monitoring() {
           {tab === 'rules' && (
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">{rules.length} rule(s)</span>
+                <span className="text-sm text-muted-foreground">{t('rules.count', { count: rules.length })}</span>
                 <div className="flex gap-2">
                   <button onClick={fetchData} className="p-2 hover:bg-accent rounded"><RefreshCw className="h-4 w-4" /></button>
                   <button onClick={() => setShowRuleForm(true)}
                     className="bg-primary text-primary-foreground px-3 py-1.5 rounded text-sm flex items-center gap-1">
-                    <Plus className="h-4 w-4" /> New Rule
+                    <Plus className="h-4 w-4" /> {t('rules.newRule')}
                   </button>
                 </div>
               </div>
 
               {showRuleForm && (
                 <form onSubmit={handleCreateRule} className="bg-card border rounded-lg p-4 grid grid-cols-2 md:grid-cols-5 gap-3">
-                  <input placeholder="Rule name" value={ruleForm.name}
+                  <input placeholder={t('rules.namePlaceholder')} value={ruleForm.name}
                     onChange={e => setRuleForm(f => ({ ...f, name: e.target.value }))}
                     className="border rounded px-3 py-2 text-sm" required />
-                  <input placeholder="Metric (e.g. cpu_usage)" value={ruleForm.metric}
+                  <input placeholder={t('rules.metricPlaceholder')} value={ruleForm.metric}
                     onChange={e => setRuleForm(f => ({ ...f, metric: e.target.value }))}
                     className="border rounded px-3 py-2 text-sm" required />
                   <div className="flex gap-1">
@@ -171,29 +173,29 @@ export default function Monitoring() {
                   <select value={ruleForm.level}
                     onChange={e => setRuleForm(f => ({ ...f, level: e.target.value as any }))}
                     className="border rounded px-3 py-2 text-sm">
-                    <option value="info">Info</option>
-                    <option value="warning">Warning</option>
-                    <option value="severe">Severe</option>
+                    <option value="info">{t('levels.info')}</option>
+                    <option value="warning">{t('levels.warning')}</option>
+                    <option value="severe">{t('levels.severe')}</option>
                   </select>
                   <div className="flex gap-2">
-                    <button type="submit" className="bg-primary text-primary-foreground px-4 py-2 rounded text-sm">Create</button>
-                    <button type="button" onClick={() => setShowRuleForm(false)} className="px-3 py-2 text-sm">Cancel</button>
+                    <button type="submit" className="bg-primary text-primary-foreground px-4 py-2 rounded text-sm">{t('common:create')}</button>
+                    <button type="button" onClick={() => setShowRuleForm(false)} className="px-3 py-2 text-sm">{t('common:cancel')}</button>
                   </div>
                 </form>
               )}
 
               {rules.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">No alert rules configured</div>
+                <div className="text-center py-12 text-muted-foreground">{t('rules.noRules')}</div>
               ) : (
                 <div className="bg-card border rounded-lg overflow-hidden">
                   <table className="w-full text-sm">
                     <thead className="bg-muted/50">
                       <tr>
-                        <th className="text-left px-4 py-2">Name</th>
-                        <th className="text-left px-4 py-2">Condition</th>
-                        <th className="text-left px-4 py-2">Level</th>
-                        <th className="text-left px-4 py-2">Status</th>
-                        <th className="text-right px-4 py-2">Actions</th>
+                        <th className="text-left px-4 py-2">{t('alerts.name')}</th>
+                        <th className="text-left px-4 py-2">{t('alerts.condition')}</th>
+                        <th className="text-left px-4 py-2">{t('logs.level')}</th>
+                        <th className="text-left px-4 py-2">{t('common:status')}</th>
+                        <th className="text-right px-4 py-2">{t('common:actions')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -206,13 +208,13 @@ export default function Monitoring() {
                           </td>
                           <td className="px-4 py-2">
                             {rule.is_active ? (
-                              <span className="text-green-600 flex items-center gap-1"><Bell className="h-3 w-3" /> Active</span>
+                              <span className="text-green-600 flex items-center gap-1"><Bell className="h-3 w-3" /> {t('common:active')}</span>
                             ) : (
-                              <span className="text-muted-foreground flex items-center gap-1"><BellOff className="h-3 w-3" /> Disabled</span>
+                              <span className="text-muted-foreground flex items-center gap-1"><BellOff className="h-3 w-3" /> {t('common:disabled')}</span>
                             )}
                           </td>
                           <td className="px-4 py-2 text-right">
-                            <button onClick={() => handleDeleteRule(rule.id)} className="text-red-600 hover:text-red-800 p-1" title="Delete">
+                            <button onClick={() => handleDeleteRule(rule.id)} className="text-red-600 hover:text-red-800 p-1" title={t('common:delete')}>
                               <Trash2 className="h-4 w-4" />
                             </button>
                           </td>
@@ -229,11 +231,11 @@ export default function Monitoring() {
           {tab === 'history' && (
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">{history.length} alert(s)</span>
+                <span className="text-sm text-muted-foreground">{t('history.count', { count: history.length })}</span>
                 <button onClick={fetchData} className="p-2 hover:bg-accent rounded"><RefreshCw className="h-4 w-4" /></button>
               </div>
               {history.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">No alert history</div>
+                <div className="text-center py-12 text-muted-foreground">{t('history.noHistory')}</div>
               ) : (
                 <div className="space-y-2">
                   {history.map(alert => (
@@ -245,8 +247,8 @@ export default function Monitoring() {
                       </div>
                       {alert.status !== 'acknowledged' && (
                         <button onClick={() => handleAcknowledge(alert.id)}
-                          className="text-green-600 hover:text-green-800 p-1 flex items-center gap-1 text-sm" title="Acknowledge">
-                          <CheckCircle className="h-4 w-4" /> Ack
+                          className="text-green-600 hover:text-green-800 p-1 flex items-center gap-1 text-sm" title={t('history.acknowledge')}>
+                          <CheckCircle className="h-4 w-4" /> {t('history.acknowledge')}
                         </button>
                       )}
                     </div>
@@ -260,41 +262,41 @@ export default function Monitoring() {
           {tab === 'channels' && (
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">{channels.length} channel(s)</span>
+                <span className="text-sm text-muted-foreground">{t('channels.count', { count: channels.length })}</span>
                 <button onClick={() => setShowChannelForm(true)}
                   className="bg-primary text-primary-foreground px-3 py-1.5 rounded text-sm flex items-center gap-1">
-                  <Plus className="h-4 w-4" /> Add Channel
+                  <Plus className="h-4 w-4" /> {t('channels.addChannel')}
                 </button>
               </div>
 
               {showChannelForm && (
                 <form onSubmit={handleCreateChannel} className="bg-card border rounded-lg p-4 flex gap-3 items-end">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Type</label>
+                    <label className="block text-sm font-medium mb-1">{t('common:type')}</label>
                     <select value={channelForm.channel_type}
                       onChange={e => setChannelForm(f => ({ ...f, channel_type: e.target.value as any }))}
                       className="border rounded px-3 py-2 text-sm">
-                      <option value="email">Email</option>
-                      <option value="wechat">WeChat</option>
-                      <option value="dingtalk">DingTalk</option>
-                      <option value="telegram">Telegram</option>
-                      <option value="slack">Slack</option>
-                      <option value="webhook">Webhook</option>
+                      <option value="email">{t('channels.email')}</option>
+                      <option value="wechat">{t('channels.wechat')}</option>
+                      <option value="dingtalk">{t('channels.dingtalk')}</option>
+                      <option value="telegram">{t('channels.telegram')}</option>
+                      <option value="slack">{t('channels.slack')}</option>
+                      <option value="webhook">{t('channels.webhook')}</option>
                     </select>
                   </div>
                   <div className="flex-1">
-                    <label className="block text-sm font-medium mb-1">Target</label>
-                    <input placeholder="e.g. user@email.com or webhook URL" value={channelForm.target}
+                    <label className="block text-sm font-medium mb-1">{t('channels.target')}</label>
+                    <input placeholder={t('channels.targetPlaceholder')} value={channelForm.target}
                       onChange={e => setChannelForm(f => ({ ...f, target: e.target.value }))}
                       className="w-full border rounded px-3 py-2 text-sm" required />
                   </div>
-                  <button type="submit" className="bg-primary text-primary-foreground px-4 py-2 rounded text-sm">Add</button>
-                  <button type="button" onClick={() => setShowChannelForm(false)} className="px-3 py-2 text-sm">Cancel</button>
+                  <button type="submit" className="bg-primary text-primary-foreground px-4 py-2 rounded text-sm">{t('common:add')}</button>
+                  <button type="button" onClick={() => setShowChannelForm(false)} className="px-3 py-2 text-sm">{t('common:cancel')}</button>
                 </form>
               )}
 
               {channels.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">No notification channels configured</div>
+                <div className="text-center py-12 text-muted-foreground">{t('channels.noChannels')}</div>
               ) : (
                 <div className="grid gap-3">
                   {channels.map(ch => (
@@ -308,7 +310,7 @@ export default function Monitoring() {
                           </div>
                         </div>
                         <span className={`text-xs px-1.5 py-0.5 rounded ${ch.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                          {ch.is_active ? 'Active' : 'Inactive'}
+                          {ch.is_active ? t('common:active') : t('common:inactive')}
                         </span>
                       </div>
                       <button onClick={() => handleDeleteChannel(ch.id)} className="text-red-600 hover:text-red-800 p-1">

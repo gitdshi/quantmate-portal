@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Activity, BarChart3, PieChart, TrendingDown, TrendingUp } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
 
 interface AnalyticsData {
@@ -39,6 +40,7 @@ interface AnalyticsData {
 }
 
 export default function AnalyticsDashboard() {
+  const { t } = useTranslation(['portfolio', 'common'])
   const { data, isLoading } = useQuery<AnalyticsData>({
     queryKey: ['analytics'],
     queryFn: async () => {
@@ -59,7 +61,7 @@ export default function AnalyticsDashboard() {
   if (!data) {
     return (
       <div className="text-center text-gray-500 py-8">
-        No analytics data available
+        {t('analytics.noData')}
       </div>
     )
   }
@@ -70,7 +72,7 @@ export default function AnalyticsDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center justify-between mb-2">
-            <div className="text-sm text-gray-600">Total Value</div>
+            <div className="text-sm text-gray-600">{t('analytics.totalValue')}</div>
             <BarChart3 className="w-5 h-5 text-blue-600" />
           </div>
           <div className="text-2xl font-bold text-gray-900">
@@ -84,7 +86,7 @@ export default function AnalyticsDashboard() {
 
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center justify-between mb-2">
-            <div className="text-sm text-gray-600">Daily P&L</div>
+            <div className="text-sm text-gray-600">{t('analytics.dailyPnl')}</div>
             <Activity className="w-5 h-5 text-purple-600" />
           </div>
           <div className={`text-2xl font-bold ${data.portfolio_stats.daily_pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -97,34 +99,34 @@ export default function AnalyticsDashboard() {
 
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center justify-between mb-2">
-            <div className="text-sm text-gray-600">Total P&L</div>
+            <div className="text-sm text-gray-600">{t('analytics.totalPnl')}</div>
             <TrendingUp className="w-5 h-5 text-green-600" />
           </div>
           <div className={`text-2xl font-bold ${data.portfolio_stats.total_pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
             ${data.portfolio_stats.total_pnl.toLocaleString()}
           </div>
           <div className="text-sm text-gray-600 mt-1">
-            All time
+            {t('analytics.allTime')}
           </div>
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center justify-between mb-2">
-            <div className="text-sm text-gray-600">Open Positions</div>
+            <div className="text-sm text-gray-600">{t('analytics.openPositions')}</div>
             <PieChart className="w-5 h-5 text-orange-600" />
           </div>
           <div className="text-2xl font-bold text-gray-900">
             {data.portfolio_stats.positions_count}
           </div>
           <div className="text-sm text-gray-600 mt-1">
-            Active trades
+            {t('analytics.activeTrades')}
           </div>
         </div>
       </div>
 
       {/* Performance Chart */}
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Portfolio Performance</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('performance')}</h3>
         <div className="h-64 flex items-end justify-between gap-1">
           {data.performance_history.slice(-30).map((item, idx) => {
             const maxValue = Math.max(...data.performance_history.slice(-30).map(d => d.portfolio_value))
@@ -156,7 +158,7 @@ export default function AnalyticsDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Strategy Performance */}
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Strategy Performance</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('analytics.strategyPerformance')}</h3>
           <div className="space-y-3">
             {data.strategy_performance.map((strategy, idx) => (
               <div key={idx} className="border border-gray-200 rounded-lg p-4">
@@ -168,15 +170,15 @@ export default function AnalyticsDashboard() {
                 </div>
                 <div className="grid grid-cols-3 gap-3 text-sm">
                   <div>
-                    <div className="text-gray-600 text-xs">Trades</div>
+                    <div className="text-gray-600 text-xs">{t('analytics.trades')}</div>
                     <div className="font-medium">{strategy.total_trades}</div>
                   </div>
                   <div>
-                    <div className="text-gray-600 text-xs">Win Rate</div>
+                    <div className="text-gray-600 text-xs">{t('analytics.winRate')}</div>
                     <div className="font-medium">{strategy.winning_rate.toFixed(1)}%</div>
                   </div>
                   <div>
-                    <div className="text-gray-600 text-xs">Sharpe</div>
+                    <div className="text-gray-600 text-xs">{t('analytics.sharpe')}</div>
                     <div className="font-medium">{strategy.sharpe_ratio.toFixed(2)}</div>
                   </div>
                 </div>
@@ -187,7 +189,7 @@ export default function AnalyticsDashboard() {
 
         {/* Sector Allocation */}
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Sector Allocation</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('analytics.sectorAllocation')}</h3>
           <div className="space-y-3">
             {data.sector_allocation.map((sector, idx) => (
               <div key={idx}>
@@ -211,34 +213,34 @@ export default function AnalyticsDashboard() {
 
       {/* Risk Metrics */}
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Risk Metrics</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('analytics.riskMetrics')}</h3>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <div>
-            <div className="text-sm text-gray-600 mb-1">Volatility</div>
+            <div className="text-sm text-gray-600 mb-1">{t('analytics.volatility')}</div>
             <div className="text-xl font-bold text-gray-900">
               {data.risk_metrics.volatility.toFixed(2)}%
             </div>
           </div>
           <div>
-            <div className="text-sm text-gray-600 mb-1">Max Drawdown</div>
+            <div className="text-sm text-gray-600 mb-1">{t('analytics.maxDrawdown')}</div>
             <div className="text-xl font-bold text-red-600">
               {data.risk_metrics.max_drawdown.toFixed(2)}%
             </div>
           </div>
           <div>
-            <div className="text-sm text-gray-600 mb-1">VaR (95%)</div>
+            <div className="text-sm text-gray-600 mb-1">{t('analytics.var95')}</div>
             <div className="text-xl font-bold text-orange-600">
               {data.risk_metrics.var_95.toFixed(2)}%
             </div>
           </div>
           <div>
-            <div className="text-sm text-gray-600 mb-1">Beta</div>
+            <div className="text-sm text-gray-600 mb-1">{t('analytics.beta')}</div>
             <div className="text-xl font-bold text-blue-600">
               {data.risk_metrics.beta.toFixed(2)}
             </div>
           </div>
           <div>
-            <div className="text-sm text-gray-600 mb-1">Alpha</div>
+            <div className="text-sm text-gray-600 mb-1">{t('analytics.alpha')}</div>
             <div className="text-xl font-bold text-green-600">
               {data.risk_metrics.alpha.toFixed(2)}%
             </div>

@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface OptimizationResult {
   parameters: Record<string, number>
@@ -24,6 +25,14 @@ export default function OptimizationHeatmap({
   yParam,
   metric,
 }: OptimizationHeatmapProps) {
+  const { t } = useTranslation(['strategies', 'common'])
+
+  const metricLabels: Record<string, string> = {
+    total_return: t('strategies:optimization.totalReturn'),
+    sharpe_ratio: t('strategies:optimization.sharpeRatio'),
+    max_drawdown: t('strategies:optimization.maxDrawdown'),
+  }
+
   const { xValues, yValues, grid, minVal, maxVal } = useMemo(() => {
     const xSet = new Set<number>()
     const ySet = new Set<number>()
@@ -58,7 +67,7 @@ export default function OptimizationHeatmap({
   }, [results, xParam, yParam, metric])
 
   if (!xValues.length || !yValues.length) {
-    return <div className="text-gray-400 text-sm">Not enough data for heatmap</div>
+    return <div className="text-gray-400 text-sm">{t('strategies:optimization.noDataForHeatmap')}</div>
   }
 
   const cellW = Math.max(40, Math.min(80, 600 / xValues.length))
@@ -67,7 +76,7 @@ export default function OptimizationHeatmap({
   return (
     <div className="overflow-auto">
       <div className="flex items-end gap-1 mb-2">
-        <span className="text-xs text-gray-500 font-medium">{metric.replace('_', ' ')}</span>
+        <span className="text-xs text-gray-500 font-medium">{metricLabels[metric] ?? metric.replace('_', ' ')}</span>
         <div className="flex items-center gap-1 ml-4">
           <span className="text-xs text-gray-400">{minVal.toFixed(2)}</span>
           <div className="w-24 h-3 rounded" style={{
@@ -104,7 +113,7 @@ export default function OptimizationHeatmap({
                       backgroundColor: val !== null ? colorScale(val, minVal, maxVal) : '#f3f4f6',
                       color: val !== null ? '#111' : '#9ca3af',
                     }}
-                    title={`${xParam}=${x}, ${yParam}=${y}: ${val?.toFixed(4) ?? 'N/A'}`}
+                    title={`${xParam}=${x}, ${yParam}=${y}: ${val?.toFixed(4) ?? t('common:na')}`}
                   >
                     {val !== null ? val.toFixed(2) : '—'}
                   </td>

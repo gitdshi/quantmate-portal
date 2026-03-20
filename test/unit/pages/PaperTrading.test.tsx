@@ -82,7 +82,7 @@ describe('PaperTrading Page', () => {
   it('displays deployments after loading', async () => {
     render(<PaperTrading />)
     await waitFor(() => {
-      expect(screen.getByText('TestStrat')).toBeInTheDocument()
+      expect(screen.getAllByText('TestStrat').length).toBeGreaterThanOrEqual(1)
       expect(screen.getByText('IF2406.CFFEX')).toBeInTheDocument()
       expect(screen.getByText('running')).toBeInTheDocument()
     })
@@ -134,7 +134,7 @@ describe('PaperTrading Page', () => {
     render(<PaperTrading />)
 
     await waitFor(() => {
-      expect(screen.getByText('TestStrat')).toBeInTheDocument()
+      expect(screen.getAllByText('TestStrat').length).toBeGreaterThanOrEqual(1)
     })
 
     // Select strategy

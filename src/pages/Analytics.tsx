@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import AnalyticsDashboard from '../components/AnalyticsDashboard'
 import PerformanceComparison from '../components/PerformanceComparison'
 import RiskMetrics from '../components/RiskMetrics'
@@ -6,20 +7,21 @@ import RiskMetrics from '../components/RiskMetrics'
 type Tab = 'dashboard' | 'risk' | 'comparison'
 
 export default function Analytics() {
+  const { t } = useTranslation(['portfolio', 'common'])
   const [activeTab, setActiveTab] = useState<Tab>('dashboard')
 
   const tabs: { id: Tab; label: string }[] = [
-    { id: 'dashboard', label: 'Portfolio Analytics' },
-    { id: 'risk', label: 'Risk Metrics' },
-    { id: 'comparison', label: 'Performance Comparison' },
+    { id: 'dashboard', label: t('analytics.tabs.dashboard') },
+    { id: 'risk', label: t('analytics.tabs.risk') },
+    { id: 'comparison', label: t('analytics.tabs.comparison') },
   ]
 
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Analytics</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('analytics.title')}</h1>
         <p className="text-gray-600">
-          Advanced analytics, risk metrics, and performance comparison
+          {t('analytics.advancedSubtitle')}
         </p>
       </div>
 

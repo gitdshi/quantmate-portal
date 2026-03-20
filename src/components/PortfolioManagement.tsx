@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { TrendingDown, TrendingUp, X } from 'lucide-react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { usePagination } from '../hooks/usePagination'
 import { api } from '../lib/api'
 import Pagination from './Pagination'
@@ -35,6 +36,7 @@ interface ClosedTrade {
 }
 
 export default function PortfolioManagement() {
+  const { t } = useTranslation(['portfolio', 'common'])
   const [showCloseModal, setShowCloseModal] = useState(false)
   const [selectedPosition, setSelectedPosition] = useState<Position | null>(null)
   const queryClient = useQueryClient()
@@ -101,33 +103,33 @@ export default function PortfolioManagement() {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <div className="text-sm text-gray-600 mb-1">Total Market Value</div>
+          <div className="text-sm text-gray-600 mb-1">{t('positions.totalMarketValue')}</div>
           <div className="text-2xl font-bold text-gray-900">
             ${totalMarketValue.toLocaleString()}
           </div>
           <div className="text-sm text-gray-600 mt-1">
-            {positions?.length || 0} open positions
+            {t('positions.openCount', { count: positions?.length || 0 })}
           </div>
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <div className="text-sm text-gray-600 mb-1">Unrealized P&L</div>
+          <div className="text-sm text-gray-600 mb-1">{t('positions.unrealizedPnl')}</div>
           <div className={`text-2xl font-bold ${totalUnrealizedPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
             ${totalUnrealizedPnL.toLocaleString()}
           </div>
           <div className={`text-sm mt-1 flex items-center gap-1 ${totalUnrealizedPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
             {totalUnrealizedPnL >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-            Open positions
+            {t('positions.openPositions')}
           </div>
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <div className="text-sm text-gray-600 mb-1">Realized P&L</div>
+          <div className="text-sm text-gray-600 mb-1">{t('positions.realizedPnl')}</div>
           <div className={`text-2xl font-bold ${totalRealizedPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
             ${totalRealizedPnL.toLocaleString()}
           </div>
           <div className="text-sm text-gray-600 mt-1">
-            {closedTrades?.length || 0} closed trades
+            {t('positions.closedCount', { count: closedTrades?.length || 0 })}
           </div>
         </div>
       </div>
@@ -135,38 +137,38 @@ export default function PortfolioManagement() {
       {/* Open Positions */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
         <div className="p-6 border-b border-gray-200">
-          <h2 className="text-xl font-bold text-gray-900">Open Positions</h2>
+          <h2 className="text-xl font-bold text-gray-900">{t('positions.openPositions')}</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Symbol
+                  {t('common:symbol')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Strategy
+                  {t('positions.strategy')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Direction
+                  {t('common:direction')}
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Quantity
+                  {t('common:quantity')}
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Entry Price
+                  {t('positions.entryPrice')}
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Current Price
+                  {t('positions.currentPrice')}
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Unrealized P&L
+                  {t('positions.unrealizedPnl')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Entry Date
+                  {t('positions.entryDate')}
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
+                  {t('common:actions')}
                 </th>
               </tr>
             </thead>
@@ -211,7 +213,7 @@ export default function PortfolioManagement() {
                       onClick={() => handleClosePosition(position)}
                       className="text-red-600 hover:text-red-800 font-medium"
                     >
-                      Close
+                      {t('common:close')}
                     </button>
                   </td>
                 </tr>
@@ -219,7 +221,7 @@ export default function PortfolioManagement() {
               {(!positions || positions.length === 0) && (
                 <tr>
                   <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
-                    No open positions
+                    {t('positions.noOpenPositions')}
                   </td>
                 </tr>
               )}
@@ -231,38 +233,38 @@ export default function PortfolioManagement() {
       {/* Closed Trades */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
         <div className="p-6 border-b border-gray-200">
-          <h2 className="text-xl font-bold text-gray-900">Closed Trades</h2>
+          <h2 className="text-xl font-bold text-gray-900">{t('positions.closedTrades')}</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Symbol
+                  {t('common:symbol')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Strategy
+                  {t('positions.strategy')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Direction
+                  {t('common:direction')}
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Quantity
+                  {t('common:quantity')}
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Entry Price
+                  {t('positions.entryPrice')}
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Exit Price
+                  {t('positions.exitPrice')}
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Realized P&L
+                  {t('positions.realizedPnl')}
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Holding Period
+                  {t('positions.holdingPeriod')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Exit Date
+                  {t('positions.exitDate')}
                 </th>
               </tr>
             </thead>
@@ -300,7 +302,7 @@ export default function PortfolioManagement() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-600">
-                    {trade.holding_period} days
+                    {trade.holding_period} {t('positions.days')}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                     {trade.exit_date}
@@ -310,7 +312,7 @@ export default function PortfolioManagement() {
               {(!closedTrades || closedTrades.length === 0) && (
                 <tr>
                   <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
-                    No closed trades
+                    {t('positions.noClosedTrades')}
                   </td>
                 </tr>
               )}
@@ -333,7 +335,7 @@ export default function PortfolioManagement() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-gray-900">Close Position</h3>
+              <h3 className="text-xl font-bold text-gray-900">{t('positions.closePosition')}</h3>
               <button
                 onClick={() => setShowCloseModal(false)}
                 className="p-2 text-gray-400 hover:text-gray-600"
@@ -345,25 +347,25 @@ export default function PortfolioManagement() {
             <div className="space-y-4 mb-6">
               <div className="bg-gray-50 p-4 rounded-lg space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Symbol:</span>
+                  <span className="text-gray-600">{t('common:symbol')}:</span>
                   <span className="font-medium text-gray-900">{selectedPosition.symbol}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Direction:</span>
+                  <span className="text-gray-600">{t('common:direction')}:</span>
                   <span className={`font-medium ${selectedPosition.direction === 'long' ? 'text-green-600' : 'text-red-600'}`}>
                     {selectedPosition.direction.toUpperCase()}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Quantity:</span>
+                  <span className="text-gray-600">{t('common:quantity')}:</span>
                   <span className="font-medium text-gray-900">{selectedPosition.quantity}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Current Price:</span>
+                  <span className="text-gray-600">{t('positions.currentPrice')}:</span>
                   <span className="font-medium text-gray-900">${selectedPosition.current_price.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between pt-2 border-t border-gray-200">
-                  <span className="text-gray-600">Unrealized P&L:</span>
+                  <span className="text-gray-600">{t('positions.unrealizedPnl')}:</span>
                   <span className={`font-medium ${selectedPosition.unrealized_pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                     ${selectedPosition.unrealized_pnl.toFixed(2)} ({selectedPosition.unrealized_pnl_pct.toFixed(2)}%)
                   </span>
@@ -371,7 +373,7 @@ export default function PortfolioManagement() {
               </div>
               
               <p className="text-sm text-gray-600">
-                Are you sure you want to close this position? This action cannot be undone.
+                {t('positions.closeConfirm')}
               </p>
             </div>
 
@@ -380,14 +382,14 @@ export default function PortfolioManagement() {
                 onClick={() => setShowCloseModal(false)}
                 className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               >
-                Cancel
+                {t('common:cancel')}
               </button>
               <button
                 onClick={confirmClose}
                 disabled={closePositionMutation.isPending}
                 className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-400 transition-colors"
               >
-                {closePositionMutation.isPending ? 'Closing...' : 'Close Position'}
+                {closePositionMutation.isPending ? t('positions.closing') : t('positions.closePosition')}
               </button>
             </div>
           </div>

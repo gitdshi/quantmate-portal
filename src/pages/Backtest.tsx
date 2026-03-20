@@ -1,5 +1,6 @@
 import { Layers, Play } from 'lucide-react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import BacktestForm from '../components/BacktestForm'
 import BacktestJobList from '../components/BacktestJobList'
 import BacktestResults from '../components/BacktestResults'
@@ -8,6 +9,7 @@ import BulkBacktestSummary from '../components/BulkBacktestSummary'
 import ErrorBoundary from '../components/ErrorBoundary'
 
 export default function Backtest() {
+  const { t } = useTranslation(['backtest', 'common'])
   const [showForm, setShowForm] = useState(false)
   const [showBulkForm, setShowBulkForm] = useState(false)
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null)
@@ -25,9 +27,9 @@ export default function Backtest() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Backtest</h1>
+          <h1 className="text-3xl font-bold">{t('title')}</h1>
           <p className="text-muted-foreground mt-2">
-            Run backtests on your strategies and analyze results
+            {t('subtitle')}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -36,20 +38,20 @@ export default function Backtest() {
             className="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 transition-colors flex items-center gap-2"
           >
             <Layers className="h-4 w-4" />
-            Bulk Test
+            {t('bulkTest')}
           </button>
           <button
             onClick={() => setShowForm(true)}
             className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors flex items-center gap-2"
           >
             <Play className="h-4 w-4" />
-            New Backtest
+            {t('newBacktest')}
           </button>
         </div>
       </div>
 
       <div className="mb-4">
-        <h2 className="text-lg font-semibold mb-3">Backtest Jobs</h2>
+        <h2 className="text-lg font-semibold mb-3">{t('jobList.title')}</h2>
         <BacktestJobList
           onViewResults={handleViewResults}
           onViewBulkSummary={handleViewBulkSummary}

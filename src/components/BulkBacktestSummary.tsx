@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { BarChart3, Loader, TrendingDown, Trophy, X, XCircle } from 'lucide-react'
 import { useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { queueAPI } from '../lib/api'
 import type { BulkSummarySymbol, BulkBacktestSummary as BulkSummaryType } from '../types'
 
@@ -11,6 +12,7 @@ interface BulkBacktestSummaryProps {
 }
 
 export default function BulkBacktestSummary({ jobId, onClose, onViewChildResult }: BulkBacktestSummaryProps) {
+  const { t } = useTranslation(['backtest', 'common'])
   const { data, isLoading, error } = useQuery<BulkSummaryType>({
     queryKey: ['bulk-summary', jobId],
     queryFn: async () => {
@@ -38,7 +40,7 @@ export default function BulkBacktestSummary({ jobId, onClose, onViewChildResult 
           <div>
             <h2 className="text-lg font-bold flex items-center gap-2">
               <BarChart3 className="h-5 w-5 text-primary" />
-              Bulk Backtest Summary
+              {t('bulk.summary')}
             </h2>
             <p className="text-xs text-muted-foreground font-mono">{jobId}</p>
           </div>
@@ -57,7 +59,7 @@ export default function BulkBacktestSummary({ jobId, onClose, onViewChildResult 
           </div>
         ) : error || !data ? (
           <div className="text-center py-12 text-destructive">
-            Failed to load summary. <button onClick={onClose} className="text-primary underline ml-2">Close</button>
+            {t('bulk.loadSummaryFailed')} <button onClick={onClose} className="text-primary underline ml-2">{t('common:close')}</button>
           </div>
         ) : (
           <SummaryContent data={data} jobId={jobId} onViewChildResult={onViewChildResult} />
@@ -68,6 +70,7 @@ export default function BulkBacktestSummary({ jobId, onClose, onViewChildResult 
 }
 
 function SummaryContent({ data, jobId, onViewChildResult }: { data: BulkSummaryType; jobId: string; onViewChildResult?: (jobId: string) => void }) {
+  const { t } = useTranslation(['backtest', 'common'])
   const fmt = (v: number | null | undefined, suffix = '%') =>
     v !== null && v !== undefined ? `${v.toFixed(2)}${suffix}` : '-'
 
@@ -76,14 +79,14 @@ function SummaryContent({ data, jobId, onViewChildResult }: { data: BulkSummaryT
 
       {/* Overview cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-        <StatCard label="Total" value={data.total_symbols} />
-        <StatCard label="Completed" value={data.completed_count} color="text-blue-500" />
-        <StatCard label="Failed" value={data.failed_count} color="text-red-500" />
-        <StatCard label="Winning" value={data.winning_count} color="text-red-500" />
-        <StatCard label="Losing" value={data.losing_count} color="text-green-500" />
-        <StatCard label="Win Rate" value={`${data.win_rate.toFixed(1)}%`} color={data.win_rate >= 50 ? 'text-red-500' : 'text-green-500'} />
+        <StatCard label={t('bulk.total')} value={data.total_symbols} />
+        <StatCard label={t('status.completed')} value={data.completed_count} color="text-blue-500" />
+        <StatCard label={t('status.failed')} value={data.failed_count} color="text-red-500" />
+        <StatCard label={t('bulk.winning')} value={data.winning_count} color="text-red-500" />
+        <StatCard label={t('bulk.losing')} value={data.losing_count} color="text-green-500" />
+        <StatCard label={t('metrics.winRate')} value={`${data.win_rate.toFixed(1)}%`} color={data.win_rate >= 50 ? 'text-red-500' : 'text-green-500'} />
         <StatCard
-          label="Avg Return"
+          label={t('metrics.avgReturn')}
           value={fmt(data.avg_metrics.total_return)}
           color={data.avg_metrics.total_return !== null && data.avg_metrics.total_return >= 0 ? 'text-red-500' : 'text-green-500'}
         />
@@ -91,21 +94,21 @@ function SummaryContent({ data, jobId, onViewChildResult }: { data: BulkSummaryT
 
       {/* Average Metrics */}
       <div className="bg-card border border-border rounded-lg p-4">
-        <h3 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wider">Average Metrics</h3>
+        <h3 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wider">{t('bulk.avgMetrics')}</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-          <MetricItem label="Total Return" value={fmt(data.avg_metrics.total_return)} positive={data.avg_metrics.total_return !== null && data.avg_metrics.total_return >= 0} />
-          <MetricItem label="Annual Return" value={fmt(data.avg_metrics.annual_return)} positive={data.avg_metrics.annual_return !== null && data.avg_metrics.annual_return >= 0} />
-          <MetricItem label="Sharpe Ratio" value={fmt(data.avg_metrics.sharpe_ratio, '')} positive={data.avg_metrics.sharpe_ratio !== null && data.avg_metrics.sharpe_ratio >= 0} />
-          <MetricItem label="Max Drawdown" value={fmt(data.avg_metrics.max_drawdown)} positive={false} />
-          <MetricItem label="Win Rate" value={fmt(data.avg_metrics.winning_rate)} positive={data.avg_metrics.winning_rate !== null && data.avg_metrics.winning_rate >= 50} />
-          <MetricItem label="Profit Factor" value={fmt(data.avg_metrics.profit_factor, '')} positive={data.avg_metrics.profit_factor !== null && data.avg_metrics.profit_factor >= 1} />
-          <MetricItem label="Avg Trades" value={fmt(data.avg_metrics.total_trades, '')} />
+          <MetricItem label={t('metrics.totalReturn')} value={fmt(data.avg_metrics.total_return)} positive={data.avg_metrics.total_return !== null && data.avg_metrics.total_return >= 0} />
+          <MetricItem label={t('metrics.annualReturn')} value={fmt(data.avg_metrics.annual_return)} positive={data.avg_metrics.annual_return !== null && data.avg_metrics.annual_return >= 0} />
+          <MetricItem label={t('metrics.sharpeRatio')} value={fmt(data.avg_metrics.sharpe_ratio, '')} positive={data.avg_metrics.sharpe_ratio !== null && data.avg_metrics.sharpe_ratio >= 0} />
+          <MetricItem label={t('metrics.maxDrawdown')} value={fmt(data.avg_metrics.max_drawdown)} positive={false} />
+          <MetricItem label={t('metrics.winRate')} value={fmt(data.avg_metrics.winning_rate)} positive={data.avg_metrics.winning_rate !== null && data.avg_metrics.winning_rate >= 50} />
+          <MetricItem label={t('metrics.profitFactor')} value={fmt(data.avg_metrics.profit_factor, '')} positive={data.avg_metrics.profit_factor !== null && data.avg_metrics.profit_factor >= 1} />
+          <MetricItem label={t('metrics.avgTrades')} value={fmt(data.avg_metrics.total_trades, '')} />
         </div>
       </div>
 
       {/* Return Distribution */}
       <div className="bg-card border border-border rounded-lg p-4">
-        <h3 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wider">Return Distribution</h3>
+        <h3 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wider">{t('bulk.returnDistribution')}</h3>
         <div className="flex items-end gap-2 h-32">
           {Object.entries(data.return_distribution).map(([bucket, count]) => {
             const maxCount = Math.max(...Object.values(data.return_distribution), 1)
@@ -133,7 +136,7 @@ function SummaryContent({ data, jobId, onViewChildResult }: { data: BulkSummaryT
         <div className="px-4 py-3 border-b border-border bg-red-500/5">
           <h3 className="text-sm font-semibold flex items-center gap-2">
             <Trophy className="h-4 w-4 text-red-500" />
-            Top 10 Performers
+            {t('bulk.top10')}
           </h3>
         </div>
         <SymbolTable symbols={data.top10} onViewResult={onViewChildResult} parentJobId={jobId} />
@@ -144,7 +147,7 @@ function SummaryContent({ data, jobId, onViewChildResult }: { data: BulkSummaryT
         <div className="px-4 py-3 border-b border-border bg-green-500/5">
           <h3 className="text-sm font-semibold flex items-center gap-2">
             <TrendingDown className="h-4 w-4 text-green-500" />
-            Bottom 10 Performers
+            {t('bulk.bottom10')}
           </h3>
         </div>
         <SymbolTable symbols={data.bottom10} onViewResult={onViewChildResult} parentJobId={jobId} />
@@ -156,7 +159,7 @@ function SummaryContent({ data, jobId, onViewChildResult }: { data: BulkSummaryT
           <div className="px-4 py-3 border-b border-border bg-destructive/5">
             <h3 className="text-sm font-semibold flex items-center gap-2">
               <XCircle className="h-4 w-4 text-destructive" />
-              Failed Symbols ({data.failed_symbols.length})
+              {t('bulk.failedSymbols')} ({data.failed_symbols.length})
             </h3>
           </div>
           <div className="divide-y divide-border">
@@ -209,21 +212,22 @@ function SymbolTable({
   onViewResult?: (jobId: string) => void
   parentJobId: string
 }) {
+  const { t } = useTranslation(['backtest', 'common'])
   if (symbols.length === 0) {
-    return <div className="px-4 py-3 text-xs text-muted-foreground text-center">No data</div>
+    return <div className="px-4 py-3 text-xs text-muted-foreground text-center">{t('common:noData')}</div>
   }
 
   return (
     <>
       <div className="grid grid-cols-[2fr_80px_80px_80px_80px_80px_80px_80px] gap-2 px-4 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase border-b border-border bg-muted/10">
-        <span>Symbol</span>
-        <span className="text-right">Return</span>
-        <span className="text-right">Annual</span>
-        <span className="text-right">Sharpe</span>
-        <span className="text-right">MaxDD</span>
-        <span className="text-right">Trades</span>
-        <span className="text-right">Win Rate</span>
-        <span className="text-right">PF</span>
+        <span>{t('symbol')}</span>
+        <span className="text-right">{t('metrics.totalReturn')}</span>
+        <span className="text-right">{t('metrics.annualReturn')}</span>
+        <span className="text-right">{t('metrics.sharpeRatio')}</span>
+        <span className="text-right">{t('metrics.maxDrawdown')}</span>
+        <span className="text-right">{t('metrics.totalTrades')}</span>
+        <span className="text-right">{t('metrics.winRate')}</span>
+        <span className="text-right">{t('metrics.profitFactor')}</span>
       </div>
       {symbols.map((s, i) => {
         const ret = s.total_return

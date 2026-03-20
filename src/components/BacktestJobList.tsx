@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowDown, ArrowUp, BarChart3, Calendar, CheckCircle, ChevronDown, ChevronRight, Clock, DollarSign, Eye, Layers, Loader, Trash2, TrendingUp, XCircle } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { usePagination } from '../hooks/usePagination'
 import { queueAPI } from '../lib/api'
 import type { BulkJobChildResult, BulkJobResultsPage } from '../types'
@@ -12,6 +13,7 @@ interface BacktestJobListProps {
 }
 
 export default function BacktestJobList({ onViewResults, onViewBulkSummary }: BacktestJobListProps) {
+  const { t } = useTranslation(['backtest', 'common'])
   const [filter, setFilter] = useState<string>('all')
   const [jobDetails, setJobDetails] = useState<Record<string, any>>({})
   const [expandedBulk, setExpandedBulk] = useState<Record<string, boolean>>({})
@@ -33,7 +35,7 @@ export default function BacktestJobList({ onViewResults, onViewBulkSummary }: Ba
 
   const handleDelete = async (jobId: string, e: React.MouseEvent) => {
     e.stopPropagation()
-    if (confirm('Are you sure you want to delete this backtest job?')) {
+    if (confirm(t('jobList.confirmDelete'))) {
       deleteMutation.mutate(jobId)
     }
   }
@@ -117,7 +119,7 @@ export default function BacktestJobList({ onViewResults, onViewBulkSummary }: Ba
               : 'bg-muted hover:bg-muted/80'
           }`}
         >
-          All
+          {t('common:all')}
         </button>
         <button
           onClick={() => setFilter('queued')}
@@ -127,7 +129,7 @@ export default function BacktestJobList({ onViewResults, onViewBulkSummary }: Ba
               : 'bg-muted hover:bg-muted/80'
           }`}
         >
-          Queued
+          {t('status.queued')}
         </button>
         <button
           onClick={() => setFilter('started')}
@@ -137,7 +139,7 @@ export default function BacktestJobList({ onViewResults, onViewBulkSummary }: Ba
               : 'bg-muted hover:bg-muted/80'
           }`}
         >
-          Running
+          {t('status.running')}
         </button>
         <button
           onClick={() => setFilter('finished')}
@@ -147,7 +149,7 @@ export default function BacktestJobList({ onViewResults, onViewBulkSummary }: Ba
               : 'bg-muted hover:bg-muted/80'
           }`}
         >
-          Finished
+          {t('status.finished')}
         </button>
         <button
           onClick={() => setFilter('failed')}
@@ -157,13 +159,13 @@ export default function BacktestJobList({ onViewResults, onViewBulkSummary }: Ba
               : 'bg-muted hover:bg-muted/80'
           }`}
         >
-          Failed
+          {t('status.failed')}
         </button>
       </div>
 
       {jobs.length === 0 ? (
         <div className="text-center py-12 bg-card border border-border rounded-lg">
-          <p className="text-muted-foreground">No backtest jobs found</p>
+          <p className="text-muted-foreground">{t('jobList.noJobs')}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -290,16 +292,16 @@ export default function BacktestJobList({ onViewResults, onViewBulkSummary }: Ba
                           </span>
                         )}
                         {job.rate !== undefined && (
-                          <span>Rate: {job.rate}</span>
+                          <span>{t('commission')}: {job.rate}</span>
                         )}
                         {job.slippage !== undefined && (
-                          <span>Slip: {job.slippage}</span>
+                          <span>{t('slippage')}: {job.slippage}</span>
                         )}
                         {/* Parameters summary */}
                         {(jobParams && Object.keys(jobParams).length > 0) && (
                           <span className="inline-flex items-center gap-1">
                             <Layers className="h-3 w-3" />
-                            Params: {Object.keys(jobParams).length}
+                            {t('common:parameters')}: {Object.keys(jobParams).length}
                           </span>
                         )}
                       </div>
@@ -311,19 +313,19 @@ export default function BacktestJobList({ onViewResults, onViewBulkSummary }: Ba
                         <div className={`text-lg font-extrabold ${
                             (stats.total_return || 0) >= 0 ? 'text-red-500' : 'text-green-500'
                           }`}>
-                            <span className="text-sm text-muted-foreground font-normal mr-2">Return</span>
+                            <span className="text-sm text-muted-foreground font-normal mr-2">{t('metrics.totalReturn')}</span>
                             {(stats.total_return || 0).toFixed(2)}%
                           </div>
                           <div className="text-lg font-extrabold">
-                            <span className="text-sm text-muted-foreground font-normal mr-2">Annual</span>
+                            <span className="text-sm text-muted-foreground font-normal mr-2">{t('metrics.annualReturn')}</span>
                             {(stats.annual_return || 0).toFixed(2)}%
                           </div>
                           <div className="text-lg font-extrabold">
-                            <span className="text-sm text-muted-foreground font-normal mr-2">Sharpe</span>
+                            <span className="text-sm text-muted-foreground font-normal mr-2">{t('metrics.sharpeRatio')}</span>
                             {(stats.sharpe_ratio || 0).toFixed(2)}
                           </div>
                           <div className="text-lg font-extrabold text-green-500">
-                            <span className="text-sm text-muted-foreground font-normal mr-2">MaxDD</span>
+                            <span className="text-sm text-muted-foreground font-normal mr-2">{t('metrics.maxDrawdown')}</span>
                             {(stats.max_drawdown_percent || stats.max_drawdown || 0).toFixed(2)}%
                           </div>
                         <div className="flex items-center gap-2 ml-2 border-l border-border pl-3">
@@ -380,7 +382,7 @@ export default function BacktestJobList({ onViewResults, onViewBulkSummary }: Ba
                   {job.progress !== undefined && job.progress > 0 && (
                     <div className="mt-2">
                       <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-                        <span>{job.progress_message || 'Processing...'}</span>
+                        <span>{job.progress_message || t('jobList.processing')}</span>
                         <span>{job.progress}%</span>
                       </div>
                       <div className="w-full bg-muted rounded-full h-2">
@@ -446,6 +448,7 @@ function BulkJobCard({
   const [total, setTotal] = useState(0)
   const [loadingMore, setLoadingMore] = useState(false)
   const PAGE_SIZE = 10
+  const { t } = useTranslation(['backtest', 'common'])
 
   const strategyDisplay = job.strategy_name || job.strategy_class || ''
   const strategyVersion = job.strategy_version
@@ -504,7 +507,7 @@ function BulkJobCard({
           </span>
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-orange-500/10 text-orange-600 dark:text-orange-400 text-xs font-semibold">
             <Layers className="h-3 w-3" />
-            Bulk
+            {t('bulk.label')}
           </span>
           <span className="text-xs text-muted-foreground">
             {new Date(job.created_at).toLocaleString()}
@@ -528,7 +531,7 @@ function BulkJobCard({
                 </span>
               )}
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-orange-500/10 text-orange-600 dark:text-orange-400 text-xs font-medium">
-                {totalSymbols} symbols
+                {t('bulk.symbols', { count: totalSymbols })}
               </span>
             </div>
             <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
@@ -544,13 +547,13 @@ function BulkJobCard({
                   {Number(job.initial_capital).toLocaleString()}
                 </span>
               )}
-              {job.rate !== undefined && <span>Rate: {job.rate}</span>}
-              {job.slippage !== undefined && <span>Slip: {job.slippage}</span>}
+              {job.rate !== undefined && <span>{t('commission')}: {job.rate}</span>}
+              {job.slippage !== undefined && <span>{t('slippage')}: {job.slippage}</span>}
               {/* Parameters summary for bulk job */}
               {(jobParams && Object.keys(jobParams).length > 0) && (
                 <span className="inline-flex items-center gap-1">
                   <Layers className="h-3 w-3" />
-                  Params: {Object.keys(jobParams).length}
+                  {t('common:parameters')}: {Object.keys(jobParams).length}
                 </span>
               )}
             </div>
@@ -562,7 +565,7 @@ function BulkJobCard({
               <div className="flex items-center gap-3">
                 <div>
                   <div className={`text-lg font-extrabold ${bestReturn >= 0 ? 'text-red-500' : 'text-green-500'}`}>
-                    <span className="text-sm text-muted-foreground font-normal mr-1">Return</span>
+                    <span className="text-sm text-muted-foreground font-normal mr-1">{t('metrics.totalReturn')}</span>
                     {bestReturn.toFixed(2)}%
                   </div>
                   {bestSymbol && (
@@ -576,19 +579,19 @@ function BulkJobCard({
                 </div>
                 {job.result?.best_annual_return !== undefined && (
                   <div className="text-lg font-extrabold">
-                    <span className="text-sm text-muted-foreground font-normal mr-1">Annual</span>
+                    <span className="text-sm text-muted-foreground font-normal mr-1">{t('metrics.annualReturn')}</span>
                     {job.result.best_annual_return.toFixed(2)}%
                   </div>
                 )}
                 {job.result?.best_sharpe_ratio !== undefined && (
                   <div className="text-lg font-extrabold">
-                    <span className="text-sm text-muted-foreground font-normal mr-1">Sharpe</span>
+                    <span className="text-sm text-muted-foreground font-normal mr-1">{t('metrics.sharpeRatio')}</span>
                     {job.result.best_sharpe_ratio.toFixed(2)}
                   </div>
                 )}
                 {job.result?.best_max_drawdown !== undefined && (
                   <div className="text-lg font-extrabold text-green-500">
-                    <span className="text-sm text-muted-foreground font-normal mr-1">MaxDD</span>
+                    <span className="text-sm text-muted-foreground font-normal mr-1">{t('metrics.maxDrawdown')}</span>
                     {job.result.best_max_drawdown.toFixed(2)}%
                   </div>
                 )}
@@ -630,7 +633,7 @@ function BulkJobCard({
         {job.progress !== undefined && job.progress > 0 && job.progress < 100 && (
           <div className="mt-2">
             <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-              <span>{job.progress_message || 'Processing...'}</span>
+              <span>{job.progress_message || t('jobList.processing')}</span>
               <span>{job.progress}%</span>
             </div>
             <div className="w-full bg-muted rounded-full h-2">
@@ -649,7 +652,7 @@ function BulkJobCard({
         <div className="border-t border-border">
           {/* Sort control */}
           <div className="flex items-center justify-between px-4 py-2 bg-muted/20">
-            <span className="text-xs text-muted-foreground">{total} results</span>
+            <span className="text-xs text-muted-foreground">{total} {t('jobList.results')}</span>
             <button
               onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
               className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
@@ -716,7 +719,7 @@ function BulkJobCard({
                 disabled={loadingMore}
                 className="text-sm text-primary hover:underline disabled:opacity-50"
               >
-                {loadingMore ? 'Loading...' : `... load more (${allResults.length}/${total})`}
+                {loadingMore ? t('common:loading') : `... ${t('jobList.loadMore')} (${allResults.length}/${total})`}
               </button>
             </div>
           )}

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Eye, Pencil, Power, PowerOff, Trash2 } from 'lucide-react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { usePagination } from '../hooks/usePagination'
 import { strategiesAPI } from '../lib/api'
 import type { Strategy } from '../types'
@@ -12,6 +13,7 @@ interface StrategyListProps {
 }
 
 export default function StrategyList({ onEdit, onView }: StrategyListProps) {
+  const { t } = useTranslation(['strategies', 'common'])
   const queryClient = useQueryClient()
   const [deleteId, setDeleteId] = useState<number | null>(null)
 
@@ -35,7 +37,7 @@ export default function StrategyList({ onEdit, onView }: StrategyListProps) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="text-muted-foreground">Loading strategies...</div>
+        <div className="text-muted-foreground">{t('list.loadingStrategies')}</div>
       </div>
     )
   }
@@ -43,9 +45,9 @@ export default function StrategyList({ onEdit, onView }: StrategyListProps) {
   if (strategies.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-muted-foreground mb-4">No strategies yet</p>
+        <p className="text-muted-foreground mb-4">{t('list.noStrategies')}</p>
         <p className="text-sm text-muted-foreground">
-          Create your first strategy to get started
+          {t('list.createFirst')}
         </p>
       </div>
     )
@@ -75,12 +77,12 @@ export default function StrategyList({ onEdit, onView }: StrategyListProps) {
                   {strategy.is_active ? (
                     <span className="flex items-center gap-1">
                       <Power className="h-3 w-3" />
-                      Active
+                      {t('common:active')}
                     </span>
                   ) : (
                     <span className="flex items-center gap-1">
                       <PowerOff className="h-3 w-3" />
-                      Inactive
+                      {t('common:inactive')}
                     </span>
                   )}
                 </span>
@@ -93,11 +95,11 @@ export default function StrategyList({ onEdit, onView }: StrategyListProps) {
               <div className="flex items-center gap-4 text-xs text-muted-foreground">
                 <span>ID: {strategy.id}</span>
                 <span>
-                  Created: {new Date(strategy.created_at).toLocaleDateString()}
+                  {t('common:created')}: {new Date(strategy.created_at).toLocaleDateString()}
                 </span>
                 {strategy.parameters && Object.keys(strategy.parameters).length > 0 && (
                   <span>
-                    Parameters: {Object.keys(strategy.parameters).length}
+                    {t('common:parameters')}: {Object.keys(strategy.parameters).length}
                   </span>
                 )}
               </div>
@@ -107,14 +109,14 @@ export default function StrategyList({ onEdit, onView }: StrategyListProps) {
               <button
                 onClick={() => onView(strategy)}
                 className="p-2 hover:bg-muted rounded-md transition-colors"
-                title="View details"
+                title={t('list.viewDetails')}
               >
                 <Eye className="h-4 w-4" />
               </button>
               <button
                 onClick={() => onEdit(strategy)}
                 className="p-2 hover:bg-muted rounded-md transition-colors"
-                title="Edit strategy"
+                title={t('list.editStrategy')}
               >
                 <Pencil className="h-4 w-4" />
               </button>
@@ -125,20 +127,20 @@ export default function StrategyList({ onEdit, onView }: StrategyListProps) {
                     className="px-3 py-1 bg-destructive text-destructive-foreground rounded text-xs hover:bg-destructive/90"
                     disabled={deleteMutation.isPending}
                   >
-                    Confirm
+                    {t('common:confirm')}
                   </button>
                   <button
                     onClick={() => setDeleteId(null)}
                     className="px-3 py-1 bg-muted rounded text-xs hover:bg-muted/80"
                   >
-                    Cancel
+                    {t('common:cancel')}
                   </button>
                 </div>
               ) : (
                 <button
                   onClick={() => setDeleteId(strategy.id)}
                   className="p-2 hover:bg-destructive/10 text-destructive rounded-md transition-colors"
-                  title="Delete strategy"
+                  title={t('list.deleteStrategy')}
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>

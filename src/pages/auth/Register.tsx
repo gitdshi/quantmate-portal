@@ -1,11 +1,13 @@
 import { useMutation } from '@tanstack/react-query'
 import { UserPlus } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import { authAPI } from '../../lib/api'
 import { useAuthStore } from '../../stores/auth'
 
 export default function Register() {
+  const { t } = useTranslation('auth')
   const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -27,7 +29,7 @@ export default function Register() {
     },
     onError: (err: unknown) => {
       const error = err as { response?: { data?: { detail?: string } } }
-      setError(error.response?.data?.detail || 'Registration failed')
+      setError(error.response?.data?.detail || t('registrationFailed'))
     },
   })
 
@@ -36,12 +38,12 @@ export default function Register() {
     setError('')
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match')
+      setError(t('passwordMismatch'))
       return
     }
 
     if (password.length < 6) {
-      setError('Password must be at least 6 characters')
+      setError(t('passwordTooShort'))
       return
     }
 
@@ -61,14 +63,14 @@ export default function Register() {
             <img src="/logo.svg" alt="QuantMate" className="h-10 w-auto" />
           </div>
 
-          <h1 className="text-2xl font-bold text-center mb-2">Create an account</h1>
+          <h1 className="text-2xl font-bold text-center mb-2">{t('createAccount')}</h1>
           <p className="text-muted-foreground text-center mb-8">
-            Join QuantMate to start trading
+            {t('joinPrompt')}
           </p>
 
           {success ? (
             <div className="p-4 rounded-lg bg-primary/10 text-primary text-center">
-              Account created successfully! Redirecting to login...
+              {t('accountCreated')}
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -80,7 +82,7 @@ export default function Register() {
 
               <div>
                 <label htmlFor="username" className="block text-sm font-medium mb-2">
-                  Username
+                  {t('username')}
                 </label>
                 <input
                   id="username"
@@ -94,7 +96,7 @@ export default function Register() {
 
               <div>
                 <label htmlFor="email" className="block text-sm font-medium mb-2">
-                  Email
+                  {t('email')}
                 </label>
                 <input
                   id="email"
@@ -108,7 +110,7 @@ export default function Register() {
 
               <div>
                 <label htmlFor="password" className="block text-sm font-medium mb-2">
-                  Password
+                  {t('password')}
                 </label>
                 <input
                   id="password"
@@ -122,7 +124,7 @@ export default function Register() {
 
               <div>
                 <label htmlFor="confirmPassword" className="block text-sm font-medium mb-2">
-                  Confirm Password
+                  {t('confirmPassword')}
                 </label>
                 <input
                   id="confirmPassword"
@@ -139,15 +141,15 @@ export default function Register() {
                 disabled={registerMutation.isPending}
                 className="w-full py-2 px-4 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
               >
-                {registerMutation.isPending ? 'Creating account...' : 'Create account'}
+                {registerMutation.isPending ? t('creatingAccount') : t('createAccount')}
               </button>
             </form>
           )}
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
-            Already have an account?{' '}
+            {t('hasAccount')}{' '}
             <Link to="/login" className="text-primary hover:underline font-medium">
-              Sign in
+              {t('signIn')}
             </Link>
           </p>
         </div>

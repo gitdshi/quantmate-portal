@@ -1,5 +1,6 @@
 import { ArrowDown, ArrowUp } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
     Bar,
     CartesianGrid,
@@ -95,6 +96,7 @@ export default function TradingChart({
   stockSymbol = 'Stock',
   benchmarkSymbol = 'Benchmark',
 }: TradingChartProps) {
+  const { t } = useTranslation(['market', 'common'])
   const [zoomState, setZoomState] = useState({ startIndex: 0, endIndex: 0 })
   const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState(0)
@@ -236,7 +238,7 @@ export default function TradingChart({
   if (chartData.length === 0) {
     return (
       <div className="flex items-center justify-center h-64 bg-muted/30 rounded-lg">
-        <p className="text-muted-foreground">No price data available</p>
+        <p className="text-muted-foreground">{t('chart.noData')}</p>
       </div>
     )
   }
@@ -307,32 +309,32 @@ export default function TradingChart({
             <div className="w-4 h-4 rounded-full bg-red-500 flex items-center justify-center">
               <ArrowUp className="w-2 h-2 text-white" />
             </div>
-            <span>Long Entry</span>
+            <span>{t('chart.longEntry')}</span>
           </div>
           <div className="flex items-center gap-1">
             <div className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center">
               <ArrowDown className="w-2 h-2 text-white" />
             </div>
-            <span>Short Entry</span>
+            <span>{t('chart.shortEntry')}</span>
           </div>
           <div className="flex items-center gap-1">
             <div className="w-4 h-4 rounded-full bg-red-500 flex items-center justify-center">
               <span className="text-white text-[8px]">✕</span>
             </div>
-            <span>Long Exit</span>
+            <span>{t('chart.longExit')}</span>
           </div>
           <div className="flex items-center gap-1">
             <div className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center">
               <span className="text-white text-[8px]">✕</span>
             </div>
-            <span>Short Exit</span>
+            <span>{t('chart.shortExit')}</span>
           </div>
         </div>
         <button
           onClick={handleResetZoom}
           className="px-3 py-1 text-xs border border-input rounded-md hover:bg-muted transition-colors"
         >
-          Reset Zoom
+          {t('chart.resetZoom')}
         </button>
       </div>
 
@@ -411,10 +413,10 @@ export default function TradingChart({
                     <div className="text-xs text-muted-foreground mb-1">{data.fullDate?.split('T')[0]}</div>
                     {data.open != null && (
                       <div className="text-xs space-y-0.5">
-                        <div>Open: <span className="font-medium">{data.open.toFixed(2)}</span></div>
-                        <div>High: <span className="font-medium">{data.high.toFixed(2)}</span></div>
-                        <div>Low: <span className="font-medium">{data.low.toFixed(2)}</span></div>
-                        <div>Close: <span className="font-medium">{data.close.toFixed(2)}</span></div>
+                        <div>{t('overview.open')}: <span className="font-medium">{data.open.toFixed(2)}</span></div>
+                        <div>{t('overview.high')}: <span className="font-medium">{data.high.toFixed(2)}</span></div>
+                        <div>{t('overview.low')}: <span className="font-medium">{data.low.toFixed(2)}</span></div>
+                        <div>{t('overview.close')}: <span className="font-medium">{data.close.toFixed(2)}</span></div>
                       </div>
                     )}
                     {data.benchmarkPrice != null && (

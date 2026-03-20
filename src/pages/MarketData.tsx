@@ -1,5 +1,6 @@
 import { X } from 'lucide-react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import MarketDataView from '../components/MarketDataView'
 import MarketOverview from '../components/MarketOverview'
 import RealtimeQuotePanel from '../components/RealtimeQuotePanel'
@@ -7,6 +8,7 @@ import SymbolSearch from '../components/SymbolSearch'
 import TechnicalIndicators from '../components/TechnicalIndicators'
 
 export default function MarketData() {
+  const { t } = useTranslation(['market', 'common'])
   const [selectedSymbol, setSelectedSymbol] = useState<string>('')
   const [startDate] = useState(() => {
     const date = new Date()
@@ -18,19 +20,18 @@ export default function MarketData() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Market Data</h1>
+        <h1 className="text-3xl font-bold">{t('title')}</h1>
         <p className="text-muted-foreground mt-2">
-          View real-time market data and technical indicators
+          {t('subtitle')}
         </p>
       </div>
 
-      <RealtimeQuotePanel defaultSymbol={selectedSymbol} />
-
       <MarketOverview />
+      <RealtimeQuotePanel defaultSymbol={selectedSymbol} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1">
-          <h2 className="text-lg font-semibold mb-4">Symbol Search</h2>
+          <h2 className="text-lg font-semibold mb-4">{t('symbolSearch')}</h2>
           <SymbolSearch onSelect={setSelectedSymbol} />
         </div>
 
@@ -42,7 +43,7 @@ export default function MarketData() {
                 <button
                   onClick={() => setSelectedSymbol('')}
                   className="p-2 hover:bg-muted rounded-md transition-colors"
-                  title="Clear selection"
+                  title={t('clearSelection')}
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -57,7 +58,7 @@ export default function MarketData() {
           ) : (
             <div className="bg-card border border-border rounded-lg p-12 text-center">
               <p className="text-muted-foreground">
-                Select a symbol from the search to view market data
+                {t('selectSymbol')}
               </p>
             </div>
           )}

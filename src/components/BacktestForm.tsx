@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Play, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { marketDataAPI, queueAPI, strategiesAPI } from '../lib/api'
 import { useAuthStore } from '../stores/auth'
 import SymbolSearch from './SymbolSearch'
@@ -20,6 +21,7 @@ interface Strategy {
 }
 
 export default function BacktestForm({ onClose, onSubmitSuccess }: BacktestFormProps) {
+  const { t } = useTranslation(['backtest', 'common'])
   const queryClient = useQueryClient()
   const { user } = useAuthStore()
 
@@ -174,7 +176,7 @@ export default function BacktestForm({ onClose, onSubmitSuccess }: BacktestFormP
       const e = err as { response?: { data?: { detail?: unknown } } }
       console.error('Backtest submit error:', e)
 
-      let message = 'Failed to submit backtest'
+      let message = t('submitFailed')
       const resp = e?.response?.data
       const detail = resp?.detail
 
@@ -206,22 +208,22 @@ export default function BacktestForm({ onClose, onSubmitSuccess }: BacktestFormP
     setError('')
 
     if (!strategyId) {
-      setError('Please select a strategy')
+      setError(t('form.selectStrategyError'))
       return
     }
 
     if (!symbol) {
-      setError('Please select a symbol')
+      setError(t('form.selectSymbolError'))
       return
     }
 
     if (!startDate || !endDate) {
-      setError('Please select start and end dates')
+      setError(t('form.selectDatesError'))
       return
     }
 
     if (new Date(startDate) >= new Date(endDate)) {
-      setError('End date must be after start date')
+      setError(t('form.dateRangeError'))
       return
     }
 
@@ -230,7 +232,7 @@ export default function BacktestForm({ onClose, onSubmitSuccess }: BacktestFormP
     try {
       paramsObj = parameters && parameters.trim() ? JSON.parse(parameters) : {}
     } catch {
-      setError('Parameters must be valid JSON')
+      setError(t('form.invalidJson'))
       return
     }
 
@@ -255,7 +257,7 @@ export default function BacktestForm({ onClose, onSubmitSuccess }: BacktestFormP
     <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-card border border-border rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
         <div className="flex items-center justify-between p-4 border-b border-border">
-          <h2 className="text-xl font-semibold">Submit Backtest</h2>
+          <h2 className="text-xl font-semibold">{t('submitBacktest')}</h2>
           <button
             onClick={onClose}
             className="p-2 hover:bg-muted rounded-md transition-colors"
@@ -275,7 +277,7 @@ export default function BacktestForm({ onClose, onSubmitSuccess }: BacktestFormP
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            Basic Settings
+            {t('form.basicSettings')}
           </button>
           <button
             type="button"
@@ -286,7 +288,7 @@ export default function BacktestForm({ onClose, onSubmitSuccess }: BacktestFormP
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            Strategy Parameters
+            {t('form.strategyParameters')}
           </button>
         </div>
 
@@ -302,7 +304,7 @@ export default function BacktestForm({ onClose, onSubmitSuccess }: BacktestFormP
 
           <div>
             <label htmlFor="strategy" className="block text-sm font-medium mb-2">
-              Strategy *
+              {t('strategy')} *
             </label>
             <select
               id="strategy"
@@ -313,18 +315,18 @@ export default function BacktestForm({ onClose, onSubmitSuccess }: BacktestFormP
               disabled={isLoadingStrategies}
             >
               <option value="">
-                {isLoadingStrategies ? 'Loading strategies...' : isErrorStrategies ? 'Error loading strategies' : strategies.length === 0 ? 'No strategies available' : 'Select a strategy'}
+                {isLoadingStrategies ? t('form.loadingStrategies') : isErrorStrategies ? t('form.errorLoadingStrategies') : strategies.length === 0 ? t('form.noStrategies') : t('selectStrategy')}
               </option>
               {strategies.map((strategy) => (
                 <option key={strategy.id} value={strategy.id}>
-                  {strategy.name} v{strategy.version || 1} ({strategy.class_name}) {!strategy.is_active && '(Inactive)'}
+                  {strategy.name} v{strategy.version || 1} ({strategy.class_name}) {!strategy.is_active && `(${t('common:inactive')})`}
                 </option>
               ))}
             </select>
           </div>
 
           <div>
-            <label htmlFor="symbol" className="block text-sm font-medium mb-2">Symbol *</label>
+            <label htmlFor="symbol" className="block text-sm font-medium mb-2">{t('symbol')} *</label>
             <SymbolSearch
               onChoose={(stock) => {
                 setSymbol(stock.vt_symbol || '')
@@ -332,14 +334,14 @@ export default function BacktestForm({ onClose, onSubmitSuccess }: BacktestFormP
               }}
             />
             {symbol && (
-              <div className="mt-1 text-xs text-muted-foreground">Selected: {symbol}{symbolName ? ` — ${symbolName}` : ''}</div>
+              <div className="mt-1 text-xs text-muted-foreground">{t('form.selected')}: {symbol}{symbolName ? ` — ${symbolName}` : ''}</div>
             )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label htmlFor="startDate" className="block text-sm font-medium mb-2">
-                Start Date *
+                {t('startDate')} *
               </label>
               <input
                 id="startDate"
@@ -352,7 +354,7 @@ export default function BacktestForm({ onClose, onSubmitSuccess }: BacktestFormP
             </div>
             <div>
               <label htmlFor="endDate" className="block text-sm font-medium mb-2">
-                End Date *
+                {t('endDate')} *
               </label>
               <input
                 id="endDate"
@@ -367,7 +369,7 @@ export default function BacktestForm({ onClose, onSubmitSuccess }: BacktestFormP
 
           <div>
             <label htmlFor="initialCapital" className="block text-sm font-medium mb-2">
-              Initial Capital *
+              {t('initialCapital')} *
             </label>
             <input
               id="initialCapital"
@@ -384,7 +386,7 @@ export default function BacktestForm({ onClose, onSubmitSuccess }: BacktestFormP
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label htmlFor="rate" className="block text-sm font-medium mb-2">
-                Commission Rate
+                {t('commission')}
               </label>
               <input
                 id="rate"
@@ -398,7 +400,7 @@ export default function BacktestForm({ onClose, onSubmitSuccess }: BacktestFormP
             </div>
             <div>
               <label htmlFor="slippage" className="block text-sm font-medium mb-2">
-                Slippage
+                {t('slippage')}
               </label>
               <input
                 id="slippage"
@@ -414,7 +416,7 @@ export default function BacktestForm({ onClose, onSubmitSuccess }: BacktestFormP
 
           <div>
             <label htmlFor="benchmark" className="block text-sm font-medium mb-2">
-              Benchmark *
+              {t('form.benchmark')} *
             </label>
             <select
               id="benchmark"
@@ -436,7 +438,7 @@ export default function BacktestForm({ onClose, onSubmitSuccess }: BacktestFormP
           {activeTab === 'parameters' && (
             <div>
               <label htmlFor="parameters" className="block text-sm font-medium mb-2">
-                Strategy Parameters (JSON)
+                {t('form.strategyParametersJson')}
               </label>
               <textarea
                 id="parameters"
@@ -447,7 +449,7 @@ export default function BacktestForm({ onClose, onSubmitSuccess }: BacktestFormP
                 placeholder='{"fast_window": 5, "slow_window": 20}'
               />
               <p className="text-xs text-muted-foreground mt-2">
-                Override strategy default parameters. Leave unchanged to use defaults from the strategy.
+                {t('form.parametersHint')}
               </p>
             </div>
           )}
@@ -459,7 +461,7 @@ export default function BacktestForm({ onClose, onSubmitSuccess }: BacktestFormP
             onClick={onClose}
             className="px-4 py-2 border border-input rounded-md hover:bg-muted transition-colors"
           >
-            Cancel
+            {t('common:cancel')}
           </button>
           <button
             onClick={handleSubmit}
@@ -467,7 +469,7 @@ export default function BacktestForm({ onClose, onSubmitSuccess }: BacktestFormP
             className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
           >
             <Play className="h-4 w-4" />
-            {submitMutation.isPending ? 'Submitting...' : 'Submit Backtest'}
+            {submitMutation.isPending ? t('common:submitting') : t('runBacktest')}
           </button>
         </div>
       </div>

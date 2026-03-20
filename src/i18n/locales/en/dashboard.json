@@ -1,0 +1,22 @@
+{
+  "title": "Dashboard",
+  "subtitle": "Overview of your trading system status",
+  "activeJobs": "Active Jobs",
+  "queuedJobs": "Queued Jobs",
+  "completed": "Completed",
+  "failed": "Failed",
+  "queueStatus": "Queue Status",
+  "loadingQueue": "Loading queue status...",
+  "jobs": "{{count}} jobs",
+  "systemStatus": "System Status",
+  "backendApi": "Backend API",
+  "redisQueue": "Redis Queue",
+  "workers": "Workers",
+  "dataSyncStatus": "Data Sync Status",
+  "daemon": "Daemon",
+  "consistency": "Consistency",
+  "missingDates": "Missing dates",
+  "lastRun": "Last run",
+  "latestSync": "Latest Sync",
+  "noSyncHistory": "No sync history available"
+}

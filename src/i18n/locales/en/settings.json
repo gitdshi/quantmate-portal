@@ -1,0 +1,93 @@
+{
+  "title": "Settings",
+  "subtitle": "Manage data sources and system configuration",
+  "accountSecurity": {
+    "title": "Account Security",
+    "subtitle": "Manage account security settings",
+    "changePassword": "Change Password",
+    "twoFactor": "Two-Factor Authentication",
+    "sessions": "Login Sessions",
+    "apiKeys": "API Keys",
+    "createApiKey": "Create API Key",
+    "deleteApiKey": "Delete API Key",
+    "keyName": "Key Name",
+    "permissions": "Permissions",
+    "lastUsed": "Last Used",
+    "created": "Created",
+    "noApiKeys": "No API keys"
+  },
+  "general": {
+    "title": "General Settings",
+    "language": "Language",
+    "timezone": "Timezone",
+    "dateFormat": "Date Format",
+    "theme": "Theme",
+    "darkMode": "Dark Mode",
+    "lightMode": "Light Mode",
+    "system": "System"
+  },
+  "notifications": {
+    "title": "Notification Settings",
+    "email": "Email Notifications",
+    "browser": "Browser Notifications",
+    "tradingAlerts": "Trading Alerts",
+    "systemAlerts": "System Alerts",
+    "marketAlerts": "Market Alerts"
+  },
+  "trading": {
+    "title": "Trading Settings",
+    "defaultAccount": "Default Account",
+    "confirmOrders": "Order Confirmation",
+    "riskLimits": "Risk Limits",
+    "maxOrderSize": "Max Order Size",
+    "maxDailyLoss": "Max Daily Loss"
+  },
+  "data": {
+    "title": "Data Settings",
+    "syncInterval": "Sync Interval",
+    "dataSource": "Data Source",
+    "cacheSettings": "Cache Settings"
+  },
+  "realtime": {
+    "title": "Realtime Quote Settings",
+    "subtitle": "Control realtime quotes and intraday caching for Market Data.",
+    "loading": "Loading realtime settings...",
+    "enableQuotes": "Enable realtime quotes",
+    "enableQuotesDesc": "Turns realtime quote fetching on/off globally.",
+    "cacheIntraday": "Cache intraday series",
+    "cacheIntradayDesc": "Store 24h realtime points in Redis for charts.",
+    "enabledMarkets": "Enabled markets",
+    "loadFailed": "Failed to load realtime settings",
+    "saveFailed": "Failed to save realtime settings",
+    "markets": {
+      "CN": "CN A-shares",
+      "HK": "HK stocks (delayed)",
+      "US": "US stocks (delayed)",
+      "FUTURES": "Futures (CN)",
+      "FX": "FX",
+      "CRYPTO": "Crypto"
+    }
+  },
+  "dataItems": {
+    "title": "Data Item Toggle Management",
+    "subtitle": "Disabled items will not consume API quota. Existing data is not affected.",
+    "enabledCount": "Enabled: {{enabled}} / {{total}} items",
+    "sourceStats": "({{enabled}}/{{total}} enabled)",
+    "testConnection": "Test Connection",
+    "enableAll": "Enable All",
+    "disableAll": "Disable All",
+    "noItems": "No data source items configured",
+    "connected": "Connected",
+    "connectionFailed": "Connection failed",
+    "toggle": "Toggle",
+    "dataItem": "Data Item",
+    "apiIdentifier": "API Identifier",
+    "permission": "Permission",
+    "lastSync": "Last Sync"
+  },
+  "save": "Save Settings",
+  "saving": "Saving...",
+  "saved": "Settings saved",
+  "saveFailed": "Failed to save settings",
+  "loadFailed": "Failed to load data source items"
+}

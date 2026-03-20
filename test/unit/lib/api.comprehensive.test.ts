@@ -434,9 +434,9 @@ describe('API Client - HTTP Calls', () => {
     })
 
     it('disconnectGateway sends POST with query param', () => {
-      tradingAPI.disconnectGateway('my_ctp')
-      expect(mockPost).toHaveBeenCalledWith('/trade/gateway/disconnect', null, {
-        params: { gateway_name: 'my_ctp' },
+      tradingAPI.disconnectGateway({ gateway_name: 'my_ctp' })
+      expect(mockPost).toHaveBeenCalledWith('/trade/gateway/disconnect', {
+        gateway_name: 'my_ctp',
       })
     })
 
@@ -455,7 +455,7 @@ describe('API Client - HTTP Calls', () => {
     })
 
     it('stopAutoStrategy sends POST', () => {
-      tradingAPI.stopAutoStrategy('test_001')
+      tradingAPI.stopAutoStrategy({ strategy_name: 'test_001' })
       expect(mockPost).toHaveBeenCalledWith('/trade/auto-strategy/stop', {
         strategy_name: 'test_001',
       })

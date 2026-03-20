@@ -4,7 +4,7 @@ import { mockClosedTrade, mockPosition } from '@test/support/mockData'
 import { render, screen, waitFor } from '@test/support/utils'
 import PortfolioManagement from '@/components/PortfolioManagement'
 
-// Mock API â€?component uses api.get()/api.post() directly
+// Mock API ï¿½?component uses api.get()/api.post() directly
 vi.mock('@/lib/api', () => ({
   api: {
     get: vi.fn(),
@@ -51,7 +51,7 @@ describe('PortfolioManagement Component', () => {
     render(<PortfolioManagement />)
     
     await waitFor(() => {
-      expect(screen.getByText('Open Positions')).toBeInTheDocument()
+      expect(screen.getAllByText('Open Positions').length).toBeGreaterThanOrEqual(1)
       expect(screen.getByText('AAPL')).toBeInTheDocument()
       expect(screen.getByText('Test Strategy')).toBeInTheDocument()
       expect(screen.getByText('LONG')).toBeInTheDocument()

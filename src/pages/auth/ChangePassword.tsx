@@ -1,11 +1,13 @@
 import { useMutation } from '@tanstack/react-query'
 import { Lock } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { authAPI } from '../../lib/api'
 import { useAuthStore } from '../../stores/auth'
 
 export default function ChangePassword() {
+  const { t } = useTranslation('auth')
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -24,7 +26,7 @@ export default function ChangePassword() {
     mutationFn: () => authAPI.changePassword(currentPassword, newPassword),
     onSuccess: async () => {
       setError('')
-      setSuccess('Password updated successfully.')
+      setSuccess(t('passwordUpdated'))
       sessionStorage.removeItem('force_change_password')
 
       const refreshToken = localStorage.getItem('refresh_token')
@@ -55,7 +57,7 @@ export default function ChangePassword() {
     },
     onError: (err: unknown) => {
       const apiError = err as { response?: { data?: { detail?: string } } }
-      setError(apiError.response?.data?.detail || 'Failed to update password')
+      setError(apiError.response?.data?.detail || t('failedToUpdate'))
     },
   })
 
@@ -64,11 +66,11 @@ export default function ChangePassword() {
     setError('')
     setSuccess('')
     if (newPassword !== confirmPassword) {
-      setError('New password and confirmation do not match')
+      setError(t('newPasswordMismatch'))
       return
     }
     if (newPassword.length < 6) {
-      setError('New password must be at least 6 characters')
+      setError(t('newPasswordTooShort'))
       return
     }
     mutation.mutate()
@@ -84,9 +86,9 @@ export default function ChangePassword() {
             </div>
           </div>
 
-          <h1 className="text-2xl font-bold text-center mb-2">Change Password</h1>
+          <h1 className="text-2xl font-bold text-center mb-2">{t('changePassword')}</h1>
           <p className="text-muted-foreground text-center mb-6">
-            You must update your password before continuing.
+            {t('changePasswordPrompt')}
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -103,7 +105,7 @@ export default function ChangePassword() {
 
             <div>
               <label htmlFor="currentPassword" className="block text-sm font-medium mb-2">
-                Current Password
+                {t('currentPassword')}
               </label>
               <input
                 id="currentPassword"
@@ -117,7 +119,7 @@ export default function ChangePassword() {
 
             <div>
               <label htmlFor="newPassword" className="block text-sm font-medium mb-2">
-                New Password
+                {t('newPassword')}
               </label>
               <input
                 id="newPassword"
@@ -131,7 +133,7 @@ export default function ChangePassword() {
 
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium mb-2">
-                Confirm New Password
+                {t('confirmNewPassword')}
               </label>
               <input
                 id="confirmPassword"
@@ -148,7 +150,7 @@ export default function ChangePassword() {
               disabled={mutation.isPending}
               className="w-full py-2 px-4 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
             >
-              {mutation.isPending ? 'Updating...' : 'Update Password'}
+              {mutation.isPending ? t('updating') : t('updatePassword')}
             </button>
           </form>
         </div>

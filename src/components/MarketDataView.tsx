@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Loader, TrendingDown, TrendingUp } from 'lucide-react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { marketDataAPI } from '../lib/api'
 
 interface MarketDataViewProps {
@@ -8,6 +9,7 @@ interface MarketDataViewProps {
 }
 
 export default function MarketDataView({ symbol }: MarketDataViewProps) {
+  const { t } = useTranslation(['market', 'common'])
   const [startDate, setStartDate] = useState(() => {
     const date = new Date()
     date.setMonth(date.getMonth() - 1)
@@ -35,7 +37,7 @@ export default function MarketDataView({ symbol }: MarketDataViewProps) {
   if (!history.length) {
     return (
       <div className="bg-card border border-border rounded-lg p-8 text-center">
-        <p className="text-muted-foreground">No data available for {symbol}</p>
+        <p className="text-muted-foreground">{t('dataView.noDataFor', { symbol })}</p>
       </div>
     )
   }
@@ -54,7 +56,7 @@ export default function MarketDataView({ symbol }: MarketDataViewProps) {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-card border border-border rounded-lg p-4">
-          <div className="text-sm text-muted-foreground mb-1">Current Price</div>
+          <div className="text-sm text-muted-foreground mb-1">{t('dataView.currentPrice')}</div>
           <div className="text-2xl font-bold">${latestPrice.toFixed(2)}</div>
           <div className={`text-sm flex items-center gap-1 mt-1 ${
             priceChange >= 0 ? 'text-green-500' : 'text-red-500'
@@ -65,17 +67,17 @@ export default function MarketDataView({ symbol }: MarketDataViewProps) {
         </div>
 
         <div className="bg-card border border-border rounded-lg p-4">
-          <div className="text-sm text-muted-foreground mb-1">High</div>
+          <div className="text-sm text-muted-foreground mb-1">{t('overview.high')}</div>
           <div className="text-2xl font-bold">${highPrice.toFixed(2)}</div>
         </div>
 
         <div className="bg-card border border-border rounded-lg p-4">
-          <div className="text-sm text-muted-foreground mb-1">Low</div>
+          <div className="text-sm text-muted-foreground mb-1">{t('overview.low')}</div>
           <div className="text-2xl font-bold">${lowPrice.toFixed(2)}</div>
         </div>
 
         <div className="bg-card border border-border rounded-lg p-4">
-          <div className="text-sm text-muted-foreground mb-1">Avg Volume</div>
+          <div className="text-sm text-muted-foreground mb-1">{t('dataView.avgVolume')}</div>
           <div className="text-2xl font-bold">{(avgVolume / 1000000).toFixed(2)}M</div>
         </div>
       </div>
@@ -83,7 +85,7 @@ export default function MarketDataView({ symbol }: MarketDataViewProps) {
       {/* Date Range Selector */}
       <div className="flex items-center gap-3">
         <div>
-          <label className="block text-sm font-medium mb-1">Start Date</label>
+          <label className="block text-sm font-medium mb-1">{t('dataView.startDate')}</label>
           <input
             type="date"
             value={startDate}
@@ -92,7 +94,7 @@ export default function MarketDataView({ symbol }: MarketDataViewProps) {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">End Date</label>
+          <label className="block text-sm font-medium mb-1">{t('dataView.endDate')}</label>
           <input
             type="date"
             value={endDate}
@@ -104,7 +106,7 @@ export default function MarketDataView({ symbol }: MarketDataViewProps) {
 
       {/* Simple Chart Visualization */}
       <div className="bg-card border border-border rounded-lg p-6">
-        <h3 className="text-lg font-semibold mb-4">Price Chart</h3>
+        <h3 className="text-lg font-semibold mb-4">{t('dataView.priceChart')}</h3>
         <div className="h-64 flex items-end gap-1">
           {history.slice(-30).map((dataPoint: { date?: string; datetime?: string; close: number }, index: number) => {
             const height = ((dataPoint.close - lowPrice) / (highPrice - lowPrice)) * 100
@@ -123,23 +125,23 @@ export default function MarketDataView({ symbol }: MarketDataViewProps) {
           })}
         </div>
         <div className="text-xs text-muted-foreground text-center mt-2">
-          Last 30 trading days
+          {t('dataView.last30Days')}
         </div>
       </div>
 
       {/* Data Table */}
       <div className="bg-card border border-border rounded-lg overflow-hidden">
-        <h3 className="text-lg font-semibold p-4 border-b border-border">Historical Data</h3>
+        <h3 className="text-lg font-semibold p-4 border-b border-border">{t('dataView.historicalData')}</h3>
         <div className="overflow-x-auto max-h-96 overflow-y-auto">
           <table className="w-full text-sm">
             <thead className="bg-muted sticky top-0">
               <tr>
-                <th className="text-left p-3">Date</th>
-                <th className="text-right p-3">Open</th>
-                <th className="text-right p-3">High</th>
-                <th className="text-right p-3">Low</th>
-                <th className="text-right p-3">Close</th>
-                <th className="text-right p-3">Volume</th>
+                <th className="text-left p-3">{t('common:date')}</th>
+                <th className="text-right p-3">{t('overview.open')}</th>
+                <th className="text-right p-3">{t('overview.high')}</th>
+                <th className="text-right p-3">{t('overview.low')}</th>
+                <th className="text-right p-3">{t('overview.close')}</th>
+                <th className="text-right p-3">{t('overview.volume')}</th>
               </tr>
             </thead>
             <tbody>
