@@ -7,7 +7,7 @@ import { useAuthStore } from '../stores/auth'
 import SymbolSearch from './SymbolSearch'
 
 interface BacktestFormProps {
-  onClose: () => void
+  onClose?: () => void
   onSubmitSuccess?: (jobId: string) => void
 }
 
@@ -20,7 +20,7 @@ interface Strategy {
   version?: number
 }
 
-export default function BacktestForm({ onClose, onSubmitSuccess }: BacktestFormProps) {
+export default function BacktestForm({ onClose = () => undefined, onSubmitSuccess }: BacktestFormProps) {
   const { t } = useTranslation(['backtest', 'common'])
   const queryClient = useQueryClient()
   const { user } = useAuthStore()
@@ -153,12 +153,15 @@ export default function BacktestForm({ onClose, onSubmitSuccess }: BacktestFormP
     mutationFn: (data: {
       strategy_id?: number
       strategy_class?: string
+      strategy_name?: string
       symbol: string
+      symbol_name?: string
       start_date: string
       end_date: string
       initial_capital?: number
       rate?: number
       slippage?: number
+      benchmark?: string
       parameters?: Record<string, unknown>
     }) => queueAPI.submitBacktest(data),
     onSuccess: (response) => {

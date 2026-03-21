@@ -146,7 +146,7 @@ class MyStrategy(CtaTemplate):
   const [pendingEditFileContent, setPendingEditFileContent] = useState<string | null>(null)
   const [pendingEditFileName, setPendingEditFileName] = useState<string | null>(null)
   const [showHistoryModal, setShowHistoryModal] = useState(false)
-  const [historyModalContent, setHistoryModalContent] = useState<{name: string, versionName: string, content: string, strategyName?: string | null, className?: string | null, historyVersion?: string | null, parameters?: any} | null>(null)
+  const [historyModalContent, setHistoryModalContent] = useState<{name: string, versionName: string, content: string, strategyName?: string | null, className?: string | null, historyVersion?: string | number | null, parameters?: any} | null>(null)
   const [showDiff, setShowDiff] = useState(true)
 
   const formatParameters = (val: any): string => {

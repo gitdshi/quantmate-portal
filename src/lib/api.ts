@@ -1,4 +1,5 @@
 import axios from 'axios'
+import type { StrategyComparison, StrategyFile, StrategyFileContent, SyncResult } from '../types'
 import { useAuthStore } from '../stores/auth'
 
 const API_URL = import.meta.env.VITE_API_URL || '/api/v1'
@@ -293,22 +294,46 @@ export const optimizationAPI = {
 }
 
 // Legacy aliases for backward compatibility (deprecated - use strategiesAPI instead)
+type LegacyStrategySource = 'data' | 'project' | 'both'
+type LegacySyncDirection = 'bidirectional' | 'data_to_project' | 'project_to_data'
+type LegacyHistoryVersion = {
+  name: string
+  path: string
+  mtime: string
+  size: string
+}
+type LegacyStrategyContent = StrategyFileContent & {
+  content: string
+  strategy_name?: string | null
+  class_name?: string | null
+  version?: number | null
+  parameters?: Record<string, unknown> | null
+}
+
 export const strategyFilesAPI = {
   lint: (payload: { content: string }) => api.post('/strategy-code/lint', payload),
   lintPyright: (payload: { content: string }) => api.post('/strategy-code/lint/pyright', payload),
   parse: (payload: { content: string }) => api.post('/strategy-code/parse', payload),
   
   // Removed file-based methods - return empty/default responses to prevent crashes
-  list: () => Promise.resolve({ data: [] }),
-  get: () => Promise.reject(new Error('File-based strategies removed. Use database strategies instead.')),
-  create: () => Promise.reject(new Error('File-based strategies removed. Use database strategies instead.')),
-  update: () => Promise.reject(new Error('File-based strategies removed. Use database strategies instead.')),
-  delete: () => Promise.reject(new Error('File-based strategies removed. Use database strategies instead.')),
-  sync: () => Promise.reject(new Error('File sync removed. Use database strategies instead.')),
-  compare: () => Promise.resolve({ data: [] }),
-  listHistory: () => Promise.resolve({ data: [] }),
-  getHistoryContent: () => Promise.reject(new Error('File history removed. Use database strategy history instead.')),
-  recoverHistory: () => Promise.reject(new Error('File history removed. Use database strategy history instead.')),
+  list: (_source?: LegacyStrategySource) => Promise.resolve({ data: [] as StrategyFile[] }),
+  get: (_name: string, _source?: LegacyStrategySource) =>
+    Promise.reject(new Error('File-based strategies removed. Use database strategies instead.')) as Promise<{ data: LegacyStrategyContent }>,
+  create: (_data: { name: string; content: string; source?: LegacyStrategySource }) =>
+    Promise.reject(new Error('File-based strategies removed. Use database strategies instead.')) as Promise<{ data: unknown }>,
+  update: (_name: string, _data: { content: string; source?: LegacyStrategySource }) =>
+    Promise.reject(new Error('File-based strategies removed. Use database strategies instead.')) as Promise<{ data: unknown }>,
+  delete: (_name: string, _source?: LegacyStrategySource) =>
+    Promise.reject(new Error('File-based strategies removed. Use database strategies instead.')) as Promise<{ data: unknown }>,
+  sync: (_direction?: LegacySyncDirection) =>
+    Promise.reject(new Error('File sync removed. Use database strategies instead.')) as Promise<{ data: SyncResult }>,
+  compare: () => Promise.resolve({ data: [] as StrategyComparison[] }),
+  listHistory: (_name: string, _source?: LegacyStrategySource) =>
+    Promise.resolve({ data: [] as LegacyHistoryVersion[] }),
+  getHistoryContent: (_name: string, _versionName: string, _source?: LegacyStrategySource) =>
+    Promise.reject(new Error('File history removed. Use database strategy history instead.')) as Promise<{ data: LegacyStrategyContent }>,
+  recoverHistory: (_name: string, _versionName: string, _source?: LegacyStrategySource) =>
+    Promise.reject(new Error('File history removed. Use database strategy history instead.')) as Promise<{ data: unknown }>,
 }
 
 // Removed: strategyFilesDbAPI - use strategiesAPI.listCodeHistory() instead
@@ -349,7 +374,7 @@ export const tradingAPI = {
   cancelOrder: (id: number) => api.post(`/trade/orders/${id}/cancel`),
 
   // Gateway management (vnpy live trading)
-  connectGateway: (data: { gateway_name: string; gateway_type: string; config?: Record<string, unknown> }) =>
+  connectGateway: (data: { gateway_name?: string; gateway_type: string; config?: Record<string, unknown> }) =>
     api.post('/trade/gateway/connect', data),
   disconnectGateway: (data: { gateway_name: string }) =>
     api.post('/trade/gateway/disconnect', data),

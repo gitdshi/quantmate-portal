@@ -1,12 +1,13 @@
 /**
  * ErrorBoundary Component Tests
  */
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { ReactElement } from 'react'
 import { render, screen } from '@test/support/utils'
 import ErrorBoundary from '@/components/ErrorBoundary'
 
 // Component that throws
-function ThrowingComponent({ msg }: { msg: string }) {
+function ThrowingComponent({ msg }: { msg: string }): ReactElement {
   throw new Error(msg)
 }
 
