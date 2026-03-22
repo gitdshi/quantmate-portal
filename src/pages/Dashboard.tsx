@@ -1,180 +1,237 @@
 import { useQuery } from '@tanstack/react-query'
-import { Activity, AlertCircle, Clock, TrendingUp } from 'lucide-react'
+import {
+  Activity,
+  AlertTriangle,
+  Bell,
+  DollarSign,
+  TrendingUp,
+} from 'lucide-react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { queueAPI, systemAPI } from '../lib/api'
+
+import LineChart from '../components/charts/LineChart'
+import PieChart from '../components/charts/PieChart'
+import Badge from '../components/ui/Badge'
+import DataTable, { type Column } from '../components/ui/DataTable'
+import { themeColors } from '../lib/theme'
+import StatCard from '../components/ui/StatCard'
+import { analyticsAPI, portfolioAPI, alertsAPI, tradingAPI } from '../lib/api'
+import type { DashboardMetrics, Position, Order, AlertHistory } from '../types'
+
+const NAV_PERIODS = ['1w', '1m', '3m', 'ytd'] as const
 
 export default function Dashboard() {
   const { t } = useTranslation('dashboard')
-  const { data: queueStats } = useQuery({
-    queryKey: ['queueStats'],
-    queryFn: () => queueAPI.getStats(),
-    refetchInterval: 5000,
+  const [navPeriod, setNavPeriod] = useState<string>('1m')
+
+  // ── Data fetching ──────────────────────────────────────────────────
+  const { data: dashData, isLoading: dashLoading } = useQuery<DashboardMetrics>({
+    queryKey: ['dashboard'],
+    queryFn: () => analyticsAPI.dashboard().then((r) => r.data),
+    refetchInterval: 30_000,
   })
 
-  const { data: syncStatusData } = useQuery({
-    queryKey: ['syncStatus'],
-    queryFn: () => systemAPI.syncStatus(),
-    refetchInterval: 60000,
+  const { data: positions = [], isLoading: posLoading } = useQuery<Position[]>({
+    queryKey: ['portfolio', 'positions'],
+    queryFn: () => portfolioAPI.positions().then((r) => r.data?.positions ?? r.data ?? []),
   })
 
-  const stats = queueStats?.data
-  const syncStatus = syncStatusData?.data
-  const daemonStatus = syncStatus?.daemon
-  const consistency = syncStatus?.consistency
-  const latestSync = syncStatus?.sync?.latest || {}
+  const { data: recentOrders = [] } = useQuery<Order[]>({
+    queryKey: ['trading', 'orders', 'recent'],
+    queryFn: () =>
+      tradingAPI.listOrders({ page_size: 5 }).then((r) => {
+        const d = r.data
+        return Array.isArray(d) ? d : d?.data ?? []
+      }),
+  })
 
+  const { data: alerts = [] } = useQuery<AlertHistory[]>({
+    queryKey: ['alerts', 'recent'],
+    queryFn: () =>
+      alertsAPI.listHistory({ page_size: 5 }).then((r) => {
+        const d = r.data
+        return Array.isArray(d) ? d : d?.data ?? []
+      }),
+  })
+
+  // ── Derived values ─────────────────────────────────────────────────
+  const stats = dashData?.portfolio_stats
+  const totalValue = stats?.total_value ?? 0
+  const dailyPnl = stats?.daily_pnl ?? 0
+  const dailyPnlPct = stats?.daily_pnl_pct ?? 0
+  const activeStrategies = dashData?.strategy_performance?.filter((s) => s.status === 'running').length ?? 0
+  const unreadAlerts = alerts.filter((a) => a.status === 'unread').length
+
+  const navDates = (dashData?.performance_history ?? []).map((p) => p.date)
+  const navValues = (dashData?.performance_history ?? []).map((p) => p.value)
+  const benchValues = (dashData?.performance_history ?? []).filter((p) => p.benchmark != null).map((p) => p.benchmark!)
+
+  const pieData = (dashData?.sector_allocation ?? []).map((s) => ({
+    name: s.name,
+    value: s.value,
+  }))
+
+  // ── Columns ────────────────────────────────────────────────────────
+  const posColumns: Column<Position>[] = [
+    { key: 'symbol', label: '代码', sortable: true, className: 'font-mono' },
+    { key: 'name', label: '名称' },
+    { key: 'direction', label: '方向', render: (r) => <Badge variant={r.direction === 'short' ? 'destructive' : 'success'}>{r.direction === 'short' ? '空' : '多'}</Badge> },
+    { key: 'quantity', label: '数量', sortable: true },
+    { key: 'avg_cost', label: '成本价', render: (r) => `¥${r.avg_cost.toFixed(2)}` },
+    { key: 'market_price', label: '现价', render: (r) => `¥${r.market_price.toFixed(2)}` },
+    { key: 'market_value', label: '市值', sortable: true, render: (r) => `¥${r.market_value.toLocaleString()}` },
+    { key: 'pnl', label: '盈亏', sortable: true, render: (r) => <span className={r.pnl >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>{r.pnl >= 0 ? '+' : ''}¥{r.pnl.toLocaleString()}</span> },
+    { key: 'pnl_pct', label: '盈亏%', sortable: true, render: (r) => <span className={r.pnl_pct >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>{r.pnl_pct >= 0 ? '+' : ''}{r.pnl_pct.toFixed(2)}%</span> },
+  ]
+
+  const orderColumns: Column<Order>[] = [
+    { key: 'symbol', label: '代码', className: 'font-mono' },
+    { key: 'direction', label: '方向', render: (r) => <Badge variant={r.direction === 'sell' ? 'destructive' : 'success'}>{r.direction === 'sell' ? '卖出' : '买入'}</Badge> },
+    { key: 'quantity', label: '数量' },
+    { key: 'price', label: '价格', render: (r) => r.price ? `¥${r.price.toFixed(2)}` : '-' },
+    { key: 'status', label: '状态', render: (r) => <Badge variant={r.status === 'filled' ? 'success' : r.status === 'cancelled' ? 'muted' : 'warning'}>{r.status}</Badge> },
+  ]
+
+  const alertColumns: Column<AlertHistory>[] = [
+    { key: 'level', label: '级别', render: (r) => <Badge variant={r.level === 'severe' ? 'destructive' : r.level === 'warning' ? 'warning' : 'primary'}>{r.level}</Badge> },
+    { key: 'message', label: '内容' },
+    { key: 'triggered_at', label: '时间', render: (r) => new Date(r.triggered_at).toLocaleString() },
+  ]
+
+  const loading = dashLoading || posLoading
+
+  // ── Render ─────────────────────────────────────────────────────────
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
+      {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold">{t('title')}</h1>
-        <p className="text-muted-foreground mt-2">
-          {t('subtitle')}
-        </p>
+        <h1 className="text-2xl font-bold text-foreground">{t('title')}</h1>
+        <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          title={t('activeJobs')}
-          value={stats?.active || 0}
-          icon={<Activity className="h-5 w-5" />}
-          color="text-blue-500"
-          bgColor="bg-blue-500/10"
+          label="总资产"
+          value={`¥${totalValue.toLocaleString()}`}
+          icon={DollarSign}
+          iconColor="text-blue-500"
         />
         <StatCard
-          title={t('queuedJobs')}
-          value={stats?.queued || 0}
-          icon={<Clock className="h-5 w-5" />}
-          color="text-yellow-500"
-          bgColor="bg-yellow-500/10"
+          label="今日盈亏"
+          value={`${dailyPnl >= 0 ? '+' : ''}¥${dailyPnl.toLocaleString()}`}
+          change={`${dailyPnlPct >= 0 ? '+' : ''}${dailyPnlPct.toFixed(2)}%`}
+          changeType={dailyPnl >= 0 ? 'positive' : 'negative'}
+          icon={TrendingUp}
+          iconColor={dailyPnl >= 0 ? 'text-green-500' : 'text-red-500'}
         />
         <StatCard
-          title={t('completed')}
-          value={stats?.completed || 0}
-          icon={<TrendingUp className="h-5 w-5" />}
-          color="text-green-500"
-          bgColor="bg-green-500/10"
+          label="活跃策略"
+          value={activeStrategies}
+          icon={Activity}
+          iconColor="text-purple-500"
         />
         <StatCard
-          title={t('failed')}
-          value={stats?.failed || 0}
-          icon={<AlertCircle className="h-5 w-5" />}
-          color="text-red-500"
-          bgColor="bg-red-500/10"
+          label="未处理告警"
+          value={unreadAlerts}
+          icon={Bell}
+          iconColor={unreadAlerts > 0 ? 'text-yellow-500' : 'text-muted-foreground'}
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="bg-card p-6 rounded-lg border border-border">
-          <h2 className="text-xl font-semibold mb-4">{t('queueStatus')}</h2>
-          {stats ? (
-            <div className="space-y-3">
-              {Object.entries(stats.by_queue || {}).map(([queueName, count]) => (
-                <div key={queueName} className="flex items-center justify-between">
-                  <span className="text-sm font-medium capitalize">{queueName}</span>
-                  <span className="text-sm text-muted-foreground">{String(count)} jobs</span>
-                </div>
+      {/* Charts: NAV + Allocation Pie */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* NAV Chart */}
+        <div className="rounded-lg border border-border bg-card p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-card-foreground">净值走势</h3>
+            <div className="flex gap-1">
+              {NAV_PERIODS.map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setNavPeriod(p)}
+                  className={`px-2.5 py-1 text-xs rounded ${navPeriod === p ? 'bg-primary text-white' : 'text-muted-foreground hover:bg-muted'}`}
+                >
+                  {p}
+                </button>
               ))}
             </div>
-          ) : (
-            <p className="text-muted-foreground">{t('loadingQueue')}</p>
-          )}
+          </div>
+          <LineChart
+            xData={navDates}
+            series={[
+              { name: '净值', data: navValues, areaStyle: true, color: themeColors.primary },
+              ...(benchValues.length > 0 ? [{ name: '基准', data: benchValues, color: '#9ca3af' }] : []),
+            ]}
+            height={260}
+            loading={loading}
+          />
         </div>
 
-        <div className="bg-card p-6 rounded-lg border border-border">
-          <h2 className="text-xl font-semibold mb-4">{t('systemStatus')}</h2>
-          <div className="space-y-3">
-            <StatusItem
-              label={t('backendApi')}
-              status="online"
-            />
-            <StatusItem
-              label={t('redisQueue')}
-              status={stats ? 'online' : 'checking'}
-            />
-            <StatusItem
-              label={t('workers')}
-              status={stats && stats.active > 0 ? 'online' : 'idle'}
-            />
-          </div>
+        {/* Allocation Pie */}
+        <div className="rounded-lg border border-border bg-card p-5">
+          <h3 className="font-semibold text-card-foreground mb-4">持仓分布</h3>
+          <PieChart data={pieData} height={260} loading={loading} donut />
         </div>
+      </div>
 
-        <div className="bg-card p-6 rounded-lg border border-border">
-          <h2 className="text-xl font-semibold mb-4">{t('dataSyncStatus')}</h2>
-          <div className="space-y-3">
-            <StatusItem
-              label={t('daemon')}
-              status={daemonStatus?.status || 'checking'}
-            />
-            <StatusItem
-              label={t('consistency')}
-              status={consistency ? (consistency.is_consistent ? 'online' : 'warning') : 'checking'}
-            />
-            <div className="text-sm text-muted-foreground">
-              {t('missingDates')}: <span className="font-medium text-foreground">{consistency?.missing_count ?? '—'}</span>
-            </div>
-            <div className="text-sm text-muted-foreground">
-              {t('lastRun')}: <span className="font-medium text-foreground">{daemonStatus?.last_run_at ? new Date(daemonStatus.last_run_at).toLocaleString() : '—'}</span>
-            </div>
-          </div>
-          <div className="mt-4 pt-4 border-t border-border">
-            <div className="text-sm font-medium mb-2">{t('latestSync')}</div>
-            <div className="space-y-2">
-              {Object.entries(latestSync).map(([endpoint, info]) => (
-                <div key={endpoint} className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">{endpoint.replace(/_/g, ' ')}</span>
-                  <span className="font-medium">{(info as { status?: string }).status || 'unknown'}</span>
+      {/* Positions Table */}
+      <div className="rounded-lg border border-border bg-card p-5">
+        <h3 className="font-semibold text-card-foreground mb-4">当前持仓</h3>
+        <DataTable columns={posColumns} data={positions} keyField="symbol" emptyText="暂无持仓" />
+      </div>
+
+      {/* Orders + Alerts side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="rounded-lg border border-border bg-card p-5">
+          <h3 className="font-semibold text-card-foreground mb-4">最近委托</h3>
+          <DataTable columns={orderColumns} data={recentOrders} emptyText="暂无委托" />
+        </div>
+        <div className="rounded-lg border border-border bg-card p-5">
+          <h3 className="font-semibold text-card-foreground mb-4">告警信息</h3>
+          <DataTable columns={alertColumns} data={alerts} emptyText="暂无告警" />
+        </div>
+      </div>
+
+      {/* Strategy Status Cards */}
+      {dashData?.strategy_performance && dashData.strategy_performance.length > 0 && (
+        <div>
+          <h3 className="font-semibold text-foreground mb-4">策略状态</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {dashData.strategy_performance.map((sp) => {
+              const borderColor =
+                sp.status === 'running' ? 'border-l-green-500' :
+                sp.status === 'error' ? 'border-l-red-500' :
+                'border-l-gray-400'
+              return (
+                <div
+                  key={sp.name}
+                  className={`rounded-lg border border-border bg-card p-4 border-l-4 ${borderColor}`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-medium text-sm text-card-foreground">{sp.name}</span>
+                    <Badge variant={sp.status === 'running' ? 'success' : sp.status === 'error' ? 'destructive' : 'muted'}>
+                      {sp.status === 'running' ? '运行中' : sp.status === 'error' ? '异常' : '已停止'}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">今日收益</span>
+                    <span className={sp.daily_return >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+                      {sp.daily_return >= 0 ? '+' : ''}{sp.daily_return.toFixed(2)}%
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm mt-1">
+                    <span className="text-muted-foreground">累计收益</span>
+                    <span className={sp.total_return >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+                      {sp.total_return >= 0 ? '+' : ''}{sp.total_return.toFixed(2)}%
+                    </span>
+                  </div>
                 </div>
-              ))}
-              {Object.keys(latestSync).length === 0 && (
-                <div className="text-sm text-muted-foreground">{t('noSyncHistory')}</div>
-              )}
-            </div>
+              )
+            })}
           </div>
         </div>
-      </div>
-    </div>
-  )
-}
-
-function StatCard({ title, value, icon, color, bgColor }: {
-  title: string
-  value: number
-  icon: React.ReactNode
-  color: string
-  bgColor: string
-}) {
-  return (
-    <div className="bg-card p-6 rounded-lg border border-border">
-      <div className="flex items-center justify-between mb-4">
-        <div className={`p-2 rounded-lg ${bgColor}`}>
-          <div className={color}>{icon}</div>
-        </div>
-      </div>
-      <div>
-        <p className="text-2xl font-bold">{value}</p>
-        <p className="text-sm text-muted-foreground mt-1">{title}</p>
-      </div>
-    </div>
-  )
-}
-
-function StatusItem({ label, status }: { label: string; status: string }) {
-  const statusColors = {
-    online: 'bg-green-500',
-    offline: 'bg-red-500',
-    idle: 'bg-yellow-500',
-    checking: 'bg-gray-500',
-    warning: 'bg-yellow-500',
-    stale: 'bg-red-500',
-  }
-
-  return (
-    <div className="flex items-center justify-between">
-      <span className="text-sm font-medium">{label}</span>
-      <div className="flex items-center gap-2">
-        <div className={`h-2 w-2 rounded-full ${statusColors[status as keyof typeof statusColors]}`} />
-        <span className="text-sm text-muted-foreground capitalize">{status}</span>
-      </div>
+      )}
     </div>
   )
 }

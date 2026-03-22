@@ -1,30 +1,39 @@
-import { useEffect, useState } from 'react'
+import { Suspense, lazy, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Navigate, Route, Routes } from 'react-router-dom'
-import Layout from './components/Layout'
 import { authAPI } from './lib/api'
-import Analytics from './pages/Analytics'
-import ChangePassword from './pages/auth/ChangePassword'
-import Login from './pages/auth/Login'
-import Register from './pages/auth/Register'
-import Backtest from './pages/Backtest'
-import Dashboard from './pages/Dashboard'
-import MarketData from './pages/MarketData'
-import Portfolio from './pages/Portfolio'
-import Settings from './pages/Settings'
-import Strategies from './pages/Strategies'
-import Trading from './pages/Trading'
-import PaperTrading from './pages/PaperTrading'
-import Positions from './pages/Positions'
-import Monitoring from './pages/Monitoring'
-import Reports from './pages/Reports'
-import AccountSecurity from './pages/AccountSecurity'
-import AIAssistant from './pages/AIAssistant'
-import FactorLab from './pages/FactorLab'
-import Marketplace from './pages/Marketplace'
-import TeamSpace from './pages/TeamSpace'
-import VisualExplorer from './pages/VisualExplorer'
 import { useAuthStore } from './stores/auth'
+
+const Layout = lazy(() => import('./components/Layout'))
+const Analytics = lazy(() => import('./pages/Analytics'))
+const ChangePassword = lazy(() => import('./pages/auth/ChangePassword'))
+const Login = lazy(() => import('./pages/auth/Login'))
+const Register = lazy(() => import('./pages/auth/Register'))
+const Backtest = lazy(() => import('./pages/Backtest'))
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const MarketData = lazy(() => import('./pages/MarketData'))
+const Portfolio = lazy(() => import('./pages/Portfolio'))
+const Settings = lazy(() => import('./pages/Settings'))
+const Strategies = lazy(() => import('./pages/Strategies'))
+const Trading = lazy(() => import('./pages/Trading'))
+const PaperTrading = lazy(() => import('./pages/PaperTrading'))
+const Positions = lazy(() => import('./pages/Positions'))
+const Monitoring = lazy(() => import('./pages/Monitoring'))
+const Reports = lazy(() => import('./pages/Reports'))
+const AccountSecurity = lazy(() => import('./pages/AccountSecurity'))
+const AIAssistant = lazy(() => import('./pages/AIAssistant'))
+const FactorLab = lazy(() => import('./pages/FactorLab'))
+const Marketplace = lazy(() => import('./pages/Marketplace'))
+const TeamSpace = lazy(() => import('./pages/TeamSpace'))
+const VisualExplorer = lazy(() => import('./pages/VisualExplorer'))
+
+function RouteFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center text-muted-foreground">
+      Loading...
+    </div>
+  )
+}
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, setAuth, logout } = useAuthStore()
@@ -105,47 +114,48 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 
 function App() {
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route
-        path="/change-password"
-        element={
-          <PrivateRoute>
-            <ChangePassword />
-          </PrivateRoute>
-        }
-      />
-      
-      <Route
-        path="/"
-        element={
-          <PrivateRoute>
-            <Layout />
-          </PrivateRoute>
-        }
-      >
-        <Route index element={<Navigate to="/dashboard" replace />} />
-        <Route path="dashboard" element={<Dashboard />} />
-        <Route path="strategies" element={<Strategies />} />
-        <Route path="backtest" element={<Backtest />} />
-        <Route path="market-data" element={<MarketData />} />
-        <Route path="analytics" element={<Analytics />} />
-        <Route path="portfolio" element={<Portfolio />} />
-        <Route path="paper-trading" element={<PaperTrading />} />
-        <Route path="trading" element={<Trading />} />
-        <Route path="positions" element={<Positions />} />
-        <Route path="monitoring" element={<Monitoring />} />
-        <Route path="reports" element={<Reports />} />
-        <Route path="account-security" element={<AccountSecurity />} />
-        <Route path="ai-assistant" element={<AIAssistant />} />
-        <Route path="factor-lab" element={<FactorLab />} />
-        <Route path="marketplace" element={<Marketplace />} />
-        <Route path="team-space" element={<TeamSpace />} />
-        <Route path="visual-explorer" element={<VisualExplorer />} />
-        <Route path="settings" element={<Settings />} />
-      </Route>
-    </Routes>
+    <Suspense fallback={<RouteFallback />}>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route
+          path="/change-password"
+          element={
+            <PrivateRoute>
+              <ChangePassword />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/"
+          element={
+            <PrivateRoute>
+              <Layout />
+            </PrivateRoute>
+          }
+        >
+          <Route index element={<Navigate to="/dashboard" replace />} />
+          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="strategies" element={<Strategies />} />
+          <Route path="backtest" element={<Backtest />} />
+          <Route path="market-data" element={<MarketData />} />
+          <Route path="analytics" element={<Analytics />} />
+          <Route path="portfolio" element={<Portfolio />} />
+          <Route path="paper-trading" element={<PaperTrading />} />
+          <Route path="trading" element={<Trading />} />
+          <Route path="positions" element={<Positions />} />
+          <Route path="monitoring" element={<Monitoring />} />
+          <Route path="reports" element={<Reports />} />
+          <Route path="account-security" element={<AccountSecurity />} />
+          <Route path="ai-assistant" element={<AIAssistant />} />
+          <Route path="factor-lab" element={<FactorLab />} />
+          <Route path="marketplace" element={<Marketplace />} />
+          <Route path="team-space" element={<TeamSpace />} />
+          <Route path="visual-explorer" element={<VisualExplorer />} />
+          <Route path="settings" element={<Settings />} />
+        </Route>
+      </Routes>
+    </Suspense>
   )
 }
 

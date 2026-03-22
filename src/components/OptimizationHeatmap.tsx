@@ -49,19 +49,16 @@ export default function OptimizationHeatmap({
 
     const xs = [...xSet].sort((a, b) => a - b)
     const ys = [...ySet].sort((a, b) => a - b)
-
-    let lo = Infinity
-    let hi = -Infinity
     const g: (number | null)[][] = ys.map((y) =>
       xs.map((x) => {
         const val = lookup.get(`${x}_${y}`) ?? null
-        if (val !== null) {
-          lo = Math.min(lo, val)
-          hi = Math.max(hi, val)
-        }
         return val
       }),
     )
+
+    const populated = g.flat().filter((value): value is number => value !== null)
+    const lo = populated.length > 0 ? Math.min(...populated) : 0
+    const hi = populated.length > 0 ? Math.max(...populated) : 0
 
     return { xValues: xs, yValues: ys, grid: g, minVal: lo, maxVal: hi }
   }, [results, xParam, yParam, metric])
@@ -115,7 +112,7 @@ export default function OptimizationHeatmap({
                     }}
                     title={`${xParam}=${x}, ${yParam}=${y}: ${val?.toFixed(4) ?? t('common:na')}`}
                   >
-                    {val !== null ? val.toFixed(2) : '—'}
+                    {val !== null ? val.toFixed(2) : '--'}
                   </td>
                 )
               })}
@@ -130,9 +127,11 @@ export default function OptimizationHeatmap({
 function colorScale(val: number, min: number, max: number): string {
   if (max === min) return '#facc15'
   const t = (val - min) / (max - min)
-  // red(0) → yellow(0.5) → green(1)
+  // red(0) -> yellow(0.5) -> green(1)
   const r = t < 0.5 ? 239 : Math.round(239 - (t - 0.5) * 2 * (239 - 34))
   const g = t < 0.5 ? Math.round(68 + t * 2 * (204 - 68)) : Math.round(204 - (t - 0.5) * 2 * (204 - 197))
   const b = t < 0.5 ? 68 : Math.round(68 - (t - 0.5) * 2 * (68 - 30))
   return `rgba(${r},${g},${b},0.7)`
 }
+
+

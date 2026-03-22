@@ -1,192 +1,131 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  Calendar, FileText, Loader2, Plus, RefreshCw
+  Download,
+  FileText,
+  List,
+  Plus,
+  PieChart as PieChartIcon,
+  TrendingUp,
 } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
+import { useState } from 'react'
+
+import Badge from '../components/ui/Badge'
+import DataTable, { type Column } from '../components/ui/DataTable'
+import Modal from '../components/ui/Modal'
+import TabPanel from '../components/ui/TabPanel'
+import { showToast } from '../components/ui/Toast'
 import { reportsAPI } from '../lib/api'
 import type { Report } from '../types'
 
+const TABS = [
+  { key: 'perf', label: '绩效报告', icon: <TrendingUp size={16} /> },
+  { key: 'review', label: '交易复盘', icon: <FileText size={16} /> },
+  { key: 'attribution', label: '归因分析', icon: <PieChartIcon size={16} /> },
+  { key: 'list', label: '报告列表', icon: <List size={16} /> },
+]
+
 export default function Reports() {
-  const { t } = useTranslation(['monitoring', 'common'])
-  const [reports, setReports] = useState<Report[]>([])
-  const [loading, setLoading] = useState(true)
-  const [generating, setGenerating] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [typeFilter, setTypeFilter] = useState<string>('')
-  const [selectedReport, setSelectedReport] = useState<Report | null>(null)
-  const [showGenerate, setShowGenerate] = useState(false)
-  const [genForm, setGenForm] = useState({ report_type: 'daily' as const, title: '' })
+  const queryClient = useQueryClient()
+  const [activeTab, setActiveTab] = useState('perf')
+  const [newReportModal, setNewReportModal] = useState(false)
 
-  const fetchReports = useCallback(async () => {
-    setLoading(true)
-    try {
-      const params: Record<string, unknown> = { page_size: 100 }
-      if (typeFilter) params.report_type = typeFilter
-      const { data } = await reportsAPI.list(params as any)
-      const result = data as any
-      setReports(result.data || result || [])
-    } catch {
-      setError(t('reports.loadFailed'))
-    } finally {
-      setLoading(false)
-    }
-  }, [typeFilter])
+  const { data: reports = [] } = useQuery<Report[]>({
+    queryKey: ['reports'],
+    queryFn: () => reportsAPI.list().then((r) => {
+      const d = r.data
+      return Array.isArray(d) ? d : d?.data ?? []
+    }),
+    enabled: activeTab === 'list',
+  })
 
-  useEffect(() => { fetchReports() }, [fetchReports])
+  const generateMutation = useMutation({
+    mutationFn: (data: { report_type: string; title: string }) => reportsAPI.generate({ report_type: data.report_type, title: data.title }),
+    onSuccess: () => {
+      showToast('报告生成中...', 'success')
+      setNewReportModal(false)
+      queryClient.invalidateQueries({ queryKey: ['reports'] })
+    },
+    onError: () => showToast('生成失败', 'error'),
+  })
 
-  const handleGenerate = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setGenerating(true)
-    setError(null)
-    try {
-      await reportsAPI.generate({
-        report_type: genForm.report_type,
-        title: genForm.title || undefined,
-      })
-      setShowGenerate(false)
-      setGenForm({ report_type: 'daily', title: '' })
-      fetchReports()
-    } catch {
-      setError(t('reports.generateFailed'))
-    } finally {
-      setGenerating(false)
-    }
-  }
-
-  const handleViewDetail = async (id: number) => {
-    try {
-      const { data } = await reportsAPI.get(id)
-      setSelectedReport(data as Report)
-    } catch {
-      setError(t('reports.detailFailed'))
-    }
-  }
-
-  const TYPE_LABELS: Record<string, string> = {
-    daily: t('reports.daily'),
-    weekly: t('reports.weekly'),
-    monthly: t('reports.monthly'),
-    custom: t('reports.custom'),
-  }
+  const reportColumns: Column<Report>[] = [
+    { key: 'title', label: '报告名称' },
+    { key: 'report_type', label: '类型', render: (r) => <Badge variant="primary">{r.report_type}</Badge> },
+    { key: 'created_at', label: '生成时间', render: (r) => new Date(r.created_at).toLocaleString() },
+  ]
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">{t('reports.title')}</h1>
-        <button onClick={() => setShowGenerate(true)}
-          className="bg-primary text-primary-foreground px-4 py-2 rounded text-sm flex items-center gap-2">
-          <Plus className="h-4 w-4" /> {t('reports.generate')}
-        </button>
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">报告复盘</h1>
+          <p className="text-sm text-muted-foreground">绩效报告 · 交易复盘 · 策略归因分析</p>
+        </div>
+        <div className="flex gap-2">
+          <button className="px-3 py-1.5 text-sm rounded-md border border-border hover:bg-muted"><Download size={14} className="inline mr-1" />导出 PDF</button>
+          <button onClick={() => setNewReportModal(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-primary text-white hover:opacity-90"><Plus size={16} />生成报告</button>
+        </div>
       </div>
 
-      {error && (
-        <div className="bg-destructive/10 text-destructive px-4 py-3 rounded text-sm">{error}</div>
-      )}
+      <TabPanel tabs={TABS} activeTab={activeTab} onChange={setActiveTab}>
+        {/* ── Performance ──────────────────────────────── */}
+        {activeTab === 'perf' && (
+          <p className="text-center text-muted-foreground py-8">暂无绩效报告数据，请先生成报告</p>
+        )}
 
-      {/* Generate Report Form */}
-      {showGenerate && (
-        <form onSubmit={handleGenerate} className="bg-card border rounded-lg p-4 flex gap-4 items-end">
+        {/* ── Review ───────────────────────────────────── */}
+        {activeTab === 'review' && (
+          <p className="text-center text-muted-foreground py-8">暂无交易复盘数据</p>
+        )}
+
+        {/* ── Attribution ──────────────────────────────── */}
+        {activeTab === 'attribution' && (
+          <p className="text-center text-muted-foreground py-8">暂无归因分析数据</p>
+        )}
+
+        {/* ── List ─────────────────────────────────────── */}
+        {activeTab === 'list' && (
+          <DataTable columns={reportColumns} data={reports} emptyText="暂无报告" />
+        )}
+      </TabPanel>
+
+      {/* New Report Modal */}
+      <Modal open={newReportModal} onClose={() => setNewReportModal(false)} title="生成报告" footer={
+        <>
+          <button onClick={() => setNewReportModal(false)} className="px-4 py-2 text-sm rounded-md border border-border hover:bg-muted">取消</button>
+          <button onClick={() => generateMutation.mutate({ report_type: 'monthly', title: '月度绩效报告' })} className="px-4 py-2 text-sm rounded-md bg-primary text-white hover:opacity-90">生成报告</button>
+        </>
+      }>
+        <div className="flex flex-col gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">{t('common:type')}</label>
-            <select value={genForm.report_type}
-              onChange={e => setGenForm(f => ({ ...f, report_type: e.target.value as any }))}
-              className="border rounded px-3 py-2 text-sm">
-              <option value="daily">{t('reports.daily')}</option>
-              <option value="weekly">{t('reports.weekly')}</option>
-              <option value="monthly">{t('reports.monthly')}</option>
-              <option value="custom">{t('reports.custom')}</option>
+            <label className="block text-sm font-medium mb-1">报告类型</label>
+            <select className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background">
+              <option>月度绩效</option>
+              <option>周报</option>
+              <option>策略对比</option>
+              <option>归因分析</option>
             </select>
           </div>
-          <div className="flex-1">
-            <label className="block text-sm font-medium mb-1">{t('reports.titleOptional')}</label>
-            <input value={genForm.title} placeholder={t('reports.autoGenerated')}
-              onChange={e => setGenForm(f => ({ ...f, title: e.target.value }))}
-              className="w-full border rounded px-3 py-2 text-sm" />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium mb-1">开始日期</label>
+              <input type="date" className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">结束日期</label>
+              <input type="date" className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background" />
+            </div>
           </div>
-          <button type="submit" disabled={generating}
-            className="bg-primary text-primary-foreground px-4 py-2 rounded text-sm disabled:opacity-50 flex items-center gap-2">
-            {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
-            {t('reports.generateBtn')}
-          </button>
-          <button type="button" onClick={() => setShowGenerate(false)} className="px-3 py-2 text-sm">{t('common:cancel')}</button>
-        </form>
-      )}
-
-      {/* Filters */}
-      <div className="flex items-center gap-3">
-        <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
-          className="border rounded px-3 py-2 text-sm">
-          <option value="">{t('reports.allTypes')}</option>
-          <option value="daily">{t('reports.daily')}</option>
-          <option value="weekly">{t('reports.weekly')}</option>
-          <option value="monthly">{t('reports.monthly')}</option>
-          <option value="custom">{t('reports.custom')}</option>
-        </select>
-        <button onClick={fetchReports} className="p-2 hover:bg-accent rounded">
-          <RefreshCw className="h-4 w-4" />
-        </button>
-      </div>
-
-      {/* Report List / Detail View */}
-      {selectedReport ? (
-        <div className="bg-card border rounded-lg p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">{selectedReport.title}</h2>
-            <button onClick={() => setSelectedReport(null)} className="text-sm text-primary hover:underline">{t('reports.backToList')}</button>
+          <div>
+            <label className="block text-sm font-medium mb-1">包含策略</label>
+            <select className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background">
+              <option>全部策略</option>
+              <option>DualMA_Cross</option>
+              <option>RSI_Reversal</option>
+            </select>
           </div>
-          <div className="flex gap-4 text-sm text-muted-foreground">
-            <span className="capitalize">{selectedReport.report_type}</span>
-            <span>{new Date(selectedReport.created_at).toLocaleString()}</span>
-          </div>
-          {selectedReport.content_json ? (
-            <pre className="bg-muted p-4 rounded text-xs overflow-auto max-h-96">
-              {JSON.stringify(selectedReport.content_json, null, 2)}
-            </pre>
-          ) : (
-            <div className="text-muted-foreground">{t('reports.noContent')}</div>
-          )}
         </div>
-      ) : loading ? (
-        <div className="flex justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
-      ) : reports.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">{t('reports.noReportsHint')}</div>
-      ) : (
-        <div className="bg-card border rounded-lg overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50">
-              <tr>
-                <th className="text-left px-4 py-2">{t('reports.title')}</th>
-                <th className="text-left px-4 py-2">{t('common:type')}</th>
-                <th className="text-left px-4 py-2">{t('common:created')}</th>
-                <th className="text-right px-4 py-2">{t('common:actions')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {reports.map(report => (
-                <tr key={report.id} className="border-t hover:bg-muted/30 cursor-pointer" onClick={() => handleViewDetail(report.id)}>
-                  <td className="px-4 py-2 font-medium flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-muted-foreground" />
-                    {report.title}
-                  </td>
-                  <td className="px-4 py-2">
-                    <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700 flex items-center gap-1 w-fit">
-                      <Calendar className="h-3 w-3" /> {TYPE_LABELS[report.report_type] || report.report_type}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2 text-muted-foreground">{new Date(report.created_at).toLocaleString()}</td>
-                  <td className="px-4 py-2 text-right">
-                    <button className="text-primary text-sm hover:underline" onClick={e => { e.stopPropagation(); handleViewDetail(report.id) }}>
-                      {t('common:view')}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      </Modal>
     </div>
   )
 }

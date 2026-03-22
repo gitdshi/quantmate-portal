@@ -11,6 +11,7 @@ import {
     XAxis,
     YAxis,
 } from 'recharts'
+import { themeColors } from '../lib/theme'
 
 interface EquityDataPoint {
   datetime: string
@@ -153,11 +154,11 @@ export default function EquityCurveChart({
           />
           <Tooltip
             contentStyle={{
-              backgroundColor: 'hsl(var(--card))',
-              border: '1px solid hsl(var(--border))',
+              backgroundColor: themeColors.card,
+              border: `1px solid ${themeColors.border}`,
               borderRadius: '8px',
             }}
-            labelStyle={{ color: 'hsl(var(--foreground))' }}
+            labelStyle={{ color: themeColors.foreground }}
             formatter={(value: any, name: any) => {
               if (value === undefined) return ['N/A', name]
               if (name === 'balance') {
@@ -193,12 +194,12 @@ export default function EquityCurveChart({
           />
           <ReferenceLine
             y={initialCapital}
-            stroke="hsl(var(--muted-foreground))"
+            stroke={themeColors.mutedForeground}
             strokeDasharray="5 5"
             label={{
               value: t('results.initial'),
               position: 'right',
-              fill: 'hsl(var(--muted-foreground))',
+              fill: themeColors.mutedForeground,
               fontSize: 12,
             }}
           />
@@ -206,7 +207,7 @@ export default function EquityCurveChart({
             type="monotone"
             dataKey="balance"
             name={t('results.strategyEquity')}
-            stroke="hsl(var(--primary))"
+            stroke={themeColors.primary}
             strokeWidth={2}
             dot={false}
             activeDot={{ r: 4, strokeWidth: 2 }}

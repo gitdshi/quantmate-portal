@@ -1,109 +1,70 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@test/support/utils'
+import { fireEvent, render, screen } from '@test/support/utils'
 import Reports from '@/pages/Reports'
+
+vi.mock('@/components/charts/BarChart', () => ({ default: (props: any) => <div data-testid="bar-chart">{props.title}</div> }))
 
 vi.mock('@/lib/api', () => ({
   api: {
     get: vi.fn(),
-    post: vi.fn(),
     interceptors: { request: { use: vi.fn() }, response: { use: vi.fn() } },
   },
   reportsAPI: {
     list: vi.fn(),
-    get: vi.fn(),
     generate: vi.fn(),
   },
 }))
 
 import { reportsAPI } from '@/lib/api'
 
-const mockReports = [
-  { id: 1, report_type: 'daily', title: 'Daily Report 2025-01-01', content_json: { profit: 100 }, created_at: '2025-01-01T08:00:00Z' },
-  { id: 2, report_type: 'weekly', title: 'Weekly Report W1', content_json: null, created_at: '2025-01-07T08:00:00Z' },
-]
-
 describe('Reports Page', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    ;(reportsAPI.list as any).mockResolvedValue({ data: mockReports })
-    ;(reportsAPI.get as any).mockResolvedValue({ data: mockReports[0] })
-    ;(reportsAPI.generate as any).mockResolvedValue({ data: { id: 3 } })
-  })
-
-  it('renders heading and generate button', () => {
-    render(<Reports />)
-    expect(screen.getByText('Reports')).toBeInTheDocument()
-    expect(screen.getByText('Generate Report')).toBeInTheDocument()
-  })
-
-  it('displays report list', async () => {
-    render(<Reports />)
-    await waitFor(() => {
-      expect(screen.getByText('Daily Report 2025-01-01')).toBeInTheDocument()
-      expect(screen.getByText('Weekly Report W1')).toBeInTheDocument()
-    })
-  })
-
-  it('shows report type badges', async () => {
-    render(<Reports />)
-    await waitFor(() => {
-      expect(screen.getByText('Daily')).toBeInTheDocument()
-      expect(screen.getByText('Weekly')).toBeInTheDocument()
-    })
-  })
-
-  it('shows generate form on button click', async () => {
-    render(<Reports />)
-    fireEvent.click(screen.getByText('Generate Report'))
-    expect(screen.getByText('Generate')).toBeInTheDocument()
-    expect(screen.getByPlaceholderText('Auto-generated if empty')).toBeInTheDocument()
-  })
-
-  it('navigates to detail view on click', async () => {
-    render(<Reports />)
-    await waitFor(() => {
-      expect(screen.getByText('Daily Report 2025-01-01')).toBeInTheDocument()
-    })
-    
-    const viewBtns = screen.getAllByText('View')
-    fireEvent.click(viewBtns[0])
-
-    await waitFor(() => {
-      expect(screen.getByText('Back to list')).toBeInTheDocument()
-      expect(screen.getByText(/"profit": 100/)).toBeInTheDocument()
-    })
-  })
-
-  it('handles API error gracefully', async () => {
-    ;(reportsAPI.list as any).mockRejectedValue(new Error('Network error'))
-    render(<Reports />)
-    await waitFor(() => {
-      expect(screen.getByText('Failed to load reports')).toBeInTheDocument()
-    })
-  })
-
-  it('shows empty state when no reports', async () => {
     ;(reportsAPI.list as any).mockResolvedValue({ data: [] })
-    render(<Reports />)
-    await waitFor(() => {
-      expect(screen.getByText(/No reports yet/)).toBeInTheDocument()
-    })
   })
 
-  it('filters by report type', async () => {
+  it('renders heading', () => {
     render(<Reports />)
-    await waitFor(() => {
-      expect(screen.getByText('Daily Report 2025-01-01')).toBeInTheDocument()
-    })
+    expect(screen.getByText('报告复盘')).toBeInTheDocument()
+  })
 
-    const typeSelect = screen.getAllByRole('combobox')[0]
-    fireEvent.change(typeSelect, { target: { value: 'daily' } })
+  it('shows all 4 tabs', () => {
+    render(<Reports />)
+    expect(screen.getByText('绩效报告')).toBeInTheDocument()
+    expect(screen.getByText('交易复盘')).toBeInTheDocument()
+    expect(screen.getByText('归因分析')).toBeInTheDocument()
+    expect(screen.getByText('报告列表')).toBeInTheDocument()
+  })
 
-    await waitFor(() => {
-      expect(reportsAPI.list).toHaveBeenCalledWith(expect.objectContaining({
-        report_type: 'daily',
-      }))
-    })
+  it('shows generate button', () => {
+    render(<Reports />)
+    expect(screen.getByText('生成报告')).toBeInTheDocument()
+  })
+
+  it('shows perf stat cards on default tab', () => {
+    render(<Reports />)
+    expect(screen.getByText('月收益率')).toBeInTheDocument()
+    expect(screen.getByText('基准收益')).toBeInTheDocument()
+    expect(screen.getByText('超额收益')).toBeInTheDocument()
+    expect(screen.getByText('最大回撤')).toBeInTheDocument()
+  })
+
+  it('switches to review tab', () => {
+    render(<Reports />)
+    fireEvent.click(screen.getByText('交易复盘'))
+    expect(screen.getByText('总交易次数')).toBeInTheDocument()
+  })
+
+  it('switches to attribution tab', () => {
+    render(<Reports />)
+    fireEvent.click(screen.getByText('归因分析'))
+    expect(screen.getByText('收益归因')).toBeInTheDocument()
+  })
+
+  it('switches to list tab', () => {
+    render(<Reports />)
+    fireEvent.click(screen.getByText('报告列表'))
+    expect(screen.getByText('报告名称')).toBeInTheDocument()
   })
 })
 

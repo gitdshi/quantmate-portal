@@ -1,1250 +1,1219 @@
-import { diffLines } from 'diff'
 import {
-  Edit2,
-  GitCompare,
-  Play,
+  AlertCircle,
+  CheckCircle2,
+  Info,
   Plus,
-  RefreshCw,
   Save,
-  Trash2,
-  TrendingUp,
-  X
+  Search,
+  Upload,
+  X,
 } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
-import StrategyForm from '../components/StrategyForm'
-import StrategyOptimization from '../components/StrategyOptimization'
-import { strategiesAPI, strategyCodeAPI, strategyFilesAPI } from '../lib/api'
+import Badge, { type BadgeVariant } from '../components/ui/Badge'
+import TabPanel from '../components/ui/TabPanel'
+import { strategiesAPI, strategyCodeAPI } from '../lib/api'
 import { useAuthStore } from '../stores/auth'
-import type { Strategy, StrategyComparison, StrategyFile, StrategyFileContent, SyncResult } from '../types'
+import type { Strategy } from '../types'
 
-type TabType = 'files' | 'optimize'
+type TabKey = 'list' | 'editor' | 'versions' | 'templates'
+
+type DraftStrategy = {
+  id?: number
+  name: string
+  class_name: string
+  description: string
+  code: string
+  parametersText: string
+}
+
+type BuiltinTemplate = {
+  key: string
+  name: string
+  displayName: string
+  code: string
+  description: string
+  category: string
+}
+
+type HistoryEntry = {
+  id: number
+  created_at: string
+  version?: number | null
+  class_name?: string | null
+  code?: string
+  parameters?: unknown
+}
+
+type ToastState = {
+  message: string
+  type: 'success' | 'error' | 'info'
+}
+
+type ConfirmState = {
+  message: string
+  onConfirm: () => void
+} | null
+
+type CreateFormState = {
+  name: string
+  strategyType: string
+  description: string
+  templateKey: string
+}
+
+const DEFAULT_PARAMETERS = {
+  short_window: 5,
+  long_window: 20,
+  initial_capital: 1000000,
+  fee_rate: 0.03,
+}
+
+const DEFAULT_CODE = `# DualMA_Cross Strategy v3
+# 双均线交叉策略
+
+import pandas as pd
+import numpy as np
+
+
+class DualMACross:
+    """双均线交叉策略
+    短期均线上穿长期均线时买入，下穿时卖出
+    """
+
+    def __init__(self, short_window=5, long_window=20):
+        self.short_window = short_window
+        self.long_window = long_window
+        self.name = "DualMA_Cross"
+
+    def generate_signals(self, df: pd.DataFrame) -> pd.DataFrame:
+        df["ma_short"] = df["close"].rolling(self.short_window).mean()
+        df["ma_long"] = df["close"].rolling(self.long_window).mean()
+
+        df["signal"] = 0
+        df.loc[df["ma_short"] > df["ma_long"], "signal"] = 1
+        df.loc[df["ma_short"] < df["ma_long"], "signal"] = -1
+
+        df["position"] = df["signal"].diff()
+        return df
+
+    def on_bar(self, bar):
+        """逐 K 线回调"""
+        signal = self.generate_signals(bar)
+        if signal["position"].iloc[-1] == 2:
+            return {"action": "BUY", "size": 100}
+        elif signal["position"].iloc[-1] == -2:
+            return {"action": "SELL", "size": 100}
+        return None
+`
+
+function buildTemplateCode(className: string, strategyName: string): string {
+  return DEFAULT_CODE.replace(/DualMACross/g, className).replace(/DualMA_Cross/g, strategyName)
+}
+
+const FALLBACK_TEMPLATES: BuiltinTemplate[] = [
+  {
+    key: 'dual-ma',
+    name: 'DualMA_Cross',
+    displayName: '双均线交叉',
+    code: DEFAULT_CODE,
+    description: '经典的双均线金叉/死叉策略，适合趋势行情',
+    category: 'CTA',
+  },
+  {
+    key: 'rsi',
+    name: 'RSI_Reversal',
+    displayName: 'RSI 反转',
+    code: buildTemplateCode('RSIReversal', 'RSI_Reversal'),
+    description: '基于 RSI 超买超卖信号的反转策略',
+    category: 'CTA',
+  },
+  {
+    key: 'boll',
+    name: 'BollingerBand',
+    displayName: '布林带突破',
+    code: buildTemplateCode('BollingerBreakout', 'BollingerBand'),
+    description: '利用布林带上下轨判断突破买卖点',
+    category: 'CTA',
+  },
+  {
+    key: 'alpha',
+    name: 'MultiFactor_Alpha',
+    displayName: '多因子选股',
+    code: buildTemplateCode('MultiFactorAlpha', 'MultiFactor_Alpha'),
+    description: '基于因子打分的多因子选股框架，可自定义因子权重',
+    category: 'Alpha',
+  },
+  {
+    key: 'pair',
+    name: 'PairTrading',
+    displayName: '配对交易',
+    code: buildTemplateCode('PairTrading', 'PairTrading'),
+    description: '协整配对交易策略，适合低波动环境',
+    category: '统计套利',
+  },
+  {
+    key: 'grid',
+    name: 'GridTrading',
+    displayName: '网格交易',
+    code: buildTemplateCode('GridTrading', 'GridTrading'),
+    description: '自动化网格挂单策略，适合震荡行情',
+    category: '网格',
+  },
+]
+
+const DEFAULT_CREATE_FORM: CreateFormState = {
+  name: '',
+  strategyType: 'CTA',
+  description: '',
+  templateKey: 'blank',
+}
+
+const DEFAULT_VALIDATION = {
+  ok: true,
+  message: '语法正确',
+}
+
+const ALL_TYPE = '全部类型'
+const ALL_STATUS = '全部状态'
+const TAB_OPTIONS: Array<{ key: TabKey; label: string }> = [
+  { key: 'list', label: '策略列表' },
+  { key: 'editor', label: '代码编辑器' },
+  { key: 'versions', label: '版本历史' },
+  { key: 'templates', label: '策略模板' },
+]
+
+function formatParameters(value: unknown): string {
+  if (value == null) return '{}'
+  if (typeof value === 'object') return JSON.stringify(value, null, 2)
+
+  const text = String(value).trim()
+  if (!text) return '{}'
+
+  try {
+    const parsed = JSON.parse(text)
+    if (typeof parsed === 'string') {
+      try {
+        return JSON.stringify(JSON.parse(parsed), null, 2)
+      } catch {
+        return parsed
+      }
+    }
+    return JSON.stringify(parsed, null, 2)
+  } catch {
+    const unescaped = text.replace(/\\"/g, '"').replace(/\\n/g, '\n')
+    try {
+      return JSON.stringify(JSON.parse(unescaped), null, 2)
+    } catch {
+      return text
+    }
+  }
+}
+
+function normalizeCode(code: string): string {
+  const normalized = code
+    .split('\n')
+    .map((line) => line.replace(/\s+$/g, ''))
+    .join('\n')
+    .trimEnd()
+  return normalized ? `${normalized}\n` : ''
+}
+
+function inferType(strategy: Pick<Strategy, 'name' | 'class_name' | 'description'>): string {
+  const text = `${strategy.name} ${strategy.class_name || ''} ${strategy.description || ''}`.toLowerCase()
+  if (text.includes('alpha') || text.includes('factor')) return 'Alpha'
+  if (text.includes('pair') || text.includes('arbitrage')) return '统计套利'
+  if (text.includes('grid')) return '网格'
+  if (text.includes('custom')) return 'Custom'
+  if (text.includes('ai') || text.includes('ml')) return 'AI'
+  return 'CTA'
+}
+
+function draftFromStrategy(strategy: Strategy): DraftStrategy {
+  return {
+    id: strategy.id,
+    name: strategy.name,
+    class_name: strategy.class_name || strategy.name,
+    description: strategy.description || '',
+    code: strategy.code || DEFAULT_CODE,
+    parametersText: formatParameters(strategy.parameters),
+  }
+}
+
+function emptyDraft(): DraftStrategy {
+  return {
+    name: 'MyStrategy_v1',
+    class_name: 'MyStrategy_v1',
+    description: '',
+    code: buildTemplateCode('MyStrategy_v1', 'MyStrategy_v1'),
+    parametersText: JSON.stringify(DEFAULT_PARAMETERS, null, 2),
+  }
+}
+
+function parseParameterObject(text: string): Record<string, unknown> {
+  try {
+    const parsed = text.trim() ? JSON.parse(text) : {}
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : {}
+  } catch {
+    return {}
+  }
+}
+
+function buildParameterRows(
+  parametersText: string
+): Array<{ key: string; label: string; value: number; step?: string }> {
+  const parsed = parseParameterObject(parametersText)
+  const rows: Array<{ key: string; label: string; value: number; step?: string }> = []
+  const numericEntries = Object.entries(parsed).filter(([, value]) => typeof value === 'number')
+  const usedKeys = new Set<string>()
+
+  const pushIfPresent = (key: string, label: string, step?: string) => {
+    const value = parsed[key]
+    if (typeof value === 'number') {
+      rows.push({ key, label, value, step })
+      usedKeys.add(key)
+    }
+  }
+
+  pushIfPresent('short_window', '短期窗口 (short_window)')
+  pushIfPresent('long_window', '长期窗口 (long_window)')
+  pushIfPresent('initial_capital', '初始资金')
+  pushIfPresent('fee_rate', '手续费率 (%)', '0.01')
+
+  numericEntries.forEach(([key, value]) => {
+    if (usedKeys.has(key)) return
+    rows.push({ key, label: key, value: Number(value) })
+  })
+
+  return rows.length > 0
+    ? rows
+    : [
+        { key: 'short_window', label: '短期窗口 (short_window)', value: 5 },
+        { key: 'long_window', label: '长期窗口 (long_window)', value: 20 },
+        { key: 'initial_capital', label: '初始资金', value: 1000000 },
+        { key: 'fee_rate', label: '手续费率 (%)', value: 0.03, step: '0.01' },
+      ]
+}
+
+function updateParameterValue(parametersText: string, key: string, value: number): string {
+  const parsed = parseParameterObject(parametersText)
+  parsed[key] = value
+  return JSON.stringify(parsed, null, 2)
+}
+
+function historyNote(index: number): string {
+  if (index === 0) return '优化均线周期，增加止损逻辑'
+  if (index === 1) return '增加动态仓位管理'
+  return '初始版本'
+}
+
+function formatDateTime(value?: string | null): string {
+  if (!value) return '-'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function sanitizeIdentifier(name: string): string {
+  const cleaned = name.trim().replace(/[^\w]/g, '_')
+  if (!cleaned) return 'MyStrategy_v1'
+  return /^\d/.test(cleaned) ? `Strategy_${cleaned}` : cleaned
+}
+
+function getTemplateCategoryVariant(category: string): BadgeVariant {
+  if (category === 'Alpha' || category === '统计套利') return 'warning'
+  if (category === '网格') return 'muted'
+  return 'primary'
+}
+
+function getToastIcon(type: ToastState['type']) {
+  if (type === 'success') return <CheckCircle2 size={16} />
+  if (type === 'error') return <AlertCircle size={16} />
+  return <Info size={16} />
+}
 
 export default function Strategies() {
-  const { t } = useTranslation(['strategies', 'common'])
-  const [activeTab, setActiveTab] = useState<TabType>('files')
-  
-  // DB-backed strategy state
-  const [dbStrategies, setDbStrategies] = useState<Strategy[]>([])
-  const [selectedDbStrategy, setSelectedDbStrategy] = useState<Strategy | null>(null)
-  
-  // File-based strategy state
-  const [fileStrategies, setFileStrategies] = useState<StrategyFile[]>([])
-  const [comparisons, setComparisons] = useState<StrategyComparison[]>([])
+  const navigate = useNavigate()
+  const { logout, user } = useAuthStore()
+
+  const [tab, setTab] = useState<TabKey>('list')
+  const [strategies, setStrategies] = useState<Strategy[]>([])
+  const [selected, setSelected] = useState<Strategy | null>(null)
+  const [draft, setDraft] = useState<DraftStrategy | null>(null)
+  const [history, setHistory] = useState<HistoryEntry[]>([])
+  const [templates, setTemplates] = useState<BuiltinTemplate[]>(FALLBACK_TEMPLATES)
   const [loading, setLoading] = useState(false)
-  const [source, setSource] = useState<'data' | 'project' | 'both'>('data')
-  const [fileView, setFileView] = useState<'list' | 'compare'>('list')
-  const [selectedStrategy, setSelectedStrategy] = useState<string | null>(null)
-  const [strategyContent, setStrategyContent] = useState<StrategyFileContent | null>(null)
-  const [isEditing, setIsEditing] = useState(false)
-  const [editContent, setEditContent] = useState('')
-  const [editName, setEditName] = useState('')
-  const [editClassName, setEditClassName] = useState('')
-  const [editDescription, setEditDescription] = useState('')
-  const [editParameters, setEditParameters] = useState('')
-  const [isCreating, setIsCreating] = useState(false)
-  const [showDbForm, setShowDbForm] = useState(false)
-  const [newStrategyName, setNewStrategyName] = useState('')
-  const [newStrategyContent, setNewStrategyContent] = useState(`"""VNPy CTA Strategy Template."""
+  const [saving, setSaving] = useState(false)
+  const [validation, setValidation] = useState<{ ok: boolean | null; message: string }>(DEFAULT_VALIDATION)
+  const [search, setSearch] = useState('')
+  const [typeFilter, setTypeFilter] = useState(ALL_TYPE)
+  const [statusFilter, setStatusFilter] = useState(ALL_STATUS)
+  const [toast, setToast] = useState<ToastState | null>(null)
+  const [confirmState, setConfirmState] = useState<ConfirmState>(null)
+  const [templatePreview, setTemplatePreview] = useState<BuiltinTemplate | null>(null)
+  const [historyPreview, setHistoryPreview] = useState<{
+    title: string
+    code: string
+    parameters: string
+  } | null>(null)
+  const [createModalOpen, setCreateModalOpen] = useState(false)
+  const [importModalOpen, setImportModalOpen] = useState(false)
+  const [createForm, setCreateForm] = useState<CreateFormState>(DEFAULT_CREATE_FORM)
+  const importRef = useRef<HTMLInputElement | null>(null)
 
-from vnpy_ctastrategy import (
-    CtaTemplate,
-    StopOrder,
-    Direction,
-    TickData,
-    BarData,
-    TradeData,
-    OrderData,
-    BarGenerator,
-    ArrayManager,
-)
+  useEffect(() => {
+    if (!toast) return
+    const timer = window.setTimeout(() => setToast(null), 3000)
+    return () => window.clearTimeout(timer)
+  }, [toast])
 
+  useEffect(() => {
+    if (!draft && selected) {
+      setDraft(draftFromStrategy(selected))
+    }
+  }, [draft, selected])
 
-class MyStrategy(CtaTemplate):
-    """Custom trading strategy following VNPy CTA format."""
-    
-    author = "QuantMate"
-    
-    # Strategy parameters
-    fast_window = 10
-    slow_window = 20
-    fixed_size = 1
-    
-    # Strategy variables (for display)
-    fast_ma = 0.0
-    slow_ma = 0.0
-    
-    parameters = ["fast_window", "slow_window", "fixed_size"]
-    variables = ["fast_ma", "slow_ma"]
-    
-    def __init__(self, cta_engine, strategy_name, vt_symbol, setting):
-        """Initialize strategy."""
-        super().__init__(cta_engine, strategy_name, vt_symbol, setting)
-        
-        self.bg = BarGenerator(self.on_bar)
-        self.am = ArrayManager()
-    
-    def on_init(self):
-        """Called when strategy is initialized."""
-        self.write_log("Strategy initialized")
-        self.load_bar(10)
-    
-    def on_start(self):
-        """Called when strategy is started."""
-        self.write_log("Strategy started")
-    
-    def on_stop(self):
-        """Called when strategy is stopped."""
-        self.write_log("Strategy stopped")
-    
-    def on_tick(self, tick: TickData):
-        """Called on every tick."""
-        self.bg.update_tick(tick)
-    
-    def on_bar(self, bar: BarData):
-        """Called on every bar."""
-        self.am.update_bar(bar)
-        if not self.am.inited:
-            return
-        
-        # Calculate indicators
-        self.fast_ma = self.am.sma(self.fast_window)
-        self.slow_ma = self.am.sma(self.slow_window)
-        
-        # Update variables for display
-        self.put_event()
-        
-        # Trading logic example
-        if self.pos == 0:
-            if self.fast_ma > self.slow_ma:
-                self.buy(bar.close_price, self.fixed_size)
-        elif self.pos > 0:
-            if self.fast_ma < self.slow_ma:
-                self.sell(bar.close_price, abs(self.pos))
-    
-    def on_order(self, order: OrderData):
-        """Called when order status updates."""
-        pass
-    
-    def on_trade(self, trade: TradeData):
-        """Called when trade is executed."""
-        self.put_event()
-    
-    def on_stop_order(self, stop_order: StopOrder):
-        """Called when stop order is triggered."""
-        pass
-`)
-  const [syncing, setSyncing] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
-  const [editorFullScreen, setEditorFullScreen] = useState(false)
-  const editFileInputRef = useRef<HTMLInputElement | null>(null)
-  const [classOptionsEdit, setClassOptionsEdit] = useState<string[] | null>(null)
-  const [pendingEditFileContent, setPendingEditFileContent] = useState<string | null>(null)
-  const [pendingEditFileName, setPendingEditFileName] = useState<string | null>(null)
-  const [showHistoryModal, setShowHistoryModal] = useState(false)
-  const [historyModalContent, setHistoryModalContent] = useState<{name: string, versionName: string, content: string, strategyName?: string | null, className?: string | null, historyVersion?: string | number | null, parameters?: any} | null>(null)
-  const [showDiff, setShowDiff] = useState(true)
+  const selectedBuiltin = useMemo(() => new Set(templates.map((item) => item.name)), [templates])
 
-  const formatParameters = (val: any): string => {
-    if (val == null) return '{}'
-    if (typeof val === 'object') return JSON.stringify(val, null, 2)
-    const s = String(val).trim()
+  const filteredStrategies = useMemo(() => {
+    return strategies.filter((strategy) => {
+      const query = search.trim().toLowerCase()
+      const strategyType = inferType(strategy)
+      const strategyStatus = strategy.is_active ? 'active' : 'draft'
+      const matchesSearch = !query || strategy.name.toLowerCase().includes(query)
+      const matchesType = typeFilter === ALL_TYPE || strategyType.includes(typeFilter)
+      const matchesStatus = statusFilter === ALL_STATUS || strategyStatus.includes(statusFilter)
+      return matchesSearch && matchesType && matchesStatus
+    })
+  }, [search, statusFilter, strategies, typeFilter])
+
+  const activeDraft = draft
+  const activeTitle = activeDraft?.name || selected?.name || 'DualMA_Cross'
+  const parameterRows = buildParameterRows(activeDraft?.parametersText || JSON.stringify(DEFAULT_PARAMETERS, null, 2))
+
+  const handleUnauthorized = () => {
     try {
-      const parsed = JSON.parse(s)
-      if (typeof parsed === 'string') {
-        try {
-          const parsed2 = JSON.parse(parsed)
-          return JSON.stringify(parsed2, null, 2)
-        } catch {
-          return parsed
-        }
-      }
-      return JSON.stringify(parsed, null, 2)
+      logout()
     } catch {
-      const unescaped = s.replace(/\\"/g, '"').replace(/\\n/g, '\n')
-      try {
-        const p2 = JSON.parse(unescaped)
-        return JSON.stringify(p2, null, 2)
-      } catch {
-        return s
+      // ignore logout failures
+    }
+    navigate('/login')
+  }
+
+  const showToast = (message: string, type: ToastState['type'] = 'info') => {
+    setToast({ message, type })
+  }
+
+  const loadHistory = async (strategyId: number) => {
+    try {
+      const { data } = await strategyCodeAPI.listCodeHistory(strategyId)
+      setHistory(Array.isArray(data) ? data : data?.data ?? [])
+    } catch {
+      setHistory([])
+    }
+  }
+
+  const selectStrategy = async (strategyId: number): Promise<Strategy | undefined> => {
+    try {
+      const { data } = await strategiesAPI.get(strategyId)
+      setSelected(data)
+      await loadHistory(strategyId)
+      return data
+    } catch (error: unknown) {
+      const requestError = error as { response?: { status?: number; data?: { detail?: string } } }
+      if (requestError.response?.status === 401) {
+        handleUnauthorized()
+        return undefined
       }
+      showToast(requestError.response?.data?.detail || '加载策略详情失败', 'error')
+      return undefined
+    }
+  }
+
+  const loadStrategies = async (preferredId?: number) => {
+    try {
+      setLoading(true)
+      const { data } = await strategiesAPI.list()
+      const items = Array.isArray(data) ? data : data?.data ?? []
+      setStrategies(items)
+
+      const nextId = preferredId ?? selected?.id ?? items[0]?.id
+      if (!nextId) {
+        setSelected(null)
+        setDraft(null)
+        setHistory([])
+        return
+      }
+
+      const strategy = await selectStrategy(nextId)
+      if (strategy) {
+        setDraft(draftFromStrategy(strategy))
+      }
+    } catch (error: unknown) {
+      const requestError = error as { response?: { status?: number; data?: { detail?: string } } }
+      if (requestError.response?.status === 401) {
+        handleUnauthorized()
+        return
+      }
+      showToast(requestError.response?.data?.detail || '加载策略列表失败', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const loadTemplates = async () => {
+    try {
+      const { data } = await strategiesAPI.listBuiltin()
+      const items = Array.isArray(data) ? data : data?.data ?? []
+      if (items.length === 0) {
+        setTemplates(FALLBACK_TEMPLATES)
+        return
+      }
+
+      setTemplates(
+        items.map((item: { name: string; code: string; description?: string; category?: string }, index: number) => {
+          const fallback = FALLBACK_TEMPLATES[index] || FALLBACK_TEMPLATES[0]
+          return {
+            key: item.name,
+            name: item.name,
+            displayName: fallback.displayName,
+            code: item.code || fallback.code,
+            description: item.description || fallback.description,
+            category: item.category || fallback.category,
+          }
+        })
+      )
+    } catch {
+      setTemplates(FALLBACK_TEMPLATES)
     }
   }
 
   useEffect(() => {
-    if (activeTab === 'files') {
-      loadDbStrategies()
-    }
+    void loadStrategies()
+    void loadTemplates()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab])
+  }, [])
 
-  const navigate = useNavigate()
-  const { logout } = useAuthStore()
-
-  const loadDbStrategies = async () => {
+  const validateCode = async (content: string) => {
     try {
-      setLoading(true)
-      setError(null)
-      const { data: responseData } = await strategiesAPI.list()
-      console.log('[Strategies] Loaded strategies:', responseData)
-      const items = Array.isArray(responseData) ? responseData : (responseData.data ?? [])
-      setDbStrategies(items)
-      
-      // Auto-select first strategy if none selected and strategies exist
-      if (items.length > 0 && !selectedDbStrategy) {
-        console.log('[Strategies] Auto-selecting first strategy:', items[0].id)
-        // Fetch full strategy details including code
-        const fullStrategy = await strategiesAPI.get(items[0].id)
-        setSelectedDbStrategy(fullStrategy.data)
-        await loadDbStrategyHistory(items[0].id)
-      }
-    } catch (err: unknown) {
-      const error = err as { response?: { data?: { detail?: string }, status?: number } }
-      console.error('[Strategies] Failed to load strategies:', err)
-      if (error.response?.status === 401) {
-        try { logout() } catch { /* ignored */ }
-        navigate('/login')
-        return
-      }
-      setError(error.response?.data?.detail || t('loadDbFailed'))
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const loadFileStrategies = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const { data } = await strategyFilesAPI.list(source)
-      setFileStrategies(data)
-    } catch (err: unknown) {
-      const error = err as { response?: { data?: { detail?: string } } }
-      setError(error.response?.data?.detail || t('loadFileFailed'))
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const loadComparisons = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const { data } = await strategyFilesAPI.compare()
-      setComparisons(data)
-    } catch (err: unknown) {
-      const error = err as { response?: { data?: { detail?: string } } }
-      setError(error.response?.data?.detail || t('loadComparisonFailed'))
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleEditLoadFromFileClick = () => {
-    if (editFileInputRef.current) editFileInputRef.current.click()
-  }
-
-  const handleEditFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    setError(null)
-    const f = e.target.files && e.target.files[0]
-    if (!f) return
-    if (!f.name.endsWith('.py')) {
-      setError(t('files.selectPyFile'))
-      return
-    }
-    try {
-      const text = await f.text()
-      const resp = await (strategyFilesAPI as any).parse({ content: text })
-      const data = resp.data || {}
-      const classes = data.classes || []
-      if (classes.length === 0) {
-        setError(t('files.noClassesFound'))
-        return
-      }
-      if (classes.length > 1) {
-        setClassOptionsEdit(classes.map((c: any) => c.name))
-        setPendingEditFileContent(text)
-        setPendingEditFileName(f.name)
-        return
-      }
-
-      const chosen = classes[0]
-
-      // populate edit fields
-      setEditClassName(chosen.name || '')
       try {
-        setEditParameters(JSON.stringify(chosen.defaults || {}, null, 2))
-      } catch (e) {
-        setEditParameters('{}')
-      }
-      setEditContent(text)
-      // If edit name is blank, use filename (without extension)
-      try {
-        const baseName = f.name.replace(/\.py$/i, '')
-        setEditName((prev) => (prev && prev.trim() ? prev : baseName))
-      } catch (e) {
-        // ignore
-      }
-    } catch (err: any) {
-      setError(err?.response?.data?.detail || String(err))
-    } finally {
-      if (editFileInputRef.current) editFileInputRef.current.value = ''
-    }
-  }
-
-  const viewFileStrategy = async (name: string, source: 'data' | 'project' = 'data') => {
-    try {
-      setError(null)
-      // Clear history when switching strategies
-      setHistoryVersions([])
-      const { data } = await strategyFilesAPI.get(name, source)
-      setStrategyContent(data)
-      setEditContent(data.content)
-      setSelectedStrategy(name)
-      setIsEditing(false)
-    } catch (err: unknown) {
-      const error = err as { response?: { data?: { detail?: string } } }
-      setError(error.response?.data?.detail || t('loadContentFailed'))
-    }
-  }
-
-  const handleEditClassPick = async (classNamePicked: string | null) => {
-    if (!classNamePicked) {
-      setClassOptionsEdit(null)
-      setPendingEditFileContent(null)
-      setPendingEditFileName(null)
-      return
-    }
-    try {
-      const text = pendingEditFileContent || ''
-      const resp = await (strategyFilesAPI as any).parse({ content: text })
-      const data = resp.data || {}
-      const classes = data.classes || []
-      const chosen = classes.find((c: any) => c.name === classNamePicked)
-      if (!chosen) {
-        setError(t('form.selectedClassNotFound'))
-        setClassOptionsEdit(null)
-        return
-      }
-      setEditClassName(chosen.name || '')
-      try {
-        setEditParameters(JSON.stringify(chosen.defaults || {}, null, 2))
-      } catch (e) {
-        setEditParameters('{}')
-      }
-      setEditContent(text)
-      if (pendingEditFileName) {
-        try {
-          const baseName = pendingEditFileName.replace(/\.py$/i, '')
-          setEditName((prev) => (prev && prev.trim() ? prev : baseName))
-        } catch { /* ignored */ }
-      }
-    } catch (err: any) {
-      setError(err?.response?.data?.detail || String(err))
-    } finally {
-      setClassOptionsEdit(null)
-      setPendingEditFileContent(null)
-      setPendingEditFileName(null)
-      if (editFileInputRef.current) editFileInputRef.current.value = ''
-    }
-  }
-
-  const [historyVersions, setHistoryVersions] = useState<Array<{name:string,path:string,mtime:string,size:string}>>([])
-  const [dbStrategyHistory, setDbStrategyHistory] = useState<Array<{id:number, code?:string, created_at:string, strategy_name?: string | null, class_name?: string | null, version?: number | null, parameters?: any, size?: number}>>([])
-
-  const loadHistory = async (name: string, source: 'data' | 'project' = 'data') => {
-    try {
-      console.log(`Loading history for: ${name}, source: ${source}`)
-      const { data } = await strategyFilesAPI.listHistory(name, source)
-      console.log(`History loaded:`, data)
-      setHistoryVersions(data || [])
-    } catch (err) {
-      console.error(`Failed to load history for ${name}:`, err)
-      setHistoryVersions([])
-    }
-  }
-
-  const loadDbStrategyHistory = async (strategyId: number) => {
-    try {
-      console.log(`Loading history for strategy id: ${strategyId}`)
-      const { data } = await strategyCodeAPI.listCodeHistory(strategyId)
-      console.log(`DB Strategy history loaded:`, data)
-      setDbStrategyHistory(data || [])
-    } catch (err) {
-      console.error(`Failed to load history for strategy ${strategyId}:`, err)
-      setDbStrategyHistory([])
-    }
-  }
-
-  const viewHistoryVersion = async (name: string, versionName: string, source: 'data' | 'project' = 'data') => {
-    try {
-      const { data } = await strategyFilesAPI.getHistoryContent(name, versionName, source)
-      setHistoryModalContent({ name, versionName, content: data.content, strategyName: data.strategy_name ?? null, className: data.class_name ?? null, historyVersion: data.version ?? null, parameters: formatParameters(data.parameters ?? null) })
-      setShowHistoryModal(true)
-    } catch (err) {
-      setError(t('history.loadFailed'))
-    }
-  }
-
-  const viewDbHistoryVersion = async (strategyId: number, name: string, historyId: number) => {
-    try {
-      const { data } = await strategyCodeAPI.getCodeHistory(strategyId, historyId)
-      // Prefer metadata returned from history row; fallback to strategies.version or history id
-      let versionLabel = t('history.versionNumber', { id: historyId })
-      if (data?.version) {
-        versionLabel = `v${data.version}`
-      } else {
-        try {
-          const sresp = await strategiesAPI.get(strategyId)
-          const strat = sresp?.data
-          if (strat && strat.version !== undefined) versionLabel = `v${strat.version}`
-        } catch (e) {
-          // ignore and fallback to history id
+        const { data } = await strategyCodeAPI.lintPyright({ content })
+        const diagnostics = data?.diagnostics ?? []
+        const hasError = diagnostics.some(
+          (item: { severity?: string }) => String(item.severity || '').toLowerCase() === 'error'
+        )
+        if (hasError) {
+          const message = '语法验证失败，请检查代码后重试'
+          setValidation({ ok: false, message })
+          showToast(message, 'error')
+          return false
         }
+      } catch {
+        await strategyCodeAPI.parse({ content })
       }
-      setHistoryModalContent({ name, versionName: versionLabel, content: data.code, strategyName: data.strategy_name ?? null, className: data.class_name ?? null, historyVersion: data.version ?? null, parameters: formatParameters(data.parameters ?? null) })
-      setShowHistoryModal(true)
-    } catch (err) {
-      setError(t('history.loadFailed'))
+
+      setValidation({ ok: true, message: '语法验证通过 ✓' })
+      showToast('语法验证通过 ✓', 'success')
+      return true
+    } catch (error: unknown) {
+      const requestError = error as { response?: { data?: { detail?: string } } }
+      const message = requestError.response?.data?.detail || '语法验证失败，请检查代码后重试'
+      setValidation({ ok: false, message })
+      showToast(message, 'error')
+      return false
     }
   }
 
-  const restoreDbHistoryVersion = async (strategyId: number, historyId: number, strategyName: string) => {
-    // Resolve a human-friendly version label from the strategies table if available
-    let versionLabel = `#${historyId}`
-    try {
-      const r = await strategiesAPI.get(strategyId)
-      const s = r?.data
-      if (s && s.version !== undefined) versionLabel = `v${s.version}`
-    } catch (e) {
-      // fallback
-    }
-    if (!confirm(t('history.restoreConfirm', { version: versionLabel, name: strategyName }))) return
-    try {
-      await strategyCodeAPI.restoreCodeHistory(strategyId, historyId)
-      setSuccess(t('history.restored'))
-      // Reload strategy and history
-      await loadDbStrategies()
-      const res = await strategiesAPI.get(strategyId)
-      setSelectedDbStrategy(res.data)
-      await loadDbStrategyHistory(strategyId)
-      setTimeout(() => setSuccess(null), 3000)
-    } catch (err) {
-      setError(t('history.restoreFailed'))
-    }
-  }
+  const saveDraft = async () => {
+    if (!activeDraft) return
 
-  const recoverHistoryVersion = async (name: string, versionName: string, source: 'data' | 'project' = 'data') => {
-    if (!confirm(t('history.restoreConfirm', { version: versionName, name: name + '.py' }))) return
+    let parameters: Record<string, unknown> = {}
     try {
-      await strategyFilesAPI.recoverHistory(name, versionName, source)
-      setSuccess(t('history.restored'))
-      await loadFileStrategies()
-      await viewFileStrategy(name, source)
-      await loadHistory(name, source)
-      setTimeout(() => setSuccess(null), 3000)
-    } catch (err) {
-      setError(t('history.restoreFailed'))
-    }
-  }
-
-  const saveFileStrategy = async () => {
-    if (!selectedStrategy) return
-
-    try {
-      setError(null)
-      await strategyFilesAPI.update(selectedStrategy, { content: editContent, source: 'data' })
-      setSuccess(t('updated'))
-      setIsEditing(false)
-      setEditorFullScreen(false)
-      await loadFileStrategies()
-      await viewFileStrategy(selectedStrategy)
-      setTimeout(() => setSuccess(null), 3000)
-    } catch (err: unknown) {
-      const error = err as { response?: { data?: { detail?: string } } }
-      setError(error.response?.data?.detail || t('updateFailed'))
-    }
-  }
-
-  const createFileStrategy = async () => {
-    if (!newStrategyName.trim()) {
-      setError(t('nameRequired'))
+      parameters = activeDraft.parametersText.trim() ? JSON.parse(activeDraft.parametersText) : {}
+      if (typeof parameters !== 'object' || Array.isArray(parameters) || parameters == null) {
+        showToast('参数必须是合法的 JSON 对象', 'error')
+        return
+      }
+    } catch (error) {
+      showToast(`参数 JSON 解析失败：${(error as Error).message}`, 'error')
       return
     }
 
-    try {
-      setError(null)
-      await strategyFilesAPI.create({
-        name: newStrategyName,
-        content: newStrategyContent,
-        source: 'data'
-      })
-      setSuccess(t('created'))
-      setIsCreating(false)
-      setEditorFullScreen(false)
-      setNewStrategyName('')
-      setNewStrategyContent('')
-      await loadFileStrategies()
-      setTimeout(() => setSuccess(null), 3000)
-    } catch (err: unknown) {
-      const error = err as { response?: { data?: { detail?: string } } }
-      setError(error.response?.data?.detail || t('createFailed'))
-    }
-  }
-
-  const deleteFileStrategy = async (name: string, source: 'data' | 'project' = 'data') => {
-    if (!confirm(t('deleteConfirm', { name }))) return
+    const ok = await validateCode(activeDraft.code)
+    if (!ok) return
 
     try {
-      setError(null)
-      await strategyFilesAPI.delete(name, source)
-      setSuccess(t('deleted'))
-      setSelectedStrategy(null)
-      setStrategyContent(null)
-      await loadFileStrategies()
-      setTimeout(() => setSuccess(null), 3000)
-    } catch (err: unknown) {
-      const error = err as { response?: { data?: { detail?: string } } }
-      setError(error.response?.data?.detail || t('deleteFailed'))
-    }
-  }
+      setSaving(true)
+      const payload = {
+        name: activeDraft.name.trim(),
+        class_name: activeDraft.class_name.trim(),
+        description: activeDraft.description.trim() || undefined,
+        code: normalizeCode(activeDraft.code),
+        parameters,
+      }
 
-  const deleteDbStrategy = async (id: number, name: string) => {
-    if (!confirm(t('deleteConfirm', { name }))) return
+      let strategyId = activeDraft.id
+      if (strategyId) {
+        await strategiesAPI.update(strategyId, payload)
+      } else {
+        const { data } = await strategiesAPI.create(payload)
+        strategyId = data?.id
+      }
 
-    try {
-      setError(null)
-      await strategiesAPI.delete(id)
-      setSuccess(t('deleted'))
-      setSelectedDbStrategy(null)
-      await loadDbStrategies()
-      setTimeout(() => setSuccess(null), 3000)
-    } catch (err: unknown) {
-      const error = err as { response?: { data?: { detail?: string } } }
-      setError(error.response?.data?.detail || t('deleteFailed'))
-    }
-  }
+      if (strategyId) {
+        const { data } = await strategiesAPI.get(strategyId)
+        setSelected(data)
+        setDraft(draftFromStrategy(data))
+        await loadHistory(strategyId)
+        await loadStrategies(strategyId)
+      }
 
-  const syncStrategies = async (direction: 'bidirectional' | 'data_to_project' | 'project_to_data' = 'bidirectional') => {
-    try {
-      setSyncing(true)
-      setError(null)
-      const { data }: { data: SyncResult } = await strategyFilesAPI.sync(direction)
-      const msg = t('sync.syncedMessage', { toData: data.copied_to_data, toProject: data.copied_to_project, unchanged: data.unchanged })
-      setSuccess(msg)
-      await loadFileStrategies()
-      if (fileView === 'compare') await loadComparisons()
-      setTimeout(() => setSuccess(null), 5000)
-    } catch (err: unknown) {
-      const error = err as { response?: { data?: { detail?: string } } }
-      setError(error.response?.data?.detail || t('sync.syncFailed'))
+      showToast('策略已保存', 'success')
+    } catch (error: unknown) {
+      const requestError = error as { response?: { data?: { detail?: string } } }
+      showToast(requestError.response?.data?.detail || '保存策略失败', 'error')
     } finally {
-      setSyncing(false)
+      setSaving(false)
     }
   }
 
-  const formatDate = (timestamp: number) => {
-    return new Date(timestamp * 1000).toLocaleString()
-  }
+  const importStrategyFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
 
-  const formatSize = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} B`
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-  }
+    try {
+      const content = await file.text()
+      const { data } = await strategyCodeAPI.parse({ content })
+      const firstClass = data?.classes?.[0]
+      const baseName = file.name.replace(/\.py$/i, '')
 
-  const getStatusBadge = (status: string) => {
-    const colors: Record<string, string> = {
-      synced: 'bg-green-100 text-green-800',
-      data_newer: 'bg-blue-100 text-blue-800',
-      project_newer: 'bg-yellow-100 text-yellow-800',
-      different: 'bg-orange-100 text-orange-800',
-      data_only: 'bg-purple-100 text-purple-800',
-      project_only: 'bg-pink-100 text-pink-800',
+      setDraft({
+        name: baseName,
+        class_name: firstClass?.name || sanitizeIdentifier(baseName),
+        description: '',
+        code: content,
+        parametersText: formatParameters(firstClass?.defaults || DEFAULT_PARAMETERS),
+      })
+      setValidation(DEFAULT_VALIDATION)
+      setImportModalOpen(false)
+      setTab('editor')
+      showToast('策略文件已导入', 'success')
+    } catch (error: unknown) {
+      const requestError = error as { response?: { data?: { detail?: string } } }
+      showToast(requestError.response?.data?.detail || '导入策略失败，请确认文件是有效的 Python 策略', 'error')
+    } finally {
+      if (importRef.current) {
+        importRef.current.value = ''
+      }
     }
-    return (
-      <span className={`px-2 py-1 rounded text-xs font-medium ${colors[status] || 'bg-gray-100 text-gray-800'}`}>
-        {status.replace('_', ' ')}
-      </span>
-    )
   }
+
+  const openEditorForStrategy = async (strategyId: number) => {
+    const strategy = await selectStrategy(strategyId)
+    if (!strategy) return
+    setDraft(draftFromStrategy(strategy))
+    setTab('editor')
+    showToast(`已加载 ${strategy.name}`, 'info')
+  }
+
+  const handleCopyStrategy = async (strategyId: number) => {
+    const strategy = await selectStrategy(strategyId)
+    if (!strategy) return
+
+    setDraft({
+      ...draftFromStrategy(strategy),
+      id: undefined,
+      name: `${strategy.name}_copy`,
+      class_name: sanitizeIdentifier(`${strategy.class_name || strategy.name}_copy`),
+    })
+    setTab('editor')
+    showToast(`${strategy.name} 已复制`, 'success')
+  }
+
+  const applyTemplate = (template: BuiltinTemplate) => {
+    const className = sanitizeIdentifier(template.name)
+    setDraft({
+      name: template.name,
+      class_name: className,
+      description: template.description,
+      code: template.code,
+      parametersText: JSON.stringify(DEFAULT_PARAMETERS, null, 2),
+    })
+    setTemplatePreview(null)
+    setCreateModalOpen(false)
+    setValidation(DEFAULT_VALIDATION)
+    setTab('editor')
+    showToast('模板已加载到编辑器', 'success')
+  }
+
+  const previewHistory = async (entry: HistoryEntry) => {
+    if (!selected) return
+
+    try {
+      const { data } = await strategyCodeAPI.getCodeHistory(selected.id, entry.id)
+      const title = data?.version ? `v${data.version}` : `v${entry.version || entry.id}`
+      setHistoryPreview({
+        title,
+        code: data.code || entry.code || '',
+        parameters: formatParameters(data.parameters ?? entry.parameters),
+      })
+      showToast(`正在查看 ${title} 版本`, 'info')
+    } catch {
+      showToast('加载历史版本失败', 'error')
+    }
+  }
+
+  const restoreHistory = (entry: HistoryEntry) => {
+    if (!selected) return
+
+    const label = entry.version ? `v${entry.version}` : `v${entry.id}`
+    setConfirmState({
+      message: `确定要回滚到 ${label} 版本？`,
+      onConfirm: () => {
+        void (async () => {
+          try {
+            await strategyCodeAPI.restoreCodeHistory(selected.id, entry.id)
+            await loadStrategies(selected.id)
+            showToast(`已回滚到 ${label}`, 'success')
+          } catch {
+            showToast('回滚历史版本失败', 'error')
+          }
+        })()
+      },
+    })
+  }
+
+  const handleCreateStrategy = () => {
+    const template =
+      createForm.templateKey === 'blank'
+        ? null
+        : templates.find((item) => item.key === createForm.templateKey || item.name === createForm.templateKey) || null
+
+    const strategyName = createForm.name.trim() || template?.name || 'MyStrategy_v1'
+    const className = sanitizeIdentifier(strategyName)
+    const baseCode = template?.code || buildTemplateCode(className, strategyName)
+
+    setDraft({
+      id: undefined,
+      name: strategyName,
+      class_name: className,
+      description: createForm.description.trim() || template?.description || '',
+      code: template ? template.code : baseCode,
+      parametersText: JSON.stringify(DEFAULT_PARAMETERS, null, 2),
+    })
+    setCreateForm(DEFAULT_CREATE_FORM)
+    setCreateModalOpen(false)
+    setValidation(DEFAULT_VALIDATION)
+    setTab('editor')
+    showToast('策略草稿已创建，可继续编辑并保存', 'success')
+  }
+
+  const validationTimestamp = selected?.updated_at
+    ? formatDateTime(selected.updated_at)
+    : formatDateTime(new Date().toISOString())
+  const versionTitle = selected?.name || activeTitle
+  const secondaryButtonClass =
+    'inline-flex items-center justify-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium transition-colors hover:bg-muted'
+  const ghostButtonClass =
+    'inline-flex items-center justify-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground'
+  const primaryButtonClass =
+    'inline-flex items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-white transition-opacity hover:opacity-90'
+  const inputClass =
+    'w-full px-3 py-2 text-sm rounded-md border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring'
+  const searchInputClass = `${inputClass} pl-9`
+  const textareaClass = `${inputClass} min-h-[96px] resize-none`
+  const labelClass = 'block text-sm font-medium mb-1'
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
-      <div className="flex-1 overflow-auto p-6">
-      {/* Header */}
-      {!editorFullScreen && (
-        <div className="flex items-center justify-between mb-6 page-header">
+    <div className="space-y-6">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-3xl font-bold">{t('title')}</h1>
-          <p className="text-muted-foreground mt-2">
-            {t('subtitle')}
-          </p>
+          <h1 className="text-2xl font-bold text-foreground">策略研究</h1>
+          <p className="text-sm text-muted-foreground">策略编辑、管理与版本控制</p>
         </div>
-        </div>
-      )}
-
-      {/* Tabs */}
-      {!editorFullScreen && (
-        <div className="mb-6 border-b border-gray-200">
-        <nav className="-mb-px flex space-x-8">
+        <div className="flex gap-2">
           <button
-            onClick={() => setActiveTab('files')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'files'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+            className={secondaryButtonClass}
+            onClick={() => setImportModalOpen(true)}
           >
-            {t('tabs.files')}
+            导入策略
           </button>
           <button
-            onClick={() => setActiveTab('optimize')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
-              activeTab === 'optimize'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+            className={primaryButtonClass}
+            onClick={() => setCreateModalOpen(true)}
           >
-            <TrendingUp className="h-4 w-4" />
-            {t('tabs.optimize')}
+            <Plus size={16} />
+            新建策略
           </button>
-        </nav>
         </div>
-      )}
-
-      {/* Alerts */}
-      {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-800 rounded">
-          {error}
-        </div>
-      )}
-      {success && (
-        <div className="mb-4 p-4 bg-green-50 border border-green-200 text-green-800 rounded">
-          {success}
-        </div>
-      )}
-      {classOptionsEdit && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-40" role="dialog">
-          <div className="bg-white dark:bg-gray-800 rounded shadow-lg w-full max-w-md p-4">
-            <div className="mb-3 font-semibold">{t('form.multipleClassesFound')}</div>
-            <div className="space-y-2 max-h-60 overflow-auto">
-              {classOptionsEdit.map((n) => (
-                <button key={n} onClick={() => handleEditClassPick(n)} className="w-full text-left px-3 py-2 border rounded hover:bg-gray-100 dark:hover:bg-gray-700">
-                  {n}
-                </button>
-              ))}
-            </div>
-            <div className="mt-3 text-right">
-              <button onClick={() => handleEditClassPick(null)} className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200">{t('common:cancel')}</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Strategy Files Tab */}
-      {activeTab === 'files' && (
-        <>
-          {/* Toolbar */}
-          {!editorFullScreen && (
-            <div className="mb-6 flex items-center gap-4 flex-wrap">
-            <button
-              onClick={() => {
-                setSelectedDbStrategy(null)
-                setShowDbForm(true)
-              }}
-              className="px-4 py-2 bg-green-600 text-white rounded flex items-center gap-2 hover:bg-green-700"
-            >
-              <Plus size={16} />
-              {t('newStrategy')}
-            </button>
-
-            <button
-              onClick={loadDbStrategies}
-              disabled={loading}
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded flex items-center gap-2 hover:bg-gray-200 disabled:opacity-50"
-            >
-              <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-              {t('common:refresh')}
-            </button>
-
-          </div>
-          )}
-
-          {/* Main Content */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-280px)]">
-            {/* List/Compare Panel */}
-            <div className={`bg-white rounded-lg shadow lg:col-span-4 overflow-hidden flex flex-col ${editorFullScreen ? 'hidden' : ''}`}>
-              {fileView === 'list' ? (
-                <div className="p-4 flex flex-col h-full overflow-hidden">
-                  <h2 className="text-lg font-semibold mb-4 flex-shrink-0">{t('fileList.strategyCount', { count: dbStrategies.length })}</h2>
-                  {loading ? (
-                    <div className="text-center py-8 text-gray-500">{t('common:loading')}</div>
-                  ) : dbStrategies.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">{t('common:noData')}</div>
-                  ) : (
-                    <div className="space-y-2 overflow-y-auto flex-1">
-                      {dbStrategies.map((strategy) => (
-                        <div key={strategy.id}>
-                          <div
-                            className={`p-3 border rounded hover:bg-gray-50 cursor-pointer ${
-                              selectedDbStrategy?.id === strategy.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
-                            }`}
-                            onClick={async () => {
-                              console.log('[Strategies] Selected strategy:', strategy)
-                              // Fetch full strategy details including code
-                              try {
-                                const fullStrategy = await strategiesAPI.get(strategy.id)
-                                setSelectedDbStrategy(fullStrategy.data)
-                                await loadDbStrategyHistory(strategy.id)
-                              } catch (err) {
-                                console.error('[Strategies] Failed to load strategy details:', err)
-                                setError(t('loadDetailsFailed'))
-                              }
-                            }}
-                          >
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <h3 className="font-medium text-gray-900">{strategy.name}</h3>
-                                  <span className="px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-600 text-xs font-medium">
-                                    v{strategy.version}
-                                  </span>
-                                </div>
-                                <p className="text-sm text-gray-500">
-                                  {strategy.class_name}
-                                </p>
-                                {strategy.description && (
-                                  <p className="text-xs text-gray-400 mt-1">{strategy.description}</p>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    navigate(`/paper-trading?strategy_id=${strategy.id}`)
-                                  }}
-                                  className="p-2 text-green-600 hover:bg-green-50 rounded"
-                                  title={t('deployPaperTrading')}
-                                >
-                                  <Play size={16} />
-                                </button>
-                                <button
-                                  onClick={async (e) => {
-                                    e.stopPropagation()
-                                    // Fetch full strategy details before opening form
-                                    try {
-                                      const fullStrategy = await strategiesAPI.get(strategy.id)
-                                      setSelectedDbStrategy(fullStrategy.data)
-                                      setShowDbForm(true)
-                                    } catch (err) {
-                                      console.error('[Strategies] Failed to load strategy for edit:', err)
-                                      setError(t('loadDetailsFailed'))
-                                    }
-                                  }}
-                                  className="p-2 text-blue-600 hover:bg-blue-50 rounded"
-                                  title={t('common:edit')}
-                                >
-                                  <Edit2 size={16} />
-                                </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    deleteDbStrategy(strategy.id, strategy.name)
-                                  }}
-                                  className="p-2 text-red-600 hover:bg-red-50 rounded"
-                                  title={t('common:delete')}
-                                >
-                                  <Trash2 size={16} />
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* History subsection */}
-                          {selectedDbStrategy?.id === strategy.id && (
-                            <div className="mt-2 p-3 border-l-2 border-blue-300 bg-blue-50 rounded-r">
-                              {dbStrategyHistory.length === 0 ? (
-                                <div className="text-sm text-gray-500 italic">{t('history.noHistory')}</div>
-                              ) : (
-                                <>
-                                  <h4 className="text-sm font-medium mb-2">{t('history.title')}</h4>
-                                  <div className="space-y-2 text-sm text-gray-700">
-                                    {dbStrategyHistory.map((v) => (
-                                      <div key={v.id} className="flex items-center justify-between">
-                                        <div>
-                                          <div className="font-mono text-xs">{v.version !== null && v.version !== undefined ? `v${v.version}` : t('history.versionNumber', { id: v.id })}</div>
-                                          <div className="text-xs text-gray-500">{new Date(v.created_at).toLocaleString()}</div>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                          <button
-                                            onClick={() => viewDbHistoryVersion(strategy.id, strategy.name, v.id)}
-                                            className="px-2 py-1 bg-white border rounded text-xs hover:bg-gray-50"
-                                          >
-                                            {t('common:view')}
-                                          </button>
-                                          <button
-                                            onClick={() => restoreDbHistoryVersion(strategy.id, v.id, strategy.name)}
-                                            className="px-2 py-1 bg-blue-600 text-white border rounded text-xs hover:bg-blue-700"
-                                          >
-                                            {t('history.restore')}
-                                          </button>
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ) : null}
-            </div>
-
-            {/* Details Panel */}
-            <div className={`bg-white rounded-lg shadow lg:col-span-8 overflow-hidden flex flex-col ${editorFullScreen ? 'fixed inset-0 z-50 rounded-none' : ''}`}>
-              {selectedDbStrategy && selectedDbStrategy.id ? (
-                <div className="flex flex-col h-full" key={`strategy-${selectedDbStrategy.id}`}>
-                  <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-lg font-semibold">{selectedDbStrategy.name}</h2>
-                      <span className="px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-600 text-xs font-medium">
-                        v{selectedDbStrategy.version}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {!isEditing ? (
-                        <>
-                          <button
-                            onClick={() => {
-                              setIsEditing(true)
-                              setEditContent(selectedDbStrategy.code || '')
-                              setEditName(selectedDbStrategy.name)
-                              setEditClassName(selectedDbStrategy.class_name)
-                              setEditDescription(selectedDbStrategy.description || '')
-                              setEditParameters(formatParameters(selectedDbStrategy.parameters))
-                              setEditorFullScreen(true)
-                            }}
-                            className="px-3 py-2 bg-blue-600 text-white rounded flex items-center gap-2 hover:bg-blue-700"
-                          >
-                            <Edit2 size={16} />
-                            {t('common:edit')}
-                          </button>
-                        </>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={async () => {
-                              try {
-                                const updatePayload: any = {}
-                                
-                                // Only send fields that have changed and are not empty
-                                if (editName.trim() && editName !== selectedDbStrategy.name) {
-                                  updatePayload.name = editName.trim()
-                                }
-                                if (editClassName.trim() && editClassName !== selectedDbStrategy.class_name) {
-                                  updatePayload.class_name = editClassName.trim()
-                                }
-                                if (editDescription.trim() !== (selectedDbStrategy.description || '')) {
-                                  updatePayload.description = editDescription.trim()
-                                }
-                                
-                                // Send parameters if changed �?compare normalized JSON
-                                const newString = (editParameters || '').trim()
-                                if (newString) {
-                                  try {
-                                    const parsed = JSON.parse(newString)
-                                    if (typeof parsed !== 'object' || Array.isArray(parsed)) {
-                                      setError(t('form.paramsJsonInvalid'))
-                                      return
-                                    }
-                                    // Compare normalized JSON to detect changes
-                                    const existingNormalized = JSON.stringify(selectedDbStrategy.parameters || {})
-                                    const newNormalized = JSON.stringify(parsed)
-                                    if (existingNormalized !== newNormalized) {
-                                      updatePayload.parameters = parsed
-                                    }
-                                  } catch (pe) {
-                                    setError(t('form.paramsJsonError', { error: (pe as any)?.message || String(pe) }))
-                                    return
-                                  }
-                                } else {
-                                  // Empty parameters editor �?send empty object if existing had data
-                                  if (selectedDbStrategy.parameters && Object.keys(selectedDbStrategy.parameters).length > 0) {
-                                    updatePayload.parameters = {}
-                                  }
-                                }
-
-                                // Always send code if it has content OR if it explicitly changed
-                                const normalizedExisting = selectedDbStrategy.code || ''
-                                const normalizedEdit = editContent || ''
-                                if (normalizedEdit !== normalizedExisting) {
-                                  if (normalizedEdit.trim() !== '') {
-                                    // User has typed code - always send it
-                                    updatePayload.code = normalizedEdit
-                                    console.debug('[Save] Sending updated code')
-                                  } else if (normalizedExisting.trim() !== '') {
-                                    // User is explicitly clearing existing code
-                                    updatePayload.code = ''
-                                    console.debug('[Save] Clearing code')
-                                  }
-                                  // else: both are empty, no need to send
-                                }
-                                
-                                // Force rebuild - payload should contain parsed object
-                                console.log('[Save] Update payload:', updatePayload)
-                                
-                                await strategiesAPI.update(selectedDbStrategy.id, updatePayload)
-                                setSuccess(t('updated'))
-                                setIsEditing(false)
-                                setEditorFullScreen(false)
-                                await loadDbStrategies()
-                                const updated = await strategiesAPI.get(selectedDbStrategy.id)
-                                setSelectedDbStrategy(updated.data)
-                                // Refresh DB-backed history versions after saving
-                                await loadDbStrategyHistory(updated.data.id)
-                                setTimeout(() => setSuccess(null), 3000)
-                              } catch (err: unknown) {
-                                const error = err as { response?: { data?: { detail?: string | any[] } } }
-                                console.error('[Save] Error:', err)
-                                console.error('[Save] Error response:', error.response)
-                                let errorMessage = t('updateFailed')
-                                if (error.response?.data?.detail) {
-                                  if (Array.isArray(error.response.data.detail)) {
-                                    errorMessage = error.response.data.detail.map((e: any) => 
-                                      typeof e === 'string' ? e : (e.msg || JSON.stringify(e))
-                                    ).join(', ')
-                                  } else {
-                                    errorMessage = error.response.data.detail
-                                  }
-                                }
-                                setError(errorMessage)
-                              }
-                            }}
-                            className="px-3 py-2 bg-green-600 text-white rounded flex items-center gap-2 hover:bg-green-700"
-                          >
-                            <Save size={16} />
-                            {t('common:save')}
-                          </button>
-                          <button
-                            onClick={() => {
-                              setIsEditing(false)
-                              setEditContent('')
-                              setEditName('')
-                              setEditClassName('')
-                              setEditDescription('')
-                              setEditParameters('')
-                              setEditorFullScreen(false)
-                            }}
-                            className="px-3 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
-                          >
-                            {t('common:cancel')}
-                          </button>
-                        </div>
-                      )}
-                      <button
-                        onClick={() => {
-                          setSelectedDbStrategy(null)
-                          setIsEditing(false)
-                          setEditorFullScreen(false)
-                        }}
-                        className="p-2 text-gray-500 hover:bg-gray-100 rounded"
-                      >
-                        <X size={20} />
-                      </button>
-                    </div>
-                  </div>
-
-                  {!isEditing ? (
-                    <div className="space-y-4 p-4 overflow-y-auto flex-1">
-                      {/* Class Name, Description, Status on one line */}
-                      <div className="flex items-center gap-4 pb-3 border-b flex-shrink-0">
-                        <div className="flex-shrink-0">
-                          <span className="text-sm font-medium text-gray-500">{t('view.class')}:</span>
-                          <span className="ml-2 text-base font-medium text-gray-900">{selectedDbStrategy.class_name}</span>
-                        </div>
-                        
-                        {selectedDbStrategy.description && (
-                          <div className="flex-1 min-w-0">
-                            <span className="text-sm font-medium text-gray-500">{t('view.description')}:</span>
-                            <span className="ml-2 text-base text-gray-700 truncate">{selectedDbStrategy.description}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {(selectedDbStrategy.parameters && ((typeof selectedDbStrategy.parameters === 'string' && (selectedDbStrategy.parameters as string).trim() !== '') || (typeof selectedDbStrategy.parameters === 'object' && Object.keys(selectedDbStrategy.parameters).length > 0))) && (
-                        <div>
-                          <label className="text-sm font-medium text-gray-600">{t('form.parameters')}</label>
-                          <pre className="mt-2 p-3 bg-gray-50 rounded border border-gray-200 overflow-x-auto text-xs">
-                            <code>{typeof selectedDbStrategy.parameters === 'string' ? selectedDbStrategy.parameters : JSON.stringify(selectedDbStrategy.parameters, null, 2)}</code>
-                          </pre>
-                        </div>
-                      )}
-
-                      {selectedDbStrategy.code ? (
-                        <div className="flex-shrink-0">
-                          <label className="text-sm font-medium text-gray-600 mb-2 block">{t('code')}</label>
-                          <div className="border border-gray-300 rounded overflow-auto max-h-[500px]">
-                            <SyntaxHighlighter
-                              language="python"
-                              style={vscDarkPlus}
-                              customStyle={{ margin: 0, fontSize: '13px' }}
-                              showLineNumbers
-                            >
-                              {selectedDbStrategy.code}
-                            </SyntaxHighlighter>
-                          </div>
-                        </div>
-                      ) : (
-                        <div>
-                          <label className="text-sm font-medium text-gray-600 mb-2 block">{t('code')}</label>
-                          <div className="p-8 text-center text-gray-500 border border-gray-200 rounded bg-gray-50">
-                            <p>{t('view.noCode')}</p>
-                            <button
-                              onClick={() => {
-                                setIsEditing(true)
-                                setEditContent('')
-                                setEditName(selectedDbStrategy.name)
-                                setEditClassName(selectedDbStrategy.class_name)
-                                setEditDescription(selectedDbStrategy.description || '')
-                                setEditParameters(formatParameters(selectedDbStrategy.parameters))
-                                setEditorFullScreen(true)
-                              }}
-                              className="mt-3 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
-                            >
-                              {t('view.addCode')}
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="grid grid-cols-2 gap-4 pt-4 border-t text-sm">
-                        <div>
-                          <label className="text-xs font-medium text-gray-500">{t('common:created')}</label>
-                          <p className="text-gray-800">{new Date(selectedDbStrategy.created_at).toLocaleString()}</p>
-                        </div>
-                        <div>
-                          <label className="text-xs font-medium text-gray-500">{t('view.updated')}</label>
-                          <p className="text-gray-800">{new Date(selectedDbStrategy.updated_at).toLocaleString()}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex flex-1 overflow-hidden absolute inset-0 top-[57px]">
-                      {/* Left: Code Editor */}
-                      <div className="flex-1 flex flex-col border-r border-gray-300 overflow-hidden">
-                        <div className="px-4 py-2 border-b border-gray-200 flex-shrink-0">
-                          <label className="text-sm font-medium text-gray-700">{t('code')}</label>
-                        </div>
-                        <div className="flex-1 relative overflow-auto">
-                          <div className="relative" style={{minHeight: '100%'}}>
-                            <textarea
-                              value={editContent}
-                              onChange={(e) => setEditContent(e.target.value)}
-                              className="absolute inset-0 w-full h-full px-3 py-2 font-mono text-sm focus:outline-none bg-transparent z-10 resize-none overflow-auto"
-                              spellCheck={false}
-                              style={{ color: 'transparent', caretColor: 'white' }}
-                            />
-                            <SyntaxHighlighter
-                              language="python"
-                              style={vscDarkPlus}
-                              customStyle={{ margin: 0, fontSize: '13px', pointerEvents: 'none', minHeight: '100%' }}
-                              showLineNumbers
-                            >
-                              {editContent || t('editor.codeHint')}
-                            </SyntaxHighlighter>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Right: Metadata & Parameters */}
-                      <div className="w-96 flex flex-col overflow-hidden flex-shrink-0 bg-gray-50 border-l border-gray-300">
-                        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">{t('form.name')}</label>
-                              <div className="flex gap-2">
-                                <input
-                                  type="text"
-                                  value={editName}
-                                  onChange={(e) => setEditName(e.target.value)}
-                                  className="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={handleEditLoadFromFileClick}
-                                  className="px-3 py-2 border border-gray-300 rounded bg-white hover:bg-gray-100 text-sm whitespace-nowrap"
-                                >
-                                  {t('form.loadFromFile')}
-                                </button>
-                                <input ref={editFileInputRef} type="file" accept=".py" className="hidden" onChange={handleEditFileSelected} />
-                              </div>
-                            </div>
-
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">{t('form.className')}</label>
-                              <input
-                                type="text"
-                                value={editClassName}
-                                onChange={(e) => setEditClassName(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder={t('form.classNamePlaceholder')}
-                              />
-                            </div>
-
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">{t('form.description')}</label>
-                              <textarea
-                                value={editDescription}
-                                onChange={(e) => setEditDescription(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                rows={3}
-                              />
-                            </div>
-
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">{t('form.defaultParametersJson')}</label>
-                              <textarea
-                                value={editParameters}
-                                onChange={(e) => setEditParameters(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
-                                rows={10}
-                                placeholder='{"fast_window": 5, "slow_window": 20}'
-                              />
-                              <p className="text-xs text-gray-500 mt-1">{t('form.parametersJsonHelp')}</p>
-                            </div>
-                          </div>
-                        </div>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="p-4 h-full flex items-center justify-center text-gray-500">
-                  {t('selectOrCreate')}
-                </div>
-              )}
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* Optimize Tab */}
-      {activeTab === 'optimize' && (
-        <div>
-          <StrategyOptimization />
-        </div>
-      )}
-
-      {/* History Version Modal */}
-      {showDbForm && (
-        <StrategyForm
-          strategy={selectedDbStrategy || undefined}
-          onClose={async () => {
-            setShowDbForm(false)
-            // Capture id before we potentially clear selection
-            const editedId = selectedDbStrategy?.id
-            // Refresh the strategies list
-            await loadDbStrategies()
-            if (editedId) {
-              // Reload the updated strategy and its history
-              const res = await strategiesAPI.get(editedId)
-              setSelectedDbStrategy(res.data)
-              await loadDbStrategyHistory(editedId)
-            } else {
-              setSelectedDbStrategy(null)
-            }
-          }}
-        />
-      )}
-
-      {showHistoryModal && historyModalContent && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowHistoryModal(false)}>
-          <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full mx-4 max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-4 border-b">
-              <div>
-                <h2 className="text-xl font-semibold">{historyModalContent.name}</h2>
-                <p className="text-sm text-gray-500">{t('history.version')}: {historyModalContent.versionName}</p>
-                <div className="text-sm text-gray-500 mt-1">
-                  {historyModalContent.strategyName && <div>{t('strategyName')}: {historyModalContent.strategyName}</div>}
-                  {historyModalContent.className && <div>{t('className')}: {historyModalContent.className}</div>}
-                  {historyModalContent.historyVersion && <div>{t('history.historyLabel')}: {historyModalContent.historyVersion}</div>}
-                </div>
-                {historyModalContent.parameters && (
-                  <div className="mt-2">
-                    <div className="text-xs font-medium text-gray-700">{t('form.parameters')}</div>
-                    <pre className="text-xs font-mono whitespace-pre-wrap bg-gray-50 p-2 rounded mt-1">{typeof historyModalContent.parameters === 'string' ? historyModalContent.parameters : JSON.stringify(historyModalContent.parameters, null, 2)}</pre>
-                  </div>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setShowDiff(!showDiff)}
-                  className={`px-3 py-1 rounded flex items-center gap-2 ${showDiff ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-                >
-                  <GitCompare size={16} />
-                  {showDiff ? t('hideDiff') : t('showDiff')}
-                </button>
-                <button
-                  onClick={() => setShowHistoryModal(false)}
-                  className="p-2 hover:bg-gray-100 rounded"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-            </div>
-            <div className="flex-1 overflow-auto">
-              {showDiff && (strategyContent || selectedDbStrategy) ? (
-                <div className="p-4">
-                  <div className="mb-2 text-sm font-medium text-gray-700">{t('history.diffLabel')}</div>
-                  <div className="border rounded overflow-hidden">
-                    {diffLines(
-                      strategyContent?.content || selectedDbStrategy?.code || '', 
-                      historyModalContent.content
-                    ).map((part, index) => {
-                      const bgColor = part.added ? 'bg-green-100' : part.removed ? 'bg-red-100' : 'bg-white'
-                      const textColor = part.added ? 'text-green-800' : part.removed ? 'text-red-800' : 'text-gray-800'
-                      const prefix = part.added ? '+ ' : part.removed ? '- ' : '  '
-                      return (
-                        <div key={index} className={`${bgColor} ${textColor}`}>
-                          {part.value.split('\n').map((line, lineIndex) => (
-                            line && <div key={lineIndex} className="px-3 py-0.5 font-mono text-xs whitespace-pre">{prefix}{line}</div>
-                          ))}
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              ) : (
-                <SyntaxHighlighter
-                  language="python"
-                  style={vscDarkPlus}
-                  customStyle={{ margin: 0, borderRadius: 0, fontSize: '13px' }}
-                  showLineNumbers
-                >
-                  {historyModalContent.content}
-                </SyntaxHighlighter>
-              )}
-            </div>
-            <div className="p-4 border-t flex justify-end gap-2">
-              <button
-                onClick={() => setShowHistoryModal(false)}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
-              >
-                {t('common:close')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
       </div>
+
+      <TabPanel tabs={TAB_OPTIONS} activeTab={tab} onChange={(key) => setTab(key as TabKey)}>
+        {tab === 'list' && (
+          <div className="space-y-4">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:flex-nowrap">
+              <div className="relative min-w-0 md:flex-1">
+                <Search
+                  size={16}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                />
+                <input
+                  type="text"
+                  className={searchInputClass}
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="🔍 搜索策略名称..."
+                />
+              </div>
+              <select
+                className={`${inputClass} w-full md:w-auto md:min-w-[160px]`}
+                value={typeFilter}
+                onChange={(event) => setTypeFilter(event.target.value)}
+              >
+                <option>{ALL_TYPE}</option>
+                <option>CTA</option>
+                <option>Custom</option>
+                <option>AI</option>
+              </select>
+              <select
+                className={`${inputClass} w-full md:w-auto md:min-w-[160px]`}
+                value={statusFilter}
+                onChange={(event) => setStatusFilter(event.target.value)}
+              >
+                <option>{ALL_STATUS}</option>
+                <option>active</option>
+                <option>draft</option>
+              </select>
+            </div>
+
+            <div className="overflow-hidden rounded-lg border border-border bg-card">
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-muted/40">
+                    <tr className="border-b border-border">
+                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">名称</th>
+                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">类型</th>
+                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">描述</th>
+                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">版本</th>
+                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">来源</th>
+                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">状态</th>
+                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {loading ? (
+                      <tr>
+                        <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
+                          正在加载策略列表...
+                        </td>
+                      </tr>
+                    ) : filteredStrategies.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
+                          暂无匹配的策略
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredStrategies.map((strategy) => (
+                        <tr key={strategy.id} className="border-b border-border/60 last:border-b-0">
+                          <td className="px-4 py-3 align-top">
+                            <div className="font-semibold text-foreground">{strategy.name}</div>
+                          </td>
+                          <td className="px-4 py-3 align-top">
+                            <Badge variant="primary">{inferType(strategy)}</Badge>
+                          </td>
+                          <td className="px-4 py-3 align-top text-muted-foreground">
+                            {strategy.description || '—'}
+                          </td>
+                          <td className="px-4 py-3 align-top">v{strategy.version}</td>
+                          <td className="px-4 py-3 align-top">
+                            {selectedBuiltin.has(strategy.name) ? '内置' : '自建'}
+                          </td>
+                          <td className="px-4 py-3 align-top">
+                            <Badge variant={strategy.is_active ? 'success' : 'muted'}>
+                              {strategy.is_active ? 'active' : 'draft'}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-3 align-top">
+                            <div className="flex flex-wrap gap-1">
+                              <button
+                                className={ghostButtonClass}
+                                onClick={() => void openEditorForStrategy(strategy.id)}
+                              >
+                                编辑
+                              </button>
+                              <button className={ghostButtonClass} onClick={() => navigate('/backtest')}>
+                                回测
+                              </button>
+                              <button
+                                className={ghostButtonClass}
+                                onClick={() => void handleCopyStrategy(strategy.id)}
+                              >
+                                复制
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {tab === 'editor' && (
+          <div className="space-y-4">
+            <div className="rounded-lg border border-border bg-card p-5">
+              <div className="mb-4 flex items-center justify-between gap-3 flex-wrap">
+                <h3 className="font-semibold text-card-foreground">代码编辑器 — {activeTitle}</h3>
+                <div className="flex gap-2 flex-wrap">
+                  <button
+                    className={ghostButtonClass}
+                    onClick={() => {
+                      setDraft((prev) => (prev ? { ...prev, code: normalizeCode(prev.code) } : prev))
+                      showToast('代码已格式化', 'success')
+                    }}
+                  >
+                    格式化
+                  </button>
+                  <button
+                    className={ghostButtonClass}
+                    onClick={() => activeDraft && void validateCode(activeDraft.code)}
+                  >
+                    验证语法
+                  </button>
+                  <button className={primaryButtonClass} onClick={() => void saveDraft()}>
+                    <Save size={14} />
+                    {saving ? '保存中...' : '保存'}
+                  </button>
+                </div>
+              </div>
+
+              <textarea
+                className="w-full min-h-[400px] rounded-lg border border-input bg-muted/40 p-4 font-mono text-sm leading-relaxed text-foreground resize-y focus:border-primary focus:ring-primary"
+                value={activeDraft?.code || DEFAULT_CODE}
+                onChange={(event) =>
+                  setDraft((prev) =>
+                    prev
+                      ? { ...prev, code: event.target.value }
+                      : {
+                          ...emptyDraft(),
+                          code: event.target.value,
+                        }
+                  )
+                }
+                spellCheck={false}
+              />
+
+              <div className="mt-3 flex items-center gap-3 flex-wrap">
+                <Badge variant={validation.ok === false ? 'warning' : 'success'}>
+                  {validation.ok === false ? '语法待修复' : '语法正确'}
+                </Badge>
+                <span className="text-[13px] text-muted-foreground">
+                  Python 3.11 · 最后修改 {validationTimestamp}
+                </span>
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-border bg-card p-5">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <h3 className="font-semibold text-card-foreground">策略参数</h3>
+                <span className="text-xs text-muted-foreground">自动从 JSON 参数提取数值字段</span>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                {parameterRows.map((row) => (
+                  <div key={row.key}>
+                    <label className={labelClass}>{row.label}</label>
+                    <input
+                      type="number"
+                      className={inputClass}
+                      value={row.value}
+                      step={row.step}
+                      onChange={(event) => {
+                        const value = Number(event.target.value)
+                        setDraft((prev) =>
+                          prev
+                            ? { ...prev, parametersText: updateParameterValue(prev.parametersText, row.key, value) }
+                            : {
+                                ...emptyDraft(),
+                                parametersText: updateParameterValue(JSON.stringify(DEFAULT_PARAMETERS, null, 2), row.key, value),
+                              }
+                        )
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {tab === 'versions' && (
+          <div className="rounded-lg border border-border bg-card p-5">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h3 className="font-semibold text-card-foreground">版本历史 — {versionTitle}</h3>
+            </div>
+            <div className="overflow-x-auto rounded-lg border border-border">
+              <table className="min-w-full text-sm">
+                <thead className="bg-muted/40">
+                  <tr className="border-b border-border">
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">版本</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">时间</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">提交者</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">说明</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {history.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
+                        暂无版本历史
+                      </td>
+                    </tr>
+                  ) : (
+                    history.map((entry, index) => (
+                      <tr key={entry.id} className="border-b border-border/60 last:border-b-0">
+                        <td className="px-4 py-3">
+                          <Badge variant={index === 0 ? 'primary' : 'muted'}>
+                            v{entry.version || entry.id}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3">{formatDateTime(entry.created_at)}</td>
+                        <td className="px-4 py-3">{user?.username || 'demo_user'}</td>
+                        <td className="px-4 py-3">{historyNote(index)}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-wrap gap-1">
+                            <button
+                              className={ghostButtonClass}
+                              onClick={() => void previewHistory(entry)}
+                            >
+                              查看
+                            </button>
+                            <button className={ghostButtonClass} onClick={() => restoreHistory(entry)}>
+                              回滚
+                            </button>
+                            {index > 0 && (
+                              <button
+                                className={ghostButtonClass}
+                                onClick={() =>
+                                  showToast(`显示 v${history[0]?.version || history[0]?.id} 与 v${entry.version || entry.id} 差异`, 'info')
+                                }
+                              >
+                                Diff
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {tab === 'templates' && (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {templates.map((template) => (
+              <div key={template.key} className="rounded-lg border border-border bg-card p-5">
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <h3 className="font-semibold text-card-foreground">{template.displayName}</h3>
+                  <Badge variant={getTemplateCategoryVariant(template.category)}>{template.category}</Badge>
+                </div>
+                <p className="my-2 text-[13px] text-muted-foreground">{template.description}</p>
+                <div className="flex gap-2">
+                  <button className={primaryButtonClass} onClick={() => applyTemplate(template)}>
+                    使用模板
+                  </button>
+                  <button className={ghostButtonClass} onClick={() => setTemplatePreview(template)}>
+                    预览
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </TabPanel>
+
+      <input ref={importRef} type="file" accept=".py" className="hidden" onChange={importStrategyFile} />
+
+      {createModalOpen && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center" onClick={() => setCreateModalOpen(false)}>
+            <div className="bg-card border border-border rounded-lg w-full max-w-[560px] max-h-[85vh] overflow-y-auto shadow-lg" onClick={(event) => event.stopPropagation()}>
+              <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+                <h3 className="font-semibold">新建策略</h3>
+                <button className="p-2 rounded hover:bg-muted" onClick={() => setCreateModalOpen(false)}>
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="p-5">
+                <div className="flex flex-col gap-4">
+                  <div>
+                    <label className={labelClass}>策略名称</label>
+                    <input
+                      className={inputClass}
+                      value={createForm.name}
+                      onChange={(event) => setCreateForm((prev) => ({ ...prev, name: event.target.value }))}
+                      placeholder="例如: MyStrategy_v1"
+                    />
+                  </div>
+                  <div>
+                    <label className={labelClass}>策略类型</label>
+                    <select
+                      className={inputClass}
+                      value={createForm.strategyType}
+                      onChange={(event) => setCreateForm((prev) => ({ ...prev, strategyType: event.target.value }))}
+                    >
+                      <option>CTA</option>
+                      <option>Alpha</option>
+                      <option>套利</option>
+                      <option>自定义</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelClass}>描述</label>
+                    <textarea
+                      className={textareaClass}
+                      rows={3}
+                      value={createForm.description}
+                      onChange={(event) => setCreateForm((prev) => ({ ...prev, description: event.target.value }))}
+                      placeholder="策略简要说明..."
+                    />
+                  </div>
+                  <div>
+                    <label className={labelClass}>基于模板</label>
+                    <select
+                      className={inputClass}
+                      value={createForm.templateKey}
+                      onChange={(event) => setCreateForm((prev) => ({ ...prev, templateKey: event.target.value }))}
+                    >
+                      <option value="blank">空白策略</option>
+                      {templates.map((template) => (
+                        <option key={template.key} value={template.key}>
+                          {template.displayName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div className="px-4 py-3 border-t border-border flex justify-end gap-2">
+                <button className="px-3 py-1.5 text-sm rounded-md border border-border hover:bg-muted" onClick={() => setCreateModalOpen(false)}>
+                  取消
+                </button>
+                <button className="px-3 py-1.5 text-sm rounded-md bg-primary text-white hover:opacity-90" onClick={handleCreateStrategy}>
+                  创建
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {importModalOpen && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center" onClick={() => setImportModalOpen(false)}>
+            <div className="bg-card border border-border rounded-lg w-full max-w-[480px] max-h-[85vh] overflow-y-auto shadow-lg" onClick={(event) => event.stopPropagation()}>
+              <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+                <h3 className="font-semibold">导入策略</h3>
+                <button className="p-2 rounded hover:bg-muted" onClick={() => setImportModalOpen(false)}>
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="p-5">
+                <div className="border-2 border-dashed border-border rounded-lg p-10 text-center text-muted-foreground">
+                  <p className="text-sm">将 .py 文件拖拽到此处，或点击上传</p>
+                  <button className="px-3 py-1.5 text-sm rounded-md border border-border mt-3" onClick={() => importRef.current?.click()}>
+                    <Upload size={16} />
+                    选择文件
+                  </button>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">支持 Python (.py) 格式，最大 500KB</p>
+              </div>
+              <div className="px-4 py-3 border-t border-border flex justify-end gap-2">
+                <button className="px-3 py-1.5 text-sm rounded-md border border-border" onClick={() => setImportModalOpen(false)}>
+                  取消
+                </button>
+                <button className="px-3 py-1.5 text-sm rounded-md bg-primary text-white hover:opacity-90" onClick={() => importRef.current?.click()}>
+                  导入
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {templatePreview && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center" onClick={() => setTemplatePreview(null)}>
+            <div className="bg-card border border-border rounded-lg w-full max-w-[900px] max-h-[85vh] overflow-y-auto shadow-lg" onClick={(event) => event.stopPropagation()}>
+              <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+                <h3 className="font-semibold">{templatePreview.displayName}</h3>
+                <button className="p-2 rounded hover:bg-muted" onClick={() => setTemplatePreview(null)}>
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="p-5">
+                <pre className="bg-muted p-4 rounded font-mono text-sm overflow-x-auto">{templatePreview.code}</pre>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {historyPreview && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center" onClick={() => setHistoryPreview(null)}>
+            <div className="bg-card border border-border rounded-lg w-full max-w-[900px] max-h-[85vh] overflow-y-auto shadow-lg" onClick={(event) => event.stopPropagation()}>
+              <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+                <h3 className="font-semibold">版本历史 — {historyPreview.title}</h3>
+                <button className="p-2 rounded hover:bg-muted" onClick={() => setHistoryPreview(null)}>
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="bg-muted border-t border-border p-4"><pre>{historyPreview.parameters}</pre></div>
+              <div className="p-5"><pre className="bg-muted p-4 rounded font-mono text-sm overflow-x-auto">{historyPreview.code}</pre></div>
+            </div>
+          </div>
+        )}
+
+        {toast && (
+          <div className="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none">
+            <div className="pointer-events-auto px-4 py-2 rounded shadow flex items-center gap-2 max-w-xs">
+              <span>{getToastIcon(toast.type)}</span>
+              <span>{toast.message}</span>
+            </div>
+          </div>
+        )}
+
+        {confirmState && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center" onClick={() => setConfirmState(null)}>
+            <div className="bg-card border border-border rounded-lg w-full max-w-[420px] p-5 shadow-lg" onClick={(event) => event.stopPropagation()}>
+              <h4 className="text-lg font-semibold">确认操作</h4>
+              <p className="mt-2 text-sm">{confirmState.message}</p>
+              <div className="mt-4 flex justify-end gap-2">
+                <button className="px-2 py-1 text-sm rounded border border-border" onClick={() => setConfirmState(null)}>
+                  取消
+                </button>
+                <button
+                  className="px-2.5 py-1 text-sm rounded bg-primary text-white hover:opacity-90"
+                  onClick={() => {
+                    confirmState.onConfirm()
+                    setConfirmState(null)
+                  }}
+                >
+                  确认
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
     </div>
   )
 }
-

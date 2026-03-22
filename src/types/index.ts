@@ -435,3 +435,155 @@ export interface StrategyShare {
   permission: 'view' | 'edit' | 'execute'
   created_at: string
 }
+
+// ── Dashboard / Analytics types ──────────────────────────────────────
+
+export interface DashboardMetrics {
+  portfolio_stats: {
+    total_value: number
+    daily_pnl: number
+    daily_pnl_pct: number
+    total_pnl: number
+    total_pnl_pct: number
+    cash: number
+  }
+  performance_history: Array<{ date: string; value: number; benchmark?: number }>
+  strategy_performance: Array<{ name: string; status: string; daily_return: number; total_return: number }>
+  sector_allocation: Array<{ name: string; value: number }>
+  risk_metrics: {
+    volatility: number
+    max_drawdown: number
+    sharpe_ratio: number
+    var_95: number
+  }
+}
+
+export interface RiskMetrics {
+  volatility: number
+  value_at_risk: number
+  max_drawdown: number
+  beta: number
+  sharpe_ratio: number
+  concentration: number
+  liquidity_score: number
+}
+
+// ── Market Data types ────────────────────────────────────────────────
+
+export interface MarketSymbol {
+  symbol: string
+  name: string
+  exchange: string
+  vt_symbol: string
+  industry?: string
+  list_date?: string
+}
+
+export interface OHLCBar {
+  datetime: string
+  open: number
+  high: number
+  low: number
+  close: number
+  volume: number
+}
+
+export interface MarketQuote {
+  symbol: string
+  name?: string
+  price: number
+  change: number
+  change_pct: number
+  volume: number
+  turnover?: number
+  high?: number
+  low?: number
+  open?: number
+  prev_close?: number
+}
+
+// ── Portfolio types ──────────────────────────────────────────────────
+
+export interface Position {
+  symbol: string
+  name?: string
+  quantity: number
+  avg_cost: number
+  market_price: number
+  market_value: number
+  pnl: number
+  pnl_pct: number
+  strategy?: string
+  direction?: 'long' | 'short'
+}
+
+export interface PortfolioData {
+  portfolio_id: number
+  cash: number
+  positions: Position[]
+}
+
+export interface Transaction {
+  id: number
+  symbol: string
+  direction: string
+  quantity: number
+  price: number
+  fee: number
+  created_at: string
+}
+
+// ── Settings types ───────────────────────────────────────────────────
+
+export interface DataSourceItem {
+  source: string
+  item_key: string
+  display_name?: string
+  enabled: boolean
+  permission?: string
+  category?: string
+}
+
+export interface SystemHealth {
+  version: string
+  python_version?: string
+  database: string
+  redis: string
+  uptime?: string
+  disk_usage?: string
+  memory_usage?: string
+}
+
+// ── User Profile ─────────────────────────────────────────────────────
+
+export interface UserProfile {
+  user_id: number
+  first_name?: string
+  last_name?: string
+  display_name?: string
+  bio?: string
+  avatar_url?: string
+  timezone?: string
+  language?: string
+  preferences?: Record<string, unknown>
+}
+
+// ── Deployment ───────────────────────────────────────────────────────
+
+export interface PaperDeployment {
+  id: number
+  strategy_id: number
+  strategy_name?: string
+  vt_symbol: string
+  status: 'running' | 'stopped' | 'error'
+  parameters?: Record<string, unknown>
+  created_at: string
+}
+
+export interface PaperPerformance {
+  total_return: number
+  sharpe_ratio: number
+  max_drawdown: number
+  total_trades: number
+  winning_rate: number
+}

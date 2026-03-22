@@ -13,6 +13,7 @@ import {
     XAxis,
     YAxis
 } from 'recharts'
+import { themeColors } from '../lib/theme'
 
 interface StockPriceDataPoint {
   datetime: string
@@ -383,11 +384,11 @@ export default function TradingChart({
             )}
             <Tooltip
               contentStyle={{
-                backgroundColor: 'hsl(var(--card))',
-                border: '1px solid hsl(var(--border))',
+                backgroundColor: themeColors.card,
+                border: `1px solid ${themeColors.border}`,
                 borderRadius: '8px',
               }}
-              labelStyle={{ color: 'hsl(var(--foreground))' }}
+              labelStyle={{ color: themeColors.foreground }}
               formatter={(value: any, name: any) => {
                 if (value === undefined || value === null) return ['N/A', name]
                 if (name === stockSymbol) {

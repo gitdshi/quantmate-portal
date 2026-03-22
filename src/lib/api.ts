@@ -284,13 +284,19 @@ export const portfolioAPI = {
 
 // Optimization API
 export const optimizationAPI = {
-  submit: (data: any) => api.post('/optimization', data),
-  
-  getStatus: (jobId: string) => api.get(`/optimization/${jobId}`),
-  
-  getHistory: () => api.get('/optimization/history'),
-  
-  cancel: (jobId: string) => api.post(`/optimization/${jobId}/cancel`),
+  listTasks: (page = 1, pageSize = 20) =>
+    api.get('/optimization/tasks', { params: { page, page_size: pageSize } }),
+
+  getTask: (taskId: number) => api.get(`/optimization/tasks/${taskId}`),
+
+  createTask: (data: {
+    strategy_id: number
+    search_method: 'grid' | 'random' | 'bayesian'
+    param_space: Record<string, { min: number; max: number; step: number }>
+    objective_metric: string
+  }) => api.post('/optimization/tasks', data),
+
+  getResults: (taskId: number) => api.get(`/optimization/tasks/${taskId}/results`),
 }
 
 // Legacy aliases for backward compatibility (deprecated - use strategiesAPI instead)

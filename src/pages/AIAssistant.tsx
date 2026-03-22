@@ -1,284 +1,222 @@
-import { useCallback, useEffect, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import {
-  Bot, Loader2, MessageSquare, Plus, Send, Settings2, Trash2, X
+  Bot,
+  Code2,
+  Lightbulb,
+  Paperclip,
+  BarChart3,
+  Send,
+  Sparkles,
 } from 'lucide-react'
+import { useRef, useState } from 'react'
+
+import TabPanel from '../components/ui/TabPanel'
+import { showToast } from '../components/ui/Toast'
 import { aiAPI } from '../lib/api'
-import type { AIConversation, AIMessage, AIModelConfig } from '../types'
+
+interface Message {
+  role: 'user' | 'assistant'
+  content: string
+  timestamp: Date
+}
+
+const TABS = [
+  { key: 'chat', label: 'AI 对话', icon: <Bot size={16} /> },
+  { key: 'codegen', label: '代码生成', icon: <Code2 size={16} /> },
+  { key: 'insight', label: '智能洞察', icon: <Lightbulb size={16} /> },
+  { key: 'suggest', label: '策略建议', icon: <Sparkles size={16} /> },
+]
 
 export default function AIAssistant() {
-  const { t } = useTranslation(['social', 'common'])
-  const [conversations, setConversations] = useState<AIConversation[]>([])
-  const [messages, setMessages] = useState<AIMessage[]>([])
-  const [models, setModels] = useState<AIModelConfig[]>([])
-  const [activeConv, setActiveConv] = useState<AIConversation | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [sending, setSending] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState('chat')
+  const [messages, setMessages] = useState<Message[]>([
+    { role: 'assistant', content: '你好！我是 QuantMate AI 助手，可以帮你分析策略、生成代码、解读行情。请问有什么可以帮助你的？', timestamp: new Date() },
+  ])
   const [input, setInput] = useState('')
-  const [showNewConv, setShowNewConv] = useState(false)
-  const [showModels, setShowModels] = useState(false)
-  const [newTitle, setNewTitle] = useState('')
-  const [newModel, setNewModel] = useState('')
+  const [codeReq, setCodeReq] = useState('')
+  const [generatedCode, setGeneratedCode] = useState('')
+  const [conversationId, setConversationId] = useState<number | null>(null)
+  const chatEndRef = useRef<HTMLDivElement>(null)
 
-  const fetchConversations = useCallback(async () => {
-    setLoading(true)
-    try {
-      const { data } = await aiAPI.listConversations({ page_size: 100 })
-      const result = data as any
-      setConversations(result.data || result || [])
-    } catch {
-      setError(t('ai.loadFailed'))
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+  const { data: conversations = [] } = useQuery<{ id: number; title: string }[]>({
+    queryKey: ['ai-conversations'],
+    queryFn: () => aiAPI.listConversations().then((r) => {
+      const d = r.data
+      return Array.isArray(d) ? d : d?.data ?? []
+    }),
+  })
 
-  const fetchModels = useCallback(async () => {
-    try {
-      const { data } = await aiAPI.listModels()
-      setModels(Array.isArray(data) ? data : data.data || [])
-    } catch { /* ignore */ }
-  }, [])
-
-  useEffect(() => { fetchConversations(); fetchModels() }, [fetchConversations, fetchModels])
-
-  const selectConversation = async (conv: AIConversation) => {
-    setActiveConv(conv)
-    try {
-      const { data } = await aiAPI.listMessages(conv.id)
-      setMessages(Array.isArray(data) ? data : data.data || [])
-    } catch {
-      setError(t('ai.loadMessagesFailed'))
-    }
-  }
-
-  const handleCreateConversation = async () => {
-    if (!newTitle.trim()) return
-    try {
-      await aiAPI.createConversation({ title: newTitle, model: newModel || undefined })
-      setNewTitle('')
-      setNewModel('')
-      setShowNewConv(false)
-      fetchConversations()
-    } catch (err: any) {
-      setError(err?.response?.data?.message || t('ai.createFailed'))
-    }
-  }
-
-  const handleSendMessage = async () => {
-    if (!input.trim() || !activeConv) return
-    setSending(true)
-    try {
-      const { data } = await aiAPI.sendMessage(activeConv.id, { content: input })
-      setInput('')
-      // data contains both user message and assistant response
-      const newMsgs = data as any
-      if (newMsgs.user_message) {
-        setMessages(prev => [...prev, newMsgs.user_message, newMsgs.assistant_message])
-      } else {
-        // Refresh
-        const { data: msgs } = await aiAPI.listMessages(activeConv.id)
-        setMessages(Array.isArray(msgs) ? msgs : msgs.data || [])
+  const createConvMutation = useMutation({
+    mutationFn: (msg: string) => aiAPI.createConversation({ title: msg.slice(0, 50) }),
+    onSuccess: (res, msg) => {
+      const conv = res.data
+      const id = conv?.id ?? conv?.data?.id
+      if (id) {
+        setConversationId(id)
+        sendMessageMutation.mutate({ conversationId: id, content: msg })
       }
-    } catch (err: any) {
-      setError(err?.response?.data?.message || t('ai.sendFailed'))
-    } finally {
-      setSending(false)
+    },
+    onError: () => {
+      setMessages((prev) => [...prev, { role: 'assistant', content: '抱歉，AI 服务暂时不可用，请稍后重试。', timestamp: new Date() }])
+    },
+  })
+
+  const sendMessageMutation = useMutation({
+    mutationFn: (data: { conversationId: number; content: string }) => aiAPI.sendMessage(data.conversationId, { content: data.content }),
+    onSuccess: (res) => {
+      const reply = res.data?.content ?? res.data?.data?.content ?? '收到，正在思考中...'
+      setMessages((prev) => [...prev, { role: 'assistant', content: reply, timestamp: new Date() }])
+      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    },
+    onError: () => {
+      setMessages((prev) => [...prev, { role: 'assistant', content: '抱歉，AI 服务暂时不可用，请稍后重试。', timestamp: new Date() }])
+    },
+  })
+
+  const handleSend = () => {
+    if (!input.trim()) return
+    const msg = input.trim()
+    setMessages((prev) => [...prev, { role: 'user', content: msg, timestamp: new Date() }])
+    setInput('')
+    if (conversationId) {
+      sendMessageMutation.mutate({ conversationId, content: msg })
+    } else {
+      createConvMutation.mutate(msg)
     }
   }
 
-  const handleDeleteConversation = async (id: number) => {
-    try {
-      await aiAPI.deleteConversation(id)
-      if (activeConv?.id === id) { setActiveConv(null); setMessages([]) }
-      fetchConversations()
-    } catch { setError(t('ai.deleteFailed')) }
+  const codeGenConvId = useRef<number | null>(null)
+
+  const codeGenCreateMutation = useMutation({
+    mutationFn: (req: string) => aiAPI.createConversation({ title: `代码生成: ${req.slice(0, 30)}` }),
+    onSuccess: (res, req) => {
+      const conv = res.data
+      const id = conv?.id ?? conv?.data?.id
+      if (id) {
+        codeGenConvId.current = id
+        codeGenSendMutation.mutate({ conversationId: id, content: `请生成以下策略代码：${req}` })
+      }
+    },
+    onError: () => showToast('代码生成失败', 'error'),
+  })
+
+  const codeGenSendMutation = useMutation({
+    mutationFn: (data: { conversationId: number; content: string }) => aiAPI.sendMessage(data.conversationId, { content: data.content }),
+    onSuccess: (res) => {
+      const code = res.data?.content ?? res.data?.data?.content ?? '# TODO: AI generated code'
+      setGeneratedCode(code)
+    },
+    onError: () => showToast('代码生成失败', 'error'),
+  })
+
+  const handleCodeGen = () => {
+    if (!codeReq.trim()) return
+    codeGenCreateMutation.mutate(codeReq.trim())
   }
+
+  const isChatPending = createConvMutation.isPending || sendMessageMutation.isPending
+  const isCodeGenPending = codeGenCreateMutation.isPending || codeGenSendMutation.isPending
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)]" data-testid="ai-assistant-page">
-      <div className="flex flex-1 min-h-0">
-      {/* Sidebar */}
-      <div className="w-72 border-r border-gray-200 bg-gray-50 flex flex-col">
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="font-semibold text-gray-900 flex items-center gap-2">
-            <Bot className="h-5 w-5" /> {t('ai.title')}
-          </h2>
-          <div className="flex gap-1">
-            <button onClick={() => setShowModels(true)} className="p-1 hover:bg-gray-200 rounded" title={t('ai.modelSettings')}>
-              <Settings2 className="h-4 w-4" />
-            </button>
-            <button onClick={() => setShowNewConv(true)} className="p-1 hover:bg-gray-200 rounded" title={t('ai.newConversation')}>
-              <Plus className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-        <div className="flex-1 overflow-y-auto">
-          {conversations.map(c => (
-            <div
-              key={c.id}
-              onClick={() => selectConversation(c)}
-              className={`p-3 cursor-pointer border-b border-gray-100 flex items-center justify-between group ${
-                activeConv?.id === c.id ? 'bg-blue-50 border-l-2 border-l-blue-500' : 'hover:bg-gray-100'
-              }`}
-            >
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-gray-900 truncate">{c.title}</p>
-                <p className="text-xs text-gray-500">{c.model || t('ai.defaultModel')}</p>
-              </div>
-              <button
-                onClick={e => { e.stopPropagation(); handleDeleteConversation(c.id) }}
-                className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded"
-              >
-                <Trash2 className="h-3 w-3 text-red-500" />
-              </button>
-            </div>
-          ))}
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">AI 助手</h1>
+          <p className="text-sm text-muted-foreground">智能对话 · 代码生成 · 策略洞察</p>
         </div>
       </div>
 
-      {/* Chat area */}
-      <div className="flex-1 flex flex-col">
-        {error && (
-          <div className="mx-4 mt-2 px-3 py-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">
-            {error}
-            <button onClick={() => setError(null)} className="ml-2 text-red-500 hover:text-red-700">
-              <X className="h-3 w-3 inline" />
-            </button>
-          </div>
-        )}
-
-        {loading ? (
-          <div className="flex-1 flex items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-          </div>
-        ) : !activeConv ? (
-          <div className="flex-1 flex items-center justify-center text-gray-400">
-            <div className="text-center">
-              <MessageSquare className="h-12 w-12 mx-auto mb-3" />
-              <p>{t('ai.selectConversation')}</p>
-            </div>
-          </div>
-        ) : (
-          <>
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {messages.map(msg => (
-                <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[80%] rounded-lg px-4 py-2 ${
-                    msg.role === 'user'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-900'
-                  }`}>
-                    <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                    <p className={`text-xs mt-1 ${msg.role === 'user' ? 'text-blue-100' : 'text-gray-400'}`}>
-                      {new Date(msg.created_at).toLocaleTimeString()}
-                    </p>
+      <TabPanel tabs={TABS} activeTab={activeTab} onChange={setActiveTab}>
+        {/* ── Chat ─────────────────────────────────────── */}
+        {activeTab === 'chat' && (
+          <div className="flex flex-col h-[60vh]">
+            <div className="flex-1 overflow-y-auto space-y-4 p-4 rounded-lg border border-border bg-card">
+              {messages.map((msg, i) => (
+                <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[75%] rounded-lg px-4 py-2.5 text-sm ${msg.role === 'user' ? 'bg-primary text-white' : 'bg-muted text-foreground'}`}>
+                    {msg.content.includes('```') ? (
+                      <pre className="whitespace-pre-wrap font-mono text-xs mt-1 bg-black/10 dark:bg-white/10 rounded p-2">{msg.content}</pre>
+                    ) : (
+                      <p className="whitespace-pre-wrap">{msg.content}</p>
+                    )}
+                    <p className="text-[10px] opacity-60 mt-1">{msg.timestamp.toLocaleTimeString()}</p>
                   </div>
                 </div>
               ))}
+              {isChatPending && (
+                <div className="flex justify-start"><div className="bg-muted rounded-lg px-4 py-2.5 text-sm"><span className="animate-pulse">思考中...</span></div></div>
+              )}
+              <div ref={chatEndRef} />
             </div>
 
-            {/* Input */}
-            <div className="border-t border-gray-200 p-4">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={input}
-                  onChange={e => setInput(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
-                  placeholder={t('ai.typeMessage')}
-                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  disabled={sending}
-                />
-                <button
-                  onClick={handleSendMessage}
-                  disabled={sending || !input.trim()}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1"
-                >
-                  {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            <div className="flex items-center gap-2 mt-3">
+              <button className="p-2 rounded-md hover:bg-muted text-muted-foreground"><Paperclip size={18} /></button>
+              <button className="p-2 rounded-md hover:bg-muted text-muted-foreground"><BarChart3 size={18} /></button>
+              <input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
+                placeholder="输入你的问题..."
+                className="flex-1 px-4 py-2.5 text-sm rounded-md border border-border bg-background"
+              />
+              <button onClick={handleSend} disabled={!input.trim() || isChatPending} className="p-2.5 rounded-md bg-primary text-white hover:opacity-90 disabled:opacity-50"><Send size={18} /></button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Code Generation ─────────────────────────── */}
+        {activeTab === 'codegen' && (
+          <div className="space-y-4">
+            <div className="rounded-lg border border-border bg-card p-5">
+              <h3 className="font-semibold text-card-foreground mb-3">需求描述</h3>
+              <textarea
+                value={codeReq}
+                onChange={(e) => setCodeReq(e.target.value)}
+                placeholder="描述你需要的策略逻辑，例如：生成一个基于RSI指标的反转策略，RSI低于30时买入，高于70时卖出..."
+                className="w-full h-28 px-3 py-2 text-sm rounded-md border border-border bg-background resize-none"
+              />
+              <div className="flex items-center gap-2 mt-3">
+              <button onClick={handleCodeGen} disabled={!codeReq.trim() || isCodeGenPending} className="px-4 py-2 text-sm rounded-md bg-primary text-white hover:opacity-90 disabled:opacity-50">
+                  {isCodeGenPending ? '生成中...' : '生成代码'}
                 </button>
               </div>
             </div>
-          </>
-        )}
-      </div>
 
-      {/* New Conversation Modal */}
-      {showNewConv && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-96 shadow-xl">
-            <h3 className="text-lg font-semibold mb-4">{t('ai.newConversationTitle')}</h3>
-            <input
-              type="text"
-              value={newTitle}
-              onChange={e => setNewTitle(e.target.value)}
-              placeholder={t('ai.conversationTitle')}
-              className="w-full border border-gray-300 rounded px-3 py-2 text-sm mb-3"
-            />
-            <select
-              value={newModel}
-              onChange={e => setNewModel(e.target.value)}
-              className="w-full border border-gray-300 rounded px-3 py-2 text-sm mb-4"
-            >
-              <option value="">{t('ai.defaultModelOption')}</option>
-              {models.map(m => (
-                <option key={m.id} value={m.name}>{m.name} ({m.provider})</option>
-              ))}
-            </select>
-            <div className="flex justify-end gap-2">
-              <button onClick={() => setShowNewConv(false)} className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded">
-                {t('common:cancel')}
-              </button>
-              <button onClick={handleCreateConversation} className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
-                {t('common:create')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Models Modal */}
-      {showModels && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-[32rem] shadow-xl max-h-[80vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">{t('ai.aiModels')}</h3>
-              <button onClick={() => setShowModels(false)} className="p-1 hover:bg-gray-100 rounded">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            {models.length === 0 ? (
-              <p className="text-gray-500 text-sm">{t('ai.noModels')}</p>
-            ) : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-2">{t('common:name')}</th>
-                    <th className="text-left py-2">{t('ai.provider')}</th>
-                    <th className="text-left py-2">{t('common:status')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {models.map(m => (
-                    <tr key={m.id} className="border-b border-gray-100">
-                      <td className="py-2 font-medium">{m.name}</td>
-                      <td className="py-2 text-gray-600">{m.provider}</td>
-                      <td className="py-2">
-                        <span className={`px-2 py-0.5 rounded text-xs ${m.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                          {m.is_active ? t('common:active') : t('common:inactive')}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            {generatedCode && (
+              <div className="rounded-lg border border-border bg-card p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold text-card-foreground">生成结果</h3>
+                  <button onClick={() => { navigator.clipboard.writeText(generatedCode); showToast('已复制', 'success') }} className="text-xs px-2 py-1 rounded border border-border hover:bg-muted">复制代码</button>
+                </div>
+                <pre className="bg-muted rounded-md p-4 text-xs font-mono overflow-x-auto whitespace-pre-wrap">{generatedCode}</pre>
+              </div>
             )}
+
+            <div className="rounded-lg border border-border bg-card p-5">
+              <h3 className="font-semibold text-card-foreground mb-3">常用提示</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {[
+                  { label: '双均线策略', prompt: '生成一个双均线交叉策略，使用5日和20日均线' },
+                  { label: 'RSI 反转', prompt: '生成一个RSI超买超卖反转策略' },
+                  { label: 'MACD 策略', prompt: '生成MACD金叉死叉策略' },
+                ].map((t) => (
+                  <button key={t.label} onClick={() => setCodeReq(t.prompt)} className="text-left px-3 py-2 text-sm rounded-md border border-border hover:bg-muted hover:border-primary">{t.label}</button>
+                ))}
+              </div>
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+
+        {/* ── Insights ────────────────────────────────── */}
+        {activeTab === 'insight' && (
+          <p className="text-center text-muted-foreground py-8">暂无智能洞察数据，通过 AI 对话获取洞察建议</p>
+        )}
+
+        {/* ── Suggestions ─────────────────────────────── */}
+        {activeTab === 'suggest' && (
+          <p className="text-center text-muted-foreground py-8">暂无策略建议，通过 AI 对话获取个性化建议</p>
+        )}
+      </TabPanel>
     </div>
   )
 }

@@ -1,385 +1,258 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  Copy, Key, Loader2, Monitor, Plus, Shield, ShieldCheck, Smartphone,
-  Trash2, X
+  CreditCard,
+  Key,
+  Laptop,
+  Lock,
+  Plus,
+  Shield,
+  User,
 } from 'lucide-react'
-import { accountSecurityAPI } from '../lib/api'
-import type { APIKey, UserSession } from '../types'
+import { useState } from 'react'
 
-type Tab = 'mfa' | 'apikeys' | 'sessions'
+import Badge from '../components/ui/Badge'
+import DataTable, { type Column } from '../components/ui/DataTable'
+import Modal from '../components/ui/Modal'
+import TabPanel from '../components/ui/TabPanel'
+import ToggleSwitch from '../components/ui/ToggleSwitch'
+import { showToast } from '../components/ui/Toast'
+import { accountSecurityAPI } from '../lib/api'
+
+interface APIKey {
+  id: string
+  name: string
+  key_prefix: string
+  permissions: string[]
+  created_at: string
+  last_used?: string
+  status: string
+}
+
+interface Session {
+  id: string
+  device: string
+  ip: string
+  location: string
+  last_active: string
+  current: boolean
+}
+
+const TABS = [
+  { key: 'profile', label: '个人资料', icon: <User size={16} /> },
+  { key: 'security', label: '安全设置', icon: <Lock size={16} /> },
+  { key: 'apikeys', label: 'API 密钥', icon: <Key size={16} /> },
+  { key: 'sessions', label: '登录会话', icon: <Laptop size={16} /> },
+  { key: 'billing', label: '订阅计费', icon: <CreditCard size={16} /> },
+]
 
 export default function AccountSecurity() {
-  const [tab, setTab] = useState<Tab>('mfa')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
+  const queryClient = useQueryClient()
+  const [activeTab, setActiveTab] = useState('profile')
+  const [newKeyModal, setNewKeyModal] = useState(false)
 
-  // MFA state
-  const [mfaSetupData, setMfaSetupData] = useState<{ secret: string; qr_uri: string; recovery_codes?: string[] } | null>(null)
-  const [mfaCode, setMfaCode] = useState('')
-  const [mfaVerified, setMfaVerified] = useState(false)
+  const { data: apiKeys = [] } = useQuery<APIKey[]>({
+    queryKey: ['api-keys'],
+    queryFn: () => accountSecurityAPI.listApiKeys().then((r) => {
+      const d = r.data
+      return Array.isArray(d) ? d : d?.data ?? []
+    }),
+    enabled: activeTab === 'apikeys',
+  })
 
-  // API Keys state
-  const [apiKeys, setApiKeys] = useState<APIKey[]>([])
-  const [showKeyForm, setShowKeyForm] = useState(false)
-  const [keyForm, setKeyForm] = useState({ name: '', rate_limit: 100 })
-  const [newKeySecret, setNewKeySecret] = useState<string | null>(null)
+  const createKeyMutation = useMutation({
+    mutationFn: (data: { name: string; permissions: string[] }) => accountSecurityAPI.createApiKey(data),
+    onSuccess: () => {
+      showToast('密钥已创建', 'success')
+      setNewKeyModal(false)
+      queryClient.invalidateQueries({ queryKey: ['api-keys'] })
+    },
+    onError: () => showToast('创建失败', 'error'),
+  })
 
-  // Sessions state
-  const [sessions, setSessions] = useState<UserSession[]>([])
+  const revokeKeyMutation = useMutation({
+    mutationFn: (id: string) => accountSecurityAPI.deleteApiKey(Number(id)),
+    onSuccess: () => {
+      showToast('密钥已删除', 'success')
+      queryClient.invalidateQueries({ queryKey: ['api-keys'] })
+    },
+  })
 
-  const fetchApiKeys = useCallback(async () => {
-    setLoading(true)
-    try {
-      const { data } = await accountSecurityAPI.listApiKeys()
-      setApiKeys(Array.isArray(data) ? data : data.data || [])
-    } catch {
-      setError('Failed to load API keys')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+  // ── Placeholder data ──
+  const [profile, setProfile] = useState({
+    displayName: '张涛',
+    email: 'zhang@example.com',
+    phone: '138****8888',
+    company: 'QuantMate',
+    bio: '量化交易研究员',
+  })
 
-  const fetchSessions = useCallback(async () => {
-    setLoading(true)
-    try {
-      const { data } = await accountSecurityAPI.listSessions()
-      setSessions(Array.isArray(data) ? data : data.data || [])
-    } catch {
-      setError('Failed to load sessions')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+  const [security, setSecurity] = useState({
+    twoFA: false,
+    twoFAMethods: { totp: false, sms: false, email: true },
+  })
 
-  useEffect(() => {
-    if (tab === 'apikeys') fetchApiKeys()
-    else if (tab === 'sessions') fetchSessions()
-  }, [tab, fetchApiKeys, fetchSessions])
+  const { data: sessions = [] } = useQuery<Session[]>({
+    queryKey: ['auth-sessions'],
+    queryFn: () => accountSecurityAPI.listSessions().then((r) => {
+      const d = r.data
+      return Array.isArray(d) ? d : d?.data ?? []
+    }),
+    enabled: activeTab === 'sessions',
+  })
 
-  const handleMfaSetup = async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const { data } = await accountSecurityAPI.mfaSetup()
-      setMfaSetupData(data as any)
-    } catch {
-      setError('Failed to initiate MFA setup')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const keyCols: Column<APIKey>[] = [
+    { key: 'name', label: '名称' },
+    { key: 'key_prefix', label: '密钥', render: (k) => <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{k.key_prefix}</code> },
+    { key: 'permissions', label: '权限', render: (k) => <div className="flex gap-1 flex-wrap">{k.permissions.map((p) => <Badge key={p} variant="primary">{p}</Badge>)}</div> },
+    { key: 'created_at', label: '创建时间' },
+    { key: 'last_used', label: '最近使用', render: (k) => k.last_used || '-' },
+    { key: 'status', label: '状态', render: (k) => <Badge variant={k.status === 'active' ? 'success' : 'muted'}>{k.status === 'active' ? '活跃' : '已吊销'}</Badge> },
+    { key: 'id', label: '操作', render: (k) => k.status === 'active' ? <button onClick={() => revokeKeyMutation.mutate(k.id)} className="text-xs text-red-500 hover:text-red-700">删除</button> : null },
+  ]
 
-  const handleMfaVerify = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
-    try {
-      await accountSecurityAPI.mfaVerify(mfaCode)
-      setMfaVerified(true)
-      setSuccess('MFA enabled successfully!')
-      setMfaCode('')
-    } catch {
-      setError('Invalid verification code')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleMfaDisable = async () => {
-    const code = prompt('Enter your TOTP code to disable MFA:')
-    if (!code) return
-    setLoading(true)
-    try {
-      await accountSecurityAPI.mfaDisable(code)
-      setMfaSetupData(null)
-      setMfaVerified(false)
-      setSuccess('MFA disabled')
-    } catch {
-      setError('Failed to disable MFA. Check your code.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleCreateApiKey = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
-    try {
-      const { data } = await accountSecurityAPI.createApiKey({
-        name: keyForm.name,
-        rate_limit: keyForm.rate_limit,
-      })
-      setNewKeySecret((data as any).secret_key || (data as any).key_secret || null)
-      setShowKeyForm(false)
-      setKeyForm({ name: '', rate_limit: 100 })
-      fetchApiKeys()
-    } catch {
-      setError('Failed to create API key')
-    }
-  }
-
-  const handleDeleteApiKey = async (id: number) => {
-    try {
-      await accountSecurityAPI.deleteApiKey(id)
-      fetchApiKeys()
-    } catch {
-      setError('Failed to delete API key')
-    }
-  }
-
-  const handleRevokeSession = async (id: number) => {
-    try {
-      await accountSecurityAPI.revokeSession(id)
-      fetchSessions()
-    } catch {
-      setError('Failed to revoke session')
-    }
-  }
-
-  const handleRevokeAll = async () => {
-    try {
-      await accountSecurityAPI.revokeAllSessions()
-      fetchSessions()
-      setSuccess('All other sessions revoked')
-    } catch {
-      setError('Failed to revoke sessions')
-    }
-  }
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
-    setSuccess('Copied to clipboard')
-    setTimeout(() => setSuccess(null), 2000)
-  }
+  const inputCls = 'w-full px-3 py-2 text-sm rounded-md border border-border bg-background'
+  const labelCls = 'block text-sm font-medium mb-1'
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Account Security</h1>
-
-      {/* Tabs */}
-      <div className="flex gap-1 border-b">
-        {([['mfa', 'Two-Factor Auth', ShieldCheck], ['apikeys', 'API Keys', Key], ['sessions', 'Sessions', Monitor]] as const).map(
-          ([key, label, Icon]) => (
-            <button key={key} onClick={() => { setTab(key as Tab); setError(null); setSuccess(null) }}
-              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
-                tab === key ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}>
-              <Icon className="h-4 w-4" /> {label}
-            </button>
-          )
-        )}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">账户安全</h1>
+          <p className="text-sm text-muted-foreground">个人资料 · 安全设置 · API 密钥 · 订阅计费</p>
+        </div>
       </div>
 
-      {error && (
-        <div className="bg-destructive/10 text-destructive px-4 py-3 rounded text-sm flex items-center justify-between">
-          {error}
-          <button onClick={() => setError(null)}><X className="h-4 w-4" /></button>
-        </div>
-      )}
-      {success && (
-        <div className="bg-green-50 text-green-700 px-4 py-3 rounded text-sm">{success}</div>
-      )}
-
-      {/* MFA Tab */}
-      {tab === 'mfa' && (
-        <div className="bg-card border rounded-lg p-6 space-y-4 max-w-lg">
-          <div className="flex items-center gap-3">
-            <Shield className="h-8 w-8 text-primary" />
-            <div>
-              <h2 className="text-lg font-semibold">Two-Factor Authentication</h2>
-              <p className="text-sm text-muted-foreground">Add an extra layer of security with TOTP</p>
-            </div>
-          </div>
-
-          {!mfaSetupData && !mfaVerified && (
-            <button onClick={handleMfaSetup} disabled={loading}
-              className="bg-primary text-primary-foreground px-4 py-2 rounded text-sm flex items-center gap-2 disabled:opacity-50">
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Smartphone className="h-4 w-4" />}
-              Setup MFA
-            </button>
-          )}
-
-          {mfaSetupData && !mfaVerified && (
-            <div className="space-y-4">
-              <div className="bg-muted p-4 rounded">
-                <p className="text-sm mb-2">Scan this with your authenticator app:</p>
-                <code className="text-xs break-all block bg-background p-2 rounded">{mfaSetupData.qr_uri}</code>
-                <p className="text-xs text-muted-foreground mt-2">Manual entry key: <code className="font-mono">{mfaSetupData.secret}</code></p>
-              </div>
-              {mfaSetupData.recovery_codes && mfaSetupData.recovery_codes.length > 0 && (
-                <div className="bg-yellow-50 border border-yellow-200 p-4 rounded">
-                  <p className="text-sm font-medium text-yellow-800 mb-2">Save your recovery codes:</p>
-                  <div className="grid grid-cols-2 gap-1 font-mono text-xs">
-                    {mfaSetupData.recovery_codes.map((code, i) => <span key={i}>{code}</span>)}
-                  </div>
-                  <button onClick={() => copyToClipboard(mfaSetupData.recovery_codes!.join('\n'))}
-                    className="mt-2 text-xs text-yellow-700 flex items-center gap-1 hover:underline">
-                    <Copy className="h-3 w-3" /> Copy all
-                  </button>
+      <TabPanel tabs={TABS} activeTab={activeTab} onChange={setActiveTab}>
+        {/* ── Profile ─────────────────────────────────── */}
+        {activeTab === 'profile' && (
+          <div className="max-w-2xl space-y-4">
+            <div className="rounded-lg border border-border bg-card p-6">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-2xl font-bold text-primary">{profile.displayName.charAt(0)}</div>
+                <div>
+                  <h3 className="font-semibold text-lg">{profile.displayName}</h3>
+                  <p className="text-sm text-muted-foreground">{profile.email}</p>
                 </div>
-              )}
-              <form onSubmit={handleMfaVerify} className="flex gap-3">
-                <input type="text" placeholder="Enter 6-digit code" value={mfaCode} maxLength={6}
-                  onChange={e => setMfaCode(e.target.value.replace(/\D/g, ''))}
-                  className="border rounded px-3 py-2 text-sm font-mono tracking-widest w-40" required />
-                <button type="submit" disabled={loading || mfaCode.length !== 6}
-                  className="bg-primary text-primary-foreground px-4 py-2 rounded text-sm disabled:opacity-50">
-                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Verify'}
-                </button>
-              </form>
-            </div>
-          )}
-
-          {mfaVerified && (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-green-600">
-                <ShieldCheck className="h-5 w-5" />
-                <span className="font-medium">MFA is enabled</span>
               </div>
-              <button onClick={handleMfaDisable} disabled={loading}
-                className="text-red-600 text-sm hover:underline disabled:opacity-50">
-                Disable MFA
-              </button>
+              <div className="grid grid-cols-1 gap-4">
+                <div><label className={labelCls}>显示名称</label><input value={profile.displayName} onChange={(e) => setProfile({ ...profile, displayName: e.target.value })} className={inputCls} /></div>
+                <div><label className={labelCls}>邮箱</label><input value={profile.email} onChange={(e) => setProfile({ ...profile, email: e.target.value })} className={inputCls} /></div>
+                <div><label className={labelCls}>手机号</label><input value={profile.phone} onChange={(e) => setProfile({ ...profile, phone: e.target.value })} className={inputCls} /></div>
+                <div><label className={labelCls}>公司/组织</label><input value={profile.company} onChange={(e) => setProfile({ ...profile, company: e.target.value })} className={inputCls} /></div>
+                <div><label className={labelCls}>个人简介</label><textarea value={profile.bio} onChange={(e) => setProfile({ ...profile, bio: e.target.value })} className={`${inputCls} h-20 resize-none`} /></div>
+              </div>
+              <button className="mt-4 px-4 py-2 text-sm rounded-md bg-primary text-white hover:opacity-90">保存资料</button>
             </div>
-          )}
-        </div>
-      )}
-
-      {/* API Keys Tab */}
-      {tab === 'apikeys' && (
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <span className="text-sm text-muted-foreground">{apiKeys.length} / 5 keys</span>
-            <button onClick={() => setShowKeyForm(true)}
-              disabled={apiKeys.length >= 5}
-              className="bg-primary text-primary-foreground px-3 py-1.5 rounded text-sm flex items-center gap-1 disabled:opacity-50">
-              <Plus className="h-4 w-4" /> New API Key
-            </button>
           </div>
+        )}
 
-          {newKeySecret && (
-            <div className="bg-yellow-50 border border-yellow-200 p-4 rounded space-y-2">
-              <p className="text-sm font-medium text-yellow-800">Your new API key (shown once):</p>
-              <div className="flex items-center gap-2">
-                <code className="bg-background border px-3 py-1.5 rounded text-sm font-mono flex-1">{newKeySecret}</code>
-                <button onClick={() => copyToClipboard(newKeySecret)} className="p-1.5 hover:bg-yellow-100 rounded">
-                  <Copy className="h-4 w-4" />
-                </button>
+        {/* ── Security ────────────────────────────────── */}
+        {activeTab === 'security' && (
+          <div className="max-w-2xl space-y-4">
+            <div className="rounded-lg border border-border bg-card p-6">
+              <h3 className="font-semibold text-card-foreground mb-4">修改密码</h3>
+              <div className="space-y-3">
+                <div><label className={labelCls}>当前密码</label><input type="password" className={inputCls} /></div>
+                <div><label className={labelCls}>新密码</label><input type="password" className={inputCls} /></div>
+                <div><label className={labelCls}>确认新密码</label><input type="password" className={inputCls} /></div>
               </div>
-              <button onClick={() => setNewKeySecret(null)} className="text-xs text-yellow-700 hover:underline">Dismiss</button>
+              <button className="mt-4 px-4 py-2 text-sm rounded-md bg-primary text-white hover:opacity-90">更新密码</button>
             </div>
-          )}
 
-          {showKeyForm && (
-            <form onSubmit={handleCreateApiKey} className="bg-card border rounded-lg p-4 flex gap-3 items-end">
-              <div className="flex-1">
-                <label className="block text-sm font-medium mb-1">Name</label>
-                <input value={keyForm.name} placeholder="e.g. Trading Bot"
-                  onChange={e => setKeyForm(f => ({ ...f, name: e.target.value }))}
-                  className="w-full border rounded px-3 py-2 text-sm" required />
+            <div className="rounded-lg border border-border bg-card p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="font-semibold text-card-foreground">两步验证 (2FA)</h3>
+                  <p className="text-xs text-muted-foreground">增强账户安全性</p>
+                </div>
+                <ToggleSwitch checked={security.twoFA} onChange={(v) => setSecurity({ ...security, twoFA: v })} />
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Rate Limit (req/min)</label>
-                <input type="number" min={1} max={1000} value={keyForm.rate_limit}
-                  onChange={e => setKeyForm(f => ({ ...f, rate_limit: Number(e.target.value) }))}
-                  className="border rounded px-3 py-2 text-sm w-32" />
+              <div className="space-y-3">
+                {([
+                  ['totp', 'TOTP 验证器', 'Google Authenticator / Authy'],
+                  ['sms', '短信验证', '发送验证码到手机'],
+                  ['email', '邮件验证', '发送验证码到邮箱'],
+                ] as const).map(([key, label, desc]) => (
+                  <div key={key} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+                    <div><div className="text-sm font-medium">{label}</div><div className="text-xs text-muted-foreground">{desc}</div></div>
+                    <ToggleSwitch checked={(security.twoFAMethods as Record<string, boolean>)[key]} onChange={(v) => setSecurity({ ...security, twoFAMethods: { ...security.twoFAMethods, [key]: v } })} />
+                  </div>
+                ))}
               </div>
-              <button type="submit" className="bg-primary text-primary-foreground px-4 py-2 rounded text-sm">Create</button>
-              <button type="button" onClick={() => setShowKeyForm(false)} className="px-3 py-2 text-sm">Cancel</button>
-            </form>
-          )}
-
-          {loading ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
-          ) : apiKeys.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">No API keys. Create one to get started.</div>
-          ) : (
-            <div className="bg-card border rounded-lg overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50">
-                  <tr>
-                    <th className="text-left px-4 py-2">Name</th>
-                    <th className="text-left px-4 py-2">Key ID</th>
-                    <th className="text-left px-4 py-2">Rate Limit</th>
-                    <th className="text-left px-4 py-2">Created</th>
-                    <th className="text-left px-4 py-2">Status</th>
-                    <th className="text-right px-4 py-2">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {apiKeys.map(key => (
-                    <tr key={key.id} className="border-t hover:bg-muted/30">
-                      <td className="px-4 py-2 font-medium">{key.name}</td>
-                      <td className="px-4 py-2 font-mono text-xs">{key.key_id}</td>
-                      <td className="px-4 py-2">{key.rate_limit}/min</td>
-                      <td className="px-4 py-2 text-muted-foreground">{new Date(key.created_at).toLocaleDateString()}</td>
-                      <td className="px-4 py-2">
-                        <span className={`text-xs px-1.5 py-0.5 rounded ${key.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                          {key.is_active ? 'Active' : 'Revoked'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2 text-right">
-                        <button onClick={() => handleDeleteApiKey(key.id)}
-                          className="text-red-600 hover:text-red-800 p-1" title="Delete">
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Sessions Tab */}
-      {tab === 'sessions' && (
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <span className="text-sm text-muted-foreground">{sessions.length} active session(s)</span>
-            {sessions.length > 1 && (
-              <button onClick={handleRevokeAll}
-                className="text-red-600 text-sm hover:underline">
-                Revoke all other sessions
-              </button>
-            )}
           </div>
+        )}
 
-          {loading ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        {/* ── API Keys ────────────────────────────────── */}
+        {activeTab === 'apikeys' && (
+          <div className="space-y-4">
+            <div className="flex justify-end">
+              <button onClick={() => setNewKeyModal(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-primary text-white hover:opacity-90"><Plus size={16} />创建密钥</button>
             </div>
-          ) : sessions.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">No active sessions</div>
-          ) : (
-            <div className="space-y-2">
-              {sessions.map(session => (
-                <div key={session.id} className="bg-card border rounded-lg p-4 flex items-center justify-between">
+            <DataTable columns={keyCols} data={apiKeys} emptyText="暂无 API 密钥" />
+          </div>
+        )}
+
+        {/* ── Sessions ────────────────────────────────── */}
+        {activeTab === 'sessions' && (
+          <div className="space-y-4 max-w-2xl">
+            {sessions.length > 0 ? sessions.map((s) => (
+              <div key={s.id} className={`rounded-lg border ${s.current ? 'border-primary' : 'border-border'} bg-card p-4`}>
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <Monitor className="h-5 w-5 text-muted-foreground" />
+                    <Laptop size={24} className="text-muted-foreground" />
                     <div>
-                      <div className="text-sm font-medium">{session.device_info || 'Unknown device'}</div>
-                      <div className="text-xs text-muted-foreground flex gap-3">
-                        <span>IP: {session.ip_address || 'unknown'}</span>
-                        <span>Active: {session.last_active_at ? new Date(session.last_active_at).toLocaleString() : '-'}</span>
-                        <span>Expires: {new Date(session.expires_at).toLocaleString()}</span>
+                      <div className="text-sm font-medium flex items-center gap-2">
+                        {s.device}
+                        {s.current && <Badge variant="success">当前</Badge>}
                       </div>
+                      <div className="text-xs text-muted-foreground">{s.ip} · {s.location} · {s.last_active}</div>
                     </div>
                   </div>
-                  <button onClick={() => handleRevokeSession(session.id)}
-                    className="text-red-600 hover:text-red-800 text-sm flex items-center gap-1">
-                    <Trash2 className="h-4 w-4" /> Revoke
-                  </button>
+                  {!s.current && <button onClick={() => accountSecurityAPI.revokeSession(Number(s.id)).then(() => { showToast('会话已注销', 'success'); queryClient.invalidateQueries({ queryKey: ['auth-sessions'] }) })} className="text-xs text-red-500 hover:text-red-700">注销</button>}
                 </div>
-              ))}
+              </div>
+            )) : <p className="text-center text-muted-foreground py-8">暂无登录会话</p>}
+          </div>
+        )}
+
+        {/* ── Billing ─────────────────────────────────── */}
+        {activeTab === 'billing' && (
+          <div className="max-w-2xl space-y-4">
+            <div className="rounded-lg border border-primary/30 bg-gradient-to-r from-primary/5 to-card p-6">
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <Badge variant="primary">专业版</Badge>
+                  <h3 className="font-semibold text-lg mt-1">Pro Plan</h3>
+                </div>
+              </div>
             </div>
-          )}
+            <p className="text-center text-muted-foreground py-8">暂无使用量统计数据</p>
+          </div>
+        )}
+      </TabPanel>
+
+      {/* New Key Modal */}
+      <Modal open={newKeyModal} onClose={() => setNewKeyModal(false)} title="创建 API 密钥" footer={
+        <>
+          <button onClick={() => setNewKeyModal(false)} className="px-4 py-2 text-sm rounded-md border border-border hover:bg-muted">取消</button>
+          <button onClick={() => createKeyMutation.mutate({ name: '新密钥', permissions: ['data:read'] })} className="px-4 py-2 text-sm rounded-md bg-primary text-white hover:opacity-90">创建密钥</button>
+        </>
+      }>
+        <div className="flex flex-col gap-4">
+          <div><label className="block text-sm font-medium mb-1">密钥名称</label><input className={inputCls} placeholder="例如: 回测脚本" /></div>
+          <div>
+            <label className="block text-sm font-medium mb-1">权限范围</label>
+            <div className="flex flex-col gap-2 text-sm">
+              <label className="flex items-center gap-2"><input type="checkbox" defaultChecked />数据读取 (data:read)</label>
+              <label className="flex items-center gap-2"><input type="checkbox" />数据写入 (data:write)</label>
+              <label className="flex items-center gap-2"><input type="checkbox" defaultChecked />回测 (backtest)</label>
+              <label className="flex items-center gap-2"><input type="checkbox" />交易 (trade)</label>
+              <label className="flex items-center gap-2"><input type="checkbox" />管理 (admin)</label>
+            </div>
+          </div>
         </div>
-      )}
+      </Modal>
     </div>
   )
 }

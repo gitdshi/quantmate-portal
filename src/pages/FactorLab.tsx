@@ -1,255 +1,156 @@
-import { useCallback, useEffect, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  BarChart3, FlaskConical, Loader2, Plus, RefreshCw, Search, Trash2
+  Library,
+  LineChart as LineChartIcon,
+  GitCompare,
+  Plus,
+  TrendingUp,
 } from 'lucide-react'
-import { factorAPI } from '../lib/api'
-import type { FactorDefinition, FactorEvaluation } from '../types'
+import { useState } from 'react'
 
-const CATEGORIES = ['value', 'momentum', 'quality', 'growth', 'volatility', 'size', 'other']
-const STATUS_COLORS: Record<string, string> = {
-  draft: 'bg-gray-100 text-gray-700',
-  testing: 'bg-yellow-100 text-yellow-700',
-  active: 'bg-green-100 text-green-700',
-  archived: 'bg-red-100 text-red-700',
+import Badge from '../components/ui/Badge'
+import DataTable, { type Column } from '../components/ui/DataTable'
+import FilterBar from '../components/ui/FilterBar'
+import Modal from '../components/ui/Modal'
+import TabPanel from '../components/ui/TabPanel'
+import { showToast } from '../components/ui/Toast'
+import { factorAPI } from '../lib/api'
+
+interface Factor {
+  id: string
+  name: string
+  category: string
+  ic: number
+  icir: number
+  turnover: number
+  coverage: number
+  status: string
+  formula?: string
 }
 
+const TABS = [
+  { key: 'library', label: '因子库', icon: <Library size={16} /> },
+  { key: 'icir', label: 'IC/IR 分析', icon: <LineChartIcon size={16} /> },
+  { key: 'combine', label: '因子合成', icon: <GitCompare size={16} /> },
+  { key: 'backtest', label: '因子回测', icon: <TrendingUp size={16} /> },
+]
+
 export default function FactorLab() {
-  const { t } = useTranslation(['social', 'common'])
-  const [factors, setFactors] = useState<FactorDefinition[]>([])
-  const [evaluations, setEvaluations] = useState<FactorEvaluation[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [selectedFactor, setSelectedFactor] = useState<FactorDefinition | null>(null)
-  const [categoryFilter, setCategoryFilter] = useState<string>('')
-  const [showCreate, setShowCreate] = useState(false)
-  const [evalLoading, setEvalLoading] = useState(false)
-  const [form, setForm] = useState({ name: '', category: 'value', expression: '', description: '' })
+  const queryClient = useQueryClient()
+  const [activeTab, setActiveTab] = useState('library')
+  const [newFactorModal, setNewFactorModal] = useState(false)
+  const [search, setSearch] = useState('')
+  const [selectedFactor, setSelectedFactor] = useState<string | null>(null)
 
-  const fetchFactors = useCallback(async () => {
-    setLoading(true)
-    try {
-      const params: Record<string, unknown> = { page_size: 100 }
-      if (categoryFilter) params.category = categoryFilter
-      const { data } = await factorAPI.list(params as any)
-      const result = data as any
-      setFactors(result.data || result || [])
-    } catch {
-      setError(t('factorLab.loadFailed'))
-    } finally {
-      setLoading(false)
-    }
-  }, [categoryFilter])
+  const { data: factors = [] } = useQuery<Factor[]>({
+    queryKey: ['factors'],
+    queryFn: () => factorAPI.list().then((r) => {
+      const d = r.data
+      return Array.isArray(d) ? d : d?.data ?? []
+    }),
+  })
 
-  useEffect(() => { fetchFactors() }, [fetchFactors])
+  const createMutation = useMutation({
+    mutationFn: (data: { name: string; category: string; formula: string }) => factorAPI.create(data),
+    onSuccess: () => {
+      showToast('因子已创建', 'success')
+      setNewFactorModal(false)
+      queryClient.invalidateQueries({ queryKey: ['factors'] })
+    },
+    onError: () => showToast('创建失败', 'error'),
+  })
 
-  const selectFactor = async (f: FactorDefinition) => {
-    setSelectedFactor(f)
-    try {
-      const { data } = await factorAPI.listEvaluations(f.id)
-      setEvaluations(Array.isArray(data) ? data : data.data || [])
-    } catch {
-      setError(t('factorLab.loadEvalFailed'))
-    }
-  }
+  const filtered = factors.filter(
+    (f) => !search || f.name.includes(search) || f.category.includes(search),
+  )
 
-  const handleCreate = async () => {
-    if (!form.name.trim() || !form.expression.trim()) return
-    try {
-      await factorAPI.create(form)
-      setForm({ name: '', category: 'value', expression: '', description: '' })
-      setShowCreate(false)
-      fetchFactors()
-    } catch (err: any) {
-      setError(err?.response?.data?.message || t('factorLab.createFailed'))
-    }
-  }
+  const factorCols: Column<Factor>[] = [
+    { key: 'name', label: '因子名称', render: (f) => <span className="font-medium cursor-pointer text-primary hover:underline" onClick={() => { setSelectedFactor(f.name); setActiveTab('icir') }}>{f.name}</span> },
+    { key: 'category', label: '分类', render: (f) => <Badge variant="primary">{f.category}</Badge> },
+    { key: 'ic', label: 'IC', render: (f) => <span className={f.ic >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500'}>{f.ic.toFixed(3)}</span> },
+    { key: 'icir', label: 'ICIR', render: (f) => <span className={f.icir >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500'}>{f.icir.toFixed(2)}</span> },
+    { key: 'turnover', label: '换手率', render: (f) => `${(f.turnover * 100).toFixed(0)}%` },
+    { key: 'coverage', label: '覆盖率', render: (f) => `${f.coverage}%` },
+    { key: 'status', label: '状态', render: (f) => <Badge variant={f.status === 'active' ? 'success' : 'warning'}>{f.status === 'active' ? '生效中' : '测试中'}</Badge> },
+  ]
 
-  const handleRunEvaluation = async () => {
-    if (!selectedFactor) return
-    setEvalLoading(true)
-    try {
-      await factorAPI.runEvaluation(selectedFactor.id, {
-        start_date: '2020-01-01', end_date: '2024-01-01',
-      })
-      const { data } = await factorAPI.listEvaluations(selectedFactor.id)
-      setEvaluations(Array.isArray(data) ? data : data.data || [])
-    } catch (err: any) {
-      setError(err?.response?.data?.message || t('factorLab.evalFailed'))
-    } finally {
-      setEvalLoading(false)
-    }
-  }
 
-  const handleDelete = async (id: number) => {
-    try {
-      await factorAPI.delete(id)
-      if (selectedFactor?.id === id) { setSelectedFactor(null); setEvaluations([]) }
-      fetchFactors()
-    } catch { setError(t('factorLab.deleteFailed')) }
-  }
+
+
 
   return (
-    <div className="p-6" data-testid="factor-lab-page">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-          <FlaskConical className="h-7 w-7" /> {t('factorLab.title')}
-        </h1>
-        <div className="flex gap-2">
-          <select
-            value={categoryFilter}
-            onChange={e => setCategoryFilter(e.target.value)}
-            className="border border-gray-300 rounded px-3 py-1.5 text-sm"
-          >
-            <option value="">{t('factorLab.allCategories')}</option>
-            {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-          <button onClick={() => setShowCreate(true)} className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
-            <Plus className="h-4 w-4" /> {t('factorLab.newFactor')}
-          </button>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">因子研究</h1>
+          <p className="text-sm text-muted-foreground">因子库 · IC/IR 分析 · 因子合成 · 因子回测</p>
         </div>
+        <button onClick={() => setNewFactorModal(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-primary text-white hover:opacity-90"><Plus size={16} />新建因子</button>
       </div>
 
-      {error && (
-        <div className="mb-4 px-3 py-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">
-          {error}
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Factor List */}
-        <div className="lg:col-span-1">
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-            <div className="p-3 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="font-semibold text-sm text-gray-700">{t('factorLab.factors')} ({factors.length})</h2>
-              <button onClick={fetchFactors} className="p-1 hover:bg-gray-100 rounded">
-                <RefreshCw className="h-4 w-4 text-gray-500" />
-              </button>
+      <TabPanel tabs={TABS} activeTab={activeTab} onChange={setActiveTab}>
+        {/* ── Library ──────────────────────────────────── */}
+        {activeTab === 'library' && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <FilterBar
+                filters={[{ key: 'search', label: '搜索因子', type: 'search' as const }]}
+                values={{ search }}
+                onChange={(v) => setSearch((v.search as string) || '')}
+              />
+              <div className="text-sm text-muted-foreground">共 {filtered.length} 个因子</div>
             </div>
-            {loading ? (
-              <div className="p-8 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto text-gray-400" /></div>
-            ) : factors.length === 0 ? (
-              <div className="p-8 text-center text-gray-400 text-sm">{t('factorLab.noFactorsDefined')}</div>
-            ) : (
-              <div className="divide-y divide-gray-100 max-h-[60vh] overflow-y-auto">
-                {factors.map(f => (
-                  <div
-                    key={f.id}
-                    onClick={() => selectFactor(f)}
-                    className={`p-3 cursor-pointer flex items-center justify-between group ${
-                      selectedFactor?.id === f.id ? 'bg-blue-50' : 'hover:bg-gray-50'
-                    }`}
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-gray-900 truncate">{f.name}</p>
-                      <div className="flex gap-2 mt-1">
-                        <span className="text-xs text-gray-500">{f.category}</span>
-                        <span className={`text-xs px-1.5 py-0.5 rounded ${STATUS_COLORS[f.status] || ''}`}>
-                          {f.status}
-                        </span>
-                      </div>
-                    </div>
-                    <button
-                      onClick={e => { e.stopPropagation(); handleDelete(f.id) }}
-                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded"
-                    >
-                      <Trash2 className="h-3 w-3 text-red-500" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+            <DataTable columns={factorCols} data={filtered} emptyText="暂无因子" />
+          </div>
+        )}
+
+        {/* ── IC/IR Analysis ──────────────────────────── */}
+        {activeTab === 'icir' && (
+          <div className="space-y-4">
+            <p className="text-center text-muted-foreground py-8">选择因子后查看 IC/IR 分析结果，暂无评估数据</p>
+          </div>
+        )}
+
+        {/* ── Combine ─────────────────────────────────── */}
+        {activeTab === 'combine' && (
+          <p className="text-center text-muted-foreground py-8">暂无因子合成数据</p>
+        )}
+
+        {/* ── Backtest ────────────────────────────────── */}
+        {activeTab === 'backtest' && (
+          <p className="text-center text-muted-foreground py-8">暂无因子回测数据</p>
+        )}
+      </TabPanel>
+
+      {/* New Factor Modal */}
+      <Modal open={newFactorModal} onClose={() => setNewFactorModal(false)} title="新建因子" footer={
+        <>
+          <button onClick={() => setNewFactorModal(false)} className="px-4 py-2 text-sm rounded-md border border-border hover:bg-muted">取消</button>
+          <button onClick={() => createMutation.mutate({ name: '新因子', category: '自定义', formula: '' })} className="px-4 py-2 text-sm rounded-md bg-primary text-white hover:opacity-90">创建因子</button>
+        </>
+      }>
+        <div className="flex flex-col gap-4">
+          <div><label className="block text-sm font-medium mb-1">因子名称</label><input className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background" placeholder="例如: Alpha01" /></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><label className="block text-sm font-medium mb-1">分类</label>
+              <select className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background">
+                <option>技术</option><option>基本面</option><option>风格</option><option>自定义</option>
+              </select></div>
+            <div><label className="block text-sm font-medium mb-1">频率</label>
+              <select className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background">
+                <option>日频</option><option>周频</option><option>月频</option>
+              </select></div>
+          </div>
+          <div><label className="block text-sm font-medium mb-1">因子公式</label><textarea className="w-full h-24 px-3 py-2 text-sm rounded-md border border-border bg-background font-mono resize-none" placeholder="rank(ts_delta(close, 20)) * -1" /></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><label className="block text-sm font-medium mb-1">回看窗口</label><input type="number" defaultValue={20} className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background" /></div>
+            <div><label className="block text-sm font-medium mb-1">标准化</label>
+              <select className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background">
+                <option>Z-Score</option><option>Rank</option><option>MinMax</option><option>无</option>
+              </select></div>
           </div>
         </div>
-
-        {/* Factor Detail + Evaluations */}
-        <div className="lg:col-span-2">
-          {!selectedFactor ? (
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-12 text-center text-gray-400">
-              <Search className="h-10 w-10 mx-auto mb-3" />
-              <p>{t('factorLab.selectFactor')}</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {/* Detail card */}
-              <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">{selectedFactor.name}</h3>
-                <p className="text-sm text-gray-500 mb-3">{selectedFactor.description || t('common:noDescription')}</p>
-                <div className="bg-gray-50 rounded p-3 font-mono text-sm text-gray-800">
-                  {selectedFactor.expression}
-                </div>
-              </div>
-
-              {/* Evaluations */}
-              <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-                <div className="p-3 border-b border-gray-200 flex items-center justify-between">
-                  <h3 className="font-semibold text-sm text-gray-700">{t('factorLab.evaluations')}</h3>
-                  <button
-                    onClick={handleRunEvaluation}
-                    disabled={evalLoading}
-                    className="flex items-center gap-1 px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 disabled:opacity-50"
-                  >
-                    {evalLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <BarChart3 className="h-3 w-3" />}
-                    {t('factorLab.runEvaluation')}
-                  </button>
-                </div>
-                {evaluations.length === 0 ? (
-                  <div className="p-6 text-center text-gray-400 text-sm">{t('factorLab.noEvaluations')}</div>
-                ) : (
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-gray-200 bg-gray-50">
-                        <th className="text-left p-2">{t('common:period')}</th>
-                        <th className="text-right p-2">{t('factorLab.icMean')}</th>
-                        <th className="text-right p-2">{t('factorLab.ir')}</th>
-                        <th className="text-right p-2">{t('factorLab.longShort')}</th>
-                        <th className="text-right p-2">{t('factorLab.turnover')}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {evaluations.map(ev => (
-                        <tr key={ev.id} className="border-b border-gray-100">
-                          <td className="p-2">{ev.start_date} ~ {ev.end_date}</td>
-                          <td className="p-2 text-right font-mono">{ev.ic_mean?.toFixed(4) ?? '—'}</td>
-                          <td className="p-2 text-right font-mono">{ev.ir?.toFixed(4) ?? '—'}</td>
-                          <td className="p-2 text-right font-mono">{ev.long_short_return != null ? `${(ev.long_short_return * 100).toFixed(2)}%` : '—'}</td>
-                          <td className="p-2 text-right font-mono">{ev.turnover?.toFixed(4) ?? '—'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Create Factor Modal */}
-      {showCreate && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-[28rem] shadow-xl">
-            <h3 className="text-lg font-semibold mb-4">{t('factorLab.newFactor')}</h3>
-            <div className="space-y-3">
-              <input type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                placeholder={t('factorLab.factorName')} className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
-              <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
-                className="w-full border border-gray-300 rounded px-3 py-2 text-sm">
-                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-              <textarea value={form.expression} onChange={e => setForm(f => ({ ...f, expression: e.target.value }))}
-                placeholder={t('factorLab.expressionPlaceholder')} rows={3}
-                className="w-full border border-gray-300 rounded px-3 py-2 text-sm font-mono" />
-              <input type="text" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                placeholder={t('factorLab.descriptionOptional')} className="w-full border border-gray-300 rounded px-3 py-2 text-sm" />
-            </div>
-            <div className="flex justify-end gap-2 mt-4">
-              <button onClick={() => setShowCreate(false)} className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded">{t('common:cancel')}</button>
-              <button onClick={handleCreate} className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">{t('common:create')}</button>
-            </div>
-          </div>
-        </div>
-      )}
+      </Modal>
     </div>
   )
 }

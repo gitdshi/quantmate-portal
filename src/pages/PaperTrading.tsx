@@ -1,44 +1,48 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  AlertCircle,
-  LineChart,
-  Pause,
+  BarChart3,
+  ListOrdered,
   Play,
-  RefreshCw,
-  Send,
-  XCircle,
+  Plus,
+  ShoppingCart,
+  Square,
+  TrendingUp,
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import { useSearchParams } from 'react-router-dom'
+import { useState } from 'react'
+
+import LineChart from '../components/charts/LineChart'
+import Badge from '../components/ui/Badge'
+import DataTable, { type Column } from '../components/ui/DataTable'
+import FilterBar from '../components/ui/FilterBar'
+import Modal from '../components/ui/Modal'
+import StatCard from '../components/ui/StatCard'
+import TabPanel from '../components/ui/TabPanel'
+import { showToast } from '../components/ui/Toast'
 import { paperTradingAPI, strategiesAPI } from '../lib/api'
 
-interface PaperDeployment {
-  id: number
-  strategy_id: number
+interface Deployment {
+  id: string
   strategy_name: string
-  vt_symbol: string
-  parameters: Record<string, unknown>
-  status: 'running' | 'stopped' | 'error'
-  started_at: string
-  stopped_at: string | null
+  status: string
+  capital: number
   pnl: number
+  pnl_pct: number
+  positions: number
+  created_at: string
 }
 
 interface PaperOrder {
-  id: number
+  id: string
   symbol: string
-  direction: 'buy' | 'sell'
-  order_type: string
+  direction: string
+  price: number
   quantity: number
-  price: number | null
   status: string
-  filled_quantity: number | null
-  avg_fill_price: number | null
-  fee: number | null
   created_at: string
 }
 
 interface PaperPosition {
+  id: string
   symbol: string
   direction: string
   quantity: number
@@ -48,544 +52,191 @@ interface PaperPosition {
   pnl_pct: number
 }
 
-interface PaperPerformance {
-  total_pnl: number
-  total_trades: number
-  win_rate: number
-  max_drawdown: number
-  sharpe_ratio: number | null
-  equity_curve: { date: string; value: number }[]
-}
-
-interface Strategy {
-  id: number
-  name: string
-}
-
-type TabType = 'deployments' | 'orders' | 'positions' | 'performance'
-
-const STATUS_COLORS: Record<string, string> = {
-  running: 'bg-green-500/20 text-green-400',
-  stopped: 'bg-gray-500/20 text-gray-400',
-  error: 'bg-red-500/20 text-red-400',
-  created: 'bg-blue-500/20 text-blue-400',
-  filled: 'bg-green-500/20 text-green-400',
-  cancelled: 'bg-gray-500/20 text-gray-400',
-  rejected: 'bg-red-500/20 text-red-400',
-  submitted: 'bg-yellow-500/20 text-yellow-400',
-  partial: 'bg-orange-500/20 text-orange-400',
-}
+const TABS = [
+  { key: 'deployments', label: '模拟部署', icon: <Play size={16} /> },
+  { key: 'orders', label: '模拟委托', icon: <ShoppingCart size={16} /> },
+  { key: 'positions', label: '模拟持仓', icon: <ListOrdered size={16} /> },
+  { key: 'performance', label: '绩效概览', icon: <TrendingUp size={16} /> },
+]
 
 export default function PaperTrading() {
-  const { t } = useTranslation(['trading', 'common'])
-  const [searchParams] = useSearchParams()
-  const prefilledStrategyId = searchParams.get('strategy_id')
+  const queryClient = useQueryClient()
+  const [activeTab, setActiveTab] = useState('deployments')
+  const [newModal, setNewModal] = useState(false)
+  const [search, setSearch] = useState('')
+  const [form, setForm] = useState({ strategy: '', capital: '1000000' })
 
-  const [activeTab, setActiveTab] = useState<TabType>('deployments')
-  const [strategies, setStrategies] = useState<Strategy[]>([])
-  const [deployments, setDeployments] = useState<PaperDeployment[]>([])
-  const [orders, setOrders] = useState<PaperOrder[]>([])
-  const [positions, setPositions] = useState<PaperPosition[]>([])
-  const [performance, setPerformance] = useState<PaperPerformance | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const { data: deployments = [] } = useQuery<Deployment[]>({
+    queryKey: ['paper-deployments'],
+    queryFn: () => paperTradingAPI.listDeployments().then((r) => {
+      const d = r.data
+      return Array.isArray(d) ? d : d?.data ?? []
+    }),
+    refetchInterval: 10_000,
+  })
 
-  // Deploy form state
-  const [deployStrategyId, setDeployStrategyId] = useState<string>(prefilledStrategyId || '')
-  const [deploySymbol, setDeploySymbol] = useState('')
-  const [deployParams, setDeployParams] = useState('{}')
+  const { data: strategies = [] } = useQuery<{ id: string; name: string }[]>({
+    queryKey: ['strategies-list-paper'],
+    queryFn: () => strategiesAPI.list().then((r) => {
+      const d = r.data
+      return Array.isArray(d) ? d : d?.data ?? []
+    }),
+    enabled: newModal,
+  })
 
-  // Manual order form state
-  const [orderSymbol, setOrderSymbol] = useState('')
-  const [orderDirection, setOrderDirection] = useState<'buy' | 'sell'>('buy')
-  const [orderType, setOrderType] = useState<'market' | 'limit'>('market')
-  const [orderQuantity, setOrderQuantity] = useState(100)
-  const [orderPrice, setOrderPrice] = useState<number | undefined>(undefined)
+  const createMutation = useMutation({
+    mutationFn: () => paperTradingAPI.deployStrategy({ strategy_id: Number(form.strategy), vt_symbol: '', parameters: {} }),
+    onSuccess: () => {
+      showToast('模拟部署已创建', 'success')
+      setNewModal(false)
+      queryClient.invalidateQueries({ queryKey: ['paper-deployments'] })
+    },
+    onError: () => showToast('创建失败', 'error'),
+  })
 
-  useEffect(() => {
-    loadStrategies()
-    loadDeployments()
-  }, [])
+  const stopMutation = useMutation({
+    mutationFn: (id: string) => paperTradingAPI.stopDeployment(Number(id)),
+    onSuccess: () => {
+      showToast('已停止', 'success')
+      queryClient.invalidateQueries({ queryKey: ['paper-deployments'] })
+    },
+  })
 
-  useEffect(() => {
-    if (activeTab === 'orders') loadOrders()
-    else if (activeTab === 'positions') loadPositions()
-    else if (activeTab === 'performance') loadPerformance()
-  }, [activeTab])
+  // ── Real data queries for orders/positions/performance ──
+  const { data: paperOrders = [] } = useQuery<PaperOrder[]>({
+    queryKey: ['paper-orders'],
+    queryFn: () => paperTradingAPI.listPaperOrders().then((r) => {
+      const d = r.data
+      return Array.isArray(d) ? d : d?.data ?? []
+    }),
+    enabled: activeTab === 'orders',
+  })
 
-  const loadStrategies = async () => {
-    try {
-      const { data } = await strategiesAPI.list()
-      const items = Array.isArray(data) ? data : (data.data ?? [])
-      setStrategies(items)
-    } catch {
-      /* strategies list is optional UI enhancement */
-    }
-  }
+  const { data: paperPositions = [] } = useQuery<PaperPosition[]>({
+    queryKey: ['paper-positions'],
+    queryFn: () => paperTradingAPI.getPaperPositions().then((r) => {
+      const d = r.data
+      return Array.isArray(d) ? d : d?.data ?? []
+    }),
+    enabled: activeTab === 'positions',
+  })
 
-  const loadDeployments = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const { data } = await paperTradingAPI.listDeployments()
-      setDeployments(Array.isArray(data) ? data : (data.deployments ?? []))
-    } catch (err: any) {
-      setError(err.response?.data?.detail || t('paper.loadDeploymentsFailed'))
-    } finally {
-      setLoading(false)
-    }
-  }
+  const { data: perfData } = useQuery<{ dates: string[]; nav: number[] }>({
+    queryKey: ['paper-performance'],
+    queryFn: () => paperTradingAPI.getPaperPerformance().then((r) => {
+      const d = r.data
+      return { dates: d?.dates ?? [], nav: d?.nav ?? [] }
+    }),
+    enabled: activeTab === 'performance',
+  })
 
-  const loadOrders = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const { data } = await paperTradingAPI.listPaperOrders()
-      setOrders(Array.isArray(data) ? data : (data.orders ?? []))
-    } catch (err: any) {
-      setError(err.response?.data?.detail || t('paper.loadOrdersFailed'))
-    } finally {
-      setLoading(false)
-    }
-  }
+  const perfDates = perfData?.dates ?? []
+  const perfNav = perfData?.nav ?? []
 
-  const loadPositions = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const { data } = await paperTradingAPI.getPaperPositions()
-      setPositions(Array.isArray(data) ? data : (data.positions ?? []))
-    } catch (err: any) {
-      setError(err.response?.data?.detail || t('paper.loadPositionsFailed'))
-    } finally {
-      setLoading(false)
-    }
-  }
+  const depCols: Column<Deployment>[] = [
+    { key: 'strategy_name', label: '策略' },
+    { key: 'status', label: '状态', render: (d) => <Badge variant={d.status === 'running' ? 'success' : d.status === 'stopped' ? 'muted' : 'warning'}>{d.status === 'running' ? '运行中' : d.status === 'stopped' ? '已停止' : d.status}</Badge> },
+    { key: 'capital', label: '初始资金', render: (d) => `¥${d.capital.toLocaleString()}` },
+    { key: 'pnl', label: '盈亏', render: (d) => <span className={d.pnl >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500'}>{d.pnl >= 0 ? '+' : ''}¥{d.pnl.toLocaleString()}</span> },
+    { key: 'pnl_pct', label: '收益率', render: (d) => <span className={d.pnl_pct >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500'}>{d.pnl_pct >= 0 ? '+' : ''}{d.pnl_pct.toFixed(2)}%</span> },
+    { key: 'positions', label: '持仓数' },
+    { key: 'created_at', label: '创建时间', render: (d) => new Date(d.created_at).toLocaleDateString() },
+    { key: 'id', label: '操作', render: (d) => d.status === 'running' ? <button onClick={() => stopMutation.mutate(d.id)} className="text-red-500 hover:text-red-700 text-xs"><Square size={12} className="inline mr-0.5" />停止</button> : null },
+  ]
 
-  const loadPerformance = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const { data } = await paperTradingAPI.getPaperPerformance()
-      setPerformance(data)
-    } catch (err: any) {
-      setError(err.response?.data?.detail || t('paper.loadPerformanceFailed'))
-    } finally {
-      setLoading(false)
-    }
-  }
+  const orderCols: Column<PaperOrder>[] = [
+    { key: 'symbol', label: '代码' },
+    { key: 'direction', label: '方向', render: (o) => <Badge variant={o.direction === 'buy' ? 'success' : 'danger'}>{o.direction === 'buy' ? '买入' : '卖出'}</Badge> },
+    { key: 'price', label: '价格', render: (o) => `¥${o.price.toFixed(2)}` },
+    { key: 'quantity', label: '数量' },
+    { key: 'status', label: '状态', render: (o) => <Badge variant={o.status === 'filled' ? 'success' : 'primary'}>{o.status === 'filled' ? '已成交' : '待成交'}</Badge> },
+    { key: 'created_at', label: '时间', render: (o) => new Date(o.created_at).toLocaleTimeString() },
+  ]
 
-  const handleDeploy = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!deployStrategyId || !deploySymbol) return
-    try {
-      setError(null)
-      let params: Record<string, unknown> = {}
-      try { params = JSON.parse(deployParams) } catch { /* use empty */ }
-      await paperTradingAPI.deployStrategy({
-        strategy_id: Number(deployStrategyId),
-        vt_symbol: deploySymbol,
-        parameters: params,
-      })
-      setDeploySymbol('')
-      setDeployParams('{}')
-      loadDeployments()
-    } catch (err: any) {
-      setError(err.response?.data?.detail || t('paper.deploy.deployFailed'))
-    }
-  }
-
-  const handleStopDeployment = async (id: number) => {
-    try {
-      await paperTradingAPI.stopDeployment(id)
-      loadDeployments()
-    } catch (err: any) {
-      setError(err.response?.data?.detail || t('paper.deployment.stopFailed'))
-    }
-  }
-
-  const handleSubmitOrder = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!orderSymbol) return
-    try {
-      setError(null)
-      await paperTradingAPI.createPaperOrder({
-        symbol: orderSymbol,
-        direction: orderDirection,
-        order_type: orderType,
-        quantity: orderQuantity,
-        price: orderType === 'limit' ? orderPrice : undefined,
-      })
-      setOrderSymbol('')
-      setOrderQuantity(100)
-      setOrderPrice(undefined)
-      if (activeTab === 'orders') loadOrders()
-    } catch (err: any) {
-      setError(err.response?.data?.detail || t('paper.manualOrder.orderFailed'))
-    }
-  }
-
-  const handleCancelOrder = async (id: number) => {
-    try {
-      await paperTradingAPI.cancelPaperOrder(id)
-      loadOrders()
-    } catch (err: any) {
-      setError(err.response?.data?.detail || t('paper.cancelFailed'))
-    }
-  }
-
-  const tabs: { key: TabType; label: string }[] = [
-    { key: 'deployments', label: t('paper.tabs.deployments') },
-    { key: 'orders', label: t('paper.tabs.orders') },
-    { key: 'positions', label: t('paper.tabs.positions') },
-    { key: 'performance', label: t('paper.tabs.performance') },
+  const posCols: Column<PaperPosition>[] = [
+    { key: 'symbol', label: '代码' },
+    { key: 'direction', label: '方向', render: (p) => <Badge variant="success">{p.direction === 'long' ? '多' : '空'}</Badge> },
+    { key: 'quantity', label: '持仓量' },
+    { key: 'avg_cost', label: '成本价', render: (p) => `¥${p.avg_cost.toFixed(2)}` },
+    { key: 'current_price', label: '现价', render: (p) => `¥${p.current_price.toFixed(2)}` },
+    { key: 'pnl', label: '浮动盈亏', render: (p) => <span className={p.pnl >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500'}>{p.pnl >= 0 ? '+' : ''}¥{p.pnl.toLocaleString()}</span> },
+    { key: 'pnl_pct', label: '收益率', render: (p) => <span className={p.pnl_pct >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500'}>{p.pnl_pct >= 0 ? '+' : ''}{p.pnl_pct.toFixed(2)}%</span> },
   ]
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white">{t('paper.title')}</h1>
-        <button
-          onClick={() => {
-            loadDeployments()
-            if (activeTab === 'orders') loadOrders()
-            else if (activeTab === 'positions') loadPositions()
-            else if (activeTab === 'performance') loadPerformance()
-          }}
-          className="flex items-center gap-2 rounded bg-gray-700 px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-600"
-        >
-          <RefreshCw size={14} />
-          {t('common:refresh')}
-        </button>
-      </div>
-
-      {error && (
-        <div className="flex items-center gap-2 rounded bg-red-500/10 px-4 py-3 text-red-400">
-          <AlertCircle size={16} />
-          {error}
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">模拟交易</h1>
+          <p className="text-sm text-muted-foreground">策略模拟部署 · 虚拟资金 · 实时行情驱动</p>
         </div>
-      )}
-
-      {/* Deploy Strategy Panel */}
-      <div className="rounded-lg border border-gray-700 bg-gray-800 p-4">
-        <h2 className="mb-3 text-lg font-semibold text-white">{t('paper.deploy.title')}</h2>
-        <form onSubmit={handleDeploy} className="flex flex-wrap items-end gap-3">
-          <div>
-            <label className="mb-1 block text-xs text-gray-400">{t('paper.deploy.strategy')}</label>
-            <select
-              value={deployStrategyId}
-              onChange={(e) => setDeployStrategyId(e.target.value)}
-              className="rounded bg-gray-700 px-3 py-2 text-sm text-white"
-            >
-              <option value="">{t('paper.deploy.selectStrategy')}</option>
-              {strategies.map((s) => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs text-gray-400">{t('paper.deploy.symbol')}</label>
-            <input
-              type="text"
-              value={deploySymbol}
-              onChange={(e) => setDeploySymbol(e.target.value)}
-              placeholder="IF2406.CFFEX"
-              className="rounded bg-gray-700 px-3 py-2 text-sm text-white placeholder-gray-500"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs text-gray-400">{t('paper.deploy.parameters')}</label>
-            <input
-              type="text"
-              value={deployParams}
-              onChange={(e) => setDeployParams(e.target.value)}
-              placeholder='{"fast_window": 10}'
-              className="rounded bg-gray-700 px-3 py-2 text-sm text-white placeholder-gray-500"
-            />
-          </div>
-          <button
-            type="submit"
-            className="flex items-center gap-1 rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500"
-          >
-            <Play size={14} />
-            {t('paper.deploy.deploy')}
-          </button>
-        </form>
+        <button onClick={() => setNewModal(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-primary text-white hover:opacity-90"><Plus size={16} />新建模拟</button>
       </div>
 
-      {/* Manual Paper Order */}
-      <div className="rounded-lg border border-gray-700 bg-gray-800 p-4">
-        <h2 className="mb-3 text-lg font-semibold text-white">{t('paper.manualOrder.title')}</h2>
-        <form onSubmit={handleSubmitOrder} className="flex flex-wrap items-end gap-3">
-          <div>
-            <label className="mb-1 block text-xs text-gray-400">{t('order.symbol')}</label>
-            <input
-              type="text"
-              value={orderSymbol}
-              onChange={(e) => setOrderSymbol(e.target.value)}
-              placeholder="000001.SZ"
-              className="rounded bg-gray-700 px-3 py-2 text-sm text-white placeholder-gray-500"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs text-gray-400">{t('order.direction')}</label>
-            <select
-              value={orderDirection}
-              onChange={(e) => setOrderDirection(e.target.value as 'buy' | 'sell')}
-              className="rounded bg-gray-700 px-3 py-2 text-sm text-white"
-            >
-              <option value="buy">{t('order.buy')}</option>
-              <option value="sell">{t('order.sell')}</option>
-            </select>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs text-gray-400">{t('order.type')}</label>
-            <select
-              value={orderType}
-              onChange={(e) => setOrderType(e.target.value as 'market' | 'limit')}
-              className="rounded bg-gray-700 px-3 py-2 text-sm text-white"
-            >
-              <option value="market">{t('order.market')}</option>
-              <option value="limit">{t('order.limit')}</option>
-            </select>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs text-gray-400">{t('order.quantity')}</label>
-            <input
-              type="number"
-              value={orderQuantity}
-              onChange={(e) => setOrderQuantity(Number(e.target.value))}
-              min={1}
-              className="w-24 rounded bg-gray-700 px-3 py-2 text-sm text-white"
-            />
-          </div>
-          {orderType === 'limit' && (
-            <div>
-              <label className="mb-1 block text-xs text-gray-400">{t('order.price')}</label>
-              <input
-                type="number"
-                step="0.01"
-                value={orderPrice ?? ''}
-                onChange={(e) => setOrderPrice(e.target.value ? Number(e.target.value) : undefined)}
-                className="w-28 rounded bg-gray-700 px-3 py-2 text-sm text-white"
-              />
+      <TabPanel tabs={TABS} activeTab={activeTab} onChange={setActiveTab}>
+        {activeTab === 'deployments' && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <StatCard label="模拟部署" value={deployments.length} />
+              <StatCard label="运行中" value={deployments.filter((d) => d.status === 'running').length} changeType="positive" />
+              <StatCard label="总盈亏" value={deployments.length > 0 ? `${deployments.reduce((s, d) => s + d.pnl, 0) >= 0 ? '+' : ''}¥${deployments.reduce((s, d) => s + d.pnl, 0).toLocaleString()}` : '-'} changeType="positive" />
+              <StatCard label="平均收益率" value={deployments.length > 0 ? `${(deployments.reduce((s, d) => s + d.pnl_pct, 0) / deployments.length).toFixed(2)}%` : '-'} />
             </div>
-          )}
-          <button
-            type="submit"
-            className="flex items-center gap-1 rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500"
-          >
-            <Send size={14} />
-            {t('paper.manualOrder.submit')}
-          </button>
-        </form>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex gap-1 border-b border-gray-700">
-        {tabs.map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            className={`px-4 py-2 text-sm font-medium ${
-              activeTab === tab.key
-                ? 'border-b-2 border-blue-500 text-white'
-                : 'text-gray-400 hover:text-gray-200'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Tab Content */}
-      {loading && <p className="text-gray-400">{t('common:loading')}</p>}
-
-      {activeTab === 'deployments' && !loading && (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-gray-700 text-gray-400">
-              <tr>
-                <th className="px-3 py-2">ID</th>
-                <th className="px-3 py-2">{t('paper.deploy.strategy')}</th>
-                <th className="px-3 py-2">{t('order.symbol')}</th>
-                <th className="px-3 py-2">{t('order.status')}</th>
-                <th className="px-3 py-2">{t('position.pnl')}</th>
-                <th className="px-3 py-2">{t('paper.deployment.startedAt')}</th>
-                <th className="px-3 py-2">{t('order.actions')}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-700/50">
-              {deployments.map((d) => (
-                <tr key={d.id} className="text-gray-300">
-                  <td className="px-3 py-2">{d.id}</td>
-                  <td className="px-3 py-2">{d.strategy_name}</td>
-                  <td className="px-3 py-2 font-mono">{d.vt_symbol}</td>
-                  <td className="px-3 py-2">
-                    <span className={`rounded-full px-2 py-0.5 text-xs ${STATUS_COLORS[d.status] || 'bg-gray-600 text-gray-300'}`}>
-                      {d.status}
-                    </span>
-                  </td>
-                  <td className={`px-3 py-2 font-mono ${d.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    {d.pnl >= 0 ? '+' : ''}{d.pnl.toFixed(2)}
-                  </td>
-                  <td className="px-3 py-2 text-gray-500">{new Date(d.started_at).toLocaleString()}</td>
-                  <td className="px-3 py-2">
-                    {d.status === 'running' && (
-                      <button
-                        onClick={() => handleStopDeployment(d.id)}
-                        className="text-red-400 hover:text-red-300"
-                        title="Stop"
-                      >
-                        <Pause size={16} />
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-              {deployments.length === 0 && (
-                <tr><td colSpan={7} className="px-3 py-8 text-center text-gray-500">{t('paper.deployment.noDeployments')}</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {activeTab === 'orders' && !loading && (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-gray-700 text-gray-400">
-              <tr>
-                <th className="px-3 py-2">ID</th>
-                <th className="px-3 py-2">{t('order.symbol')}</th>
-                <th className="px-3 py-2">{t('order.direction')}</th>
-                <th className="px-3 py-2">{t('order.type')}</th>
-                <th className="px-3 py-2">{t('order.quantity')}</th>
-                <th className="px-3 py-2">{t('order.price')}</th>
-                <th className="px-3 py-2">{t('order.status')}</th>
-                <th className="px-3 py-2">{t('common:filled')}</th>
-                <th className="px-3 py-2">{t('common:fee')}</th>
-                <th className="px-3 py-2">{t('order.time')}</th>
-                <th className="px-3 py-2">{t('order.actions')}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-700/50">
-              {orders.map((o) => (
-                <tr key={o.id} className="text-gray-300">
-                  <td className="px-3 py-2">{o.id}</td>
-                  <td className="px-3 py-2 font-mono">{o.symbol}</td>
-                  <td className="px-3 py-2">
-                    <span className={o.direction === 'buy' ? 'text-green-400' : 'text-red-400'}>
-                      {o.direction.toUpperCase()}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2">{o.order_type}</td>
-                  <td className="px-3 py-2">{o.quantity}</td>
-                  <td className="px-3 py-2 font-mono">{o.price ?? '-'}</td>
-                  <td className="px-3 py-2">
-                    <span className={`rounded-full px-2 py-0.5 text-xs ${STATUS_COLORS[o.status] || 'bg-gray-600 text-gray-300'}`}>
-                      {o.status}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2 font-mono">
-                    {o.filled_quantity != null ? `${o.filled_quantity}@${o.avg_fill_price}` : '-'}
-                  </td>
-                  <td className="px-3 py-2 font-mono">{o.fee ?? '-'}</td>
-                  <td className="px-3 py-2 text-gray-500">{new Date(o.created_at).toLocaleString()}</td>
-                  <td className="px-3 py-2">
-                    {['created', 'submitted', 'partial'].includes(o.status) && (
-                      <button
-                        onClick={() => handleCancelOrder(o.id)}
-                        className="text-red-400 hover:text-red-300"
-                        title="Cancel"
-                      >
-                        <XCircle size={16} />
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-              {orders.length === 0 && (
-                <tr><td colSpan={11} className="px-3 py-8 text-center text-gray-500">{t('order.noOrders')}</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {activeTab === 'positions' && !loading && (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-gray-700 text-gray-400">
-              <tr>
-                <th className="px-3 py-2">{t('position.symbol')}</th>
-                <th className="px-3 py-2">{t('position.direction')}</th>
-                <th className="px-3 py-2">{t('position.quantity')}</th>
-                <th className="px-3 py-2">{t('position.avgCost')}</th>
-                <th className="px-3 py-2">{t('position.currentPrice')}</th>
-                <th className="px-3 py-2">{t('position.pnl')}</th>
-                <th className="px-3 py-2">{t('position.pnlPct')}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-700/50">
-              {positions.map((p) => (
-                <tr key={`${p.symbol}-${p.direction}`} className="text-gray-300">
-                  <td className="px-3 py-2 font-mono">{p.symbol}</td>
-                  <td className="px-3 py-2">
-                    <span className={p.direction === 'buy' ? 'text-green-400' : 'text-red-400'}>
-                      {p.direction.toUpperCase()}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2">{p.quantity}</td>
-                  <td className="px-3 py-2 font-mono">{p.avg_cost.toFixed(2)}</td>
-                  <td className="px-3 py-2 font-mono">{p.current_price.toFixed(2)}</td>
-                  <td className={`px-3 py-2 font-mono ${p.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    {p.pnl >= 0 ? '+' : ''}{p.pnl.toFixed(2)}
-                  </td>
-                  <td className={`px-3 py-2 font-mono ${p.pnl_pct >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    {p.pnl_pct >= 0 ? '+' : ''}{p.pnl_pct.toFixed(2)}%
-                  </td>
-                </tr>
-              ))}
-              {positions.length === 0 && (
-                <tr><td colSpan={7} className="px-3 py-8 text-center text-gray-500">{t('positions.noPositions')}</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {activeTab === 'performance' && !loading && performance && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
-            {[
-              { label: t('performance.totalPnl'), value: performance.total_pnl.toFixed(2), color: performance.total_pnl >= 0 ? 'text-green-400' : 'text-red-400' },
-              { label: t('performance.totalTrades'), value: String(performance.total_trades), color: 'text-white' },
-              { label: t('performance.winRate'), value: `${(performance.win_rate * 100).toFixed(1)}%`, color: 'text-white' },
-              { label: t('performance.maxDrawdown'), value: `${(performance.max_drawdown * 100).toFixed(2)}%`, color: 'text-red-400' },
-              { label: t('performance.sharpeRatio'), value: performance.sharpe_ratio?.toFixed(2) ?? 'N/A', color: 'text-white' },
-            ].map((m) => (
-              <div key={m.label} className="rounded-lg border border-gray-700 bg-gray-800 p-3">
-                <p className="text-xs text-gray-400">{m.label}</p>
-                <p className={`text-lg font-bold ${m.color}`}>{m.value}</p>
-              </div>
-            ))}
+            <DataTable columns={depCols} data={deployments} emptyText="暂无模拟部署" />
           </div>
-          {performance.equity_curve.length > 0 && (
-            <div className="flex items-center gap-2 rounded-lg border border-gray-700 bg-gray-800 p-4">
-              <LineChart size={16} className="text-gray-400" />
-              <span className="text-sm text-gray-400">
-                Equity curve: {performance.equity_curve.length} data points
-                (from {performance.equity_curve[0].date} to {performance.equity_curve[performance.equity_curve.length - 1].date})
-              </span>
-            </div>
-          )}
-        </div>
-      )}
+        )}
 
-      {activeTab === 'performance' && !loading && !performance && (
-        <p className="py-8 text-center text-gray-500">{t('performance.noData')}</p>
-      )}
+        {activeTab === 'orders' && (
+          <div className="space-y-4">
+            <FilterBar
+              filters={[{ key: 'search', label: '搜索代码', type: 'search' as const }]}
+              values={{ search }}
+              onChange={(v) => setSearch((v.search as string) || '')}
+            />
+            <DataTable columns={orderCols} data={search ? paperOrders.filter((o) => o.symbol.includes(search)) : paperOrders} emptyText="暂无模拟委托" />
+          </div>
+        )}
+
+        {activeTab === 'positions' && (
+          <DataTable columns={posCols} data={paperPositions} emptyText="暂无模拟持仓" />
+        )}
+
+        {activeTab === 'performance' && (
+          <div className="space-y-4">
+            {perfDates.length > 0 ? (
+              <>
+                <div className="rounded-lg border border-border bg-card p-5">
+                  <h3 className="font-semibold text-card-foreground mb-4">模拟净值曲线</h3>
+                  <LineChart xData={perfDates} series={[{ name: '净值', data: perfNav }]} height={280} />
+                </div>
+              </>
+            ) : (
+              <p className="text-center text-muted-foreground py-8">暂无绩效数据</p>
+            )}
+          </div>
+        )}
+      </TabPanel>
+
+      <Modal open={newModal} onClose={() => setNewModal(false)} title="新建模拟部署" footer={
+        <>
+          <button onClick={() => setNewModal(false)} className="px-4 py-2 text-sm rounded-md border border-border hover:bg-muted">取消</button>
+          <button onClick={() => createMutation.mutate()} disabled={!form.strategy} className="px-4 py-2 text-sm rounded-md bg-primary text-white hover:opacity-90 disabled:opacity-50">创建部署</button>
+        </>
+      }>
+        <div className="flex flex-col gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">选择策略</label>
+            <select value={form.strategy} onChange={(e) => setForm({ ...form, strategy: e.target.value })} className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background">
+              <option value="">请选择策略...</option>
+              {strategies.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">初始资金</label>
+            <input type="number" value={form.capital} onChange={(e) => setForm({ ...form, capital: e.target.value })} className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background" />
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

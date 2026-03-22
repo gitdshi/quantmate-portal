@@ -1,213 +1,90 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor } from '@test/support/utils'
-import userEvent from '@testing-library/user-event'
+import { fireEvent, render, screen, waitFor } from '@test/support/utils'
 import Settings from '@/pages/Settings'
 
 vi.mock('@/lib/api', () => ({
   api: {
     get: vi.fn(),
-    interceptors: {
-      request: { use: vi.fn() },
-      response: { use: vi.fn() },
-    },
+    interceptors: { request: { use: vi.fn() }, response: { use: vi.fn() } },
   },
-  dataSourceAPI: {
-    listItems: vi.fn(),
-    updateItem: vi.fn(),
-    batchUpdate: vi.fn(),
-    testConnection: vi.fn(),
-  },
+  systemAPI: { healthCheck: vi.fn() },
+  dataSourceAPI: {},
 }))
 
-import { dataSourceAPI } from '@/lib/api'
-
-const mockItems = [
-  {
-    item_key: 'stock_basic',
-    name: '股票列表',
-    source: 'tushare',
-    api_identifier: 'stock_basic',
-    permission_level: '基础',
-    enabled: true,
-    last_sync: '2025-01-01 10:00',
-    status: 'ok',
-  },
-  {
-    item_key: 'stock_daily',
-    name: '日线行情',
-    source: 'tushare',
-    api_identifier: 'stock_daily',
-    permission_level: '基础',
-    enabled: true,
-    last_sync: '2025-01-01 10:00',
-    status: 'ok',
-  },
-  {
-    item_key: 'top10_holders',
-    name: '十大股东',
-    source: 'tushare',
-    api_identifier: 'top10_holders',
-    permission_level: '积分 �?5000',
-    enabled: false,
-  },
-  {
-    item_key: 'ak_trade_cal',
-    name: '交易日历',
-    source: 'akshare',
-    api_identifier: 'ak_trade_cal',
-    permission_level: '无需Token',
-    enabled: true,
-    last_sync: '2025-01-01 08:00',
-  },
-]
+import { systemAPI } from '@/lib/api'
 
 describe('Settings Page', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    ;(dataSourceAPI.listItems as any).mockResolvedValue({ data: mockItems })
-    ;(dataSourceAPI.updateItem as any).mockResolvedValue({ data: { ok: true } })
-    ;(dataSourceAPI.batchUpdate as any).mockResolvedValue({ data: { ok: true } })
-    ;(dataSourceAPI.testConnection as any).mockResolvedValue({ data: { ok: true, message: 'Connected' } })
+    ;(systemAPI.healthCheck as any).mockResolvedValue({ data: { status: '正常', version: 'v1.2.0' } })
   })
 
-  it('renders Settings heading and data source items', async () => {
+  it('renders heading', () => {
     render(<Settings />)
-
-    await waitFor(() => {
-      expect(screen.getByText('Settings')).toBeInTheDocument()
-    })
-
-    expect(screen.getByText('Data Item Toggle Management')).toBeInTheDocument()
-    expect(screen.getByText('股票列表')).toBeInTheDocument()
-    expect(screen.getByText('日线行情')).toBeInTheDocument()
-    expect(screen.getByText('十大股东')).toBeInTheDocument()
-    expect(screen.getByText('交易日历')).toBeInTheDocument()
+    expect(screen.getByText('系统设置')).toBeInTheDocument()
   })
 
-  it('displays source groups with stats', async () => {
+  it('shows all 6 tabs', () => {
     render(<Settings />)
-
-    await waitFor(() => {
-      expect(screen.getByText('tushare')).toBeInTheDocument()
-    })
-
-    expect(screen.getByText('akshare')).toBeInTheDocument()
-    expect(screen.getByText('(2/3 enabled)')).toBeInTheDocument()
-    expect(screen.getByText('(1/1 enabled)')).toBeInTheDocument()
+    expect(screen.getByText('常规设置')).toBeInTheDocument()
+    expect(screen.getByText('数据源')).toBeInTheDocument()
+    expect(screen.getByText('交易参数')).toBeInTheDocument()
+    expect(screen.getByText('通知设置')).toBeInTheDocument()
+    expect(screen.getByText('界面设置')).toBeInTheDocument()
+    expect(screen.getByText('系统信息')).toBeInTheDocument()
   })
 
-  it('displays permission badges with correct styling', async () => {
+  it('shows save button', () => {
     render(<Settings />)
-
-    await waitFor(() => {
-      expect(screen.getAllByText('基础')).toHaveLength(2)
-    })
-
-    expect(screen.getByText('积分 �?5000')).toBeInTheDocument()
-    expect(screen.getByText('无需Token')).toBeInTheDocument()
+    expect(screen.getByText('保存设置')).toBeInTheDocument()
   })
 
-  it('shows enabled/disabled status badges', async () => {
+  it('shows general settings by default', () => {
     render(<Settings />)
-
-    await waitFor(() => {
-      expect(screen.getAllByText('Enabled')).toHaveLength(3)
-    })
-
-    expect(screen.getByText('Disabled')).toBeInTheDocument()
+    expect(screen.getByText('语言')).toBeInTheDocument()
+    expect(screen.getByText('时区')).toBeInTheDocument()
+    expect(screen.getByText('日期格式')).toBeInTheDocument()
+    expect(screen.getByText('默认货币')).toBeInTheDocument()
+    expect(screen.getByText('自动保存')).toBeInTheDocument()
   })
 
-  it('displays enabled item count summary', async () => {
+  it('switches to datasource tab', () => {
     render(<Settings />)
-
-    await waitFor(() => {
-      expect(screen.getByText(/Enabled: 3 \/ 4 items/)).toBeInTheDocument()
-    })
+    fireEvent.click(screen.getByText('数据源'))
+    expect(screen.getByText('Tushare Pro')).toBeInTheDocument()
+    expect(screen.getByText('AkShare')).toBeInTheDocument()
   })
 
-  it('toggles a data source item', async () => {
-    const user = userEvent.setup()
+  it('shows trading config tab', () => {
     render(<Settings />)
-
-    await waitFor(() => {
-      expect(screen.getByText('十大股东')).toBeInTheDocument()
-    })
-
-    const toggleBtn = screen.getByLabelText('Toggle 十大股东')
-    await user.click(toggleBtn)
-
-    expect(dataSourceAPI.updateItem).toHaveBeenCalledWith('top10_holders', { enabled: true, source: 'tushare' })
+    fireEvent.click(screen.getByText('交易参数'))
+    expect(screen.getByText('交易参数')).toBeInTheDocument()
+    expect(screen.getByText('风控参数')).toBeInTheDocument()
   })
 
-  it('calls batchUpdate when Enable All is clicked', async () => {
-    const user = userEvent.setup()
+  it('shows notification settings tab', () => {
     render(<Settings />)
-
-    await waitFor(() => {
-      expect(screen.getByText('tushare')).toBeInTheDocument()
-    })
-
-    const enableAllBtns = screen.getAllByText('Enable All')
-    await user.click(enableAllBtns[0])
-
-    expect(dataSourceAPI.batchUpdate).toHaveBeenCalledWith({
-      items: [
-        { item_key: 'stock_basic', enabled: true, source: 'tushare' },
-        { item_key: 'stock_daily', enabled: true, source: 'tushare' },
-        { item_key: 'top10_holders', enabled: true, source: 'tushare' },
-      ],
-    })
+    fireEvent.click(screen.getByText('通知设置'))
+    expect(screen.getByText('策略状态变更通知')).toBeInTheDocument()
+    expect(screen.getByText('交易执行通知')).toBeInTheDocument()
+    expect(screen.getByText('风控告警通知')).toBeInTheDocument()
   })
 
-  it('tests connection for a data source', async () => {
-    const user = userEvent.setup()
+  it('shows UI settings tab', () => {
     render(<Settings />)
-
-    await waitFor(() => {
-      expect(screen.getByText('tushare')).toBeInTheDocument()
-    })
-
-    const testBtns = screen.getAllByText('Test Connection')
-    await user.click(testBtns[0])
-
-    expect(dataSourceAPI.testConnection).toHaveBeenCalledWith('tushare')
-
-    await waitFor(() => {
-      expect(screen.getByText('Connected')).toBeInTheDocument()
-    })
+    fireEvent.click(screen.getByText('界面设置'))
+    expect(screen.getByText('主题模式')).toBeInTheDocument()
+    expect(screen.getByText('主题色')).toBeInTheDocument()
+    expect(screen.getByText('图表库')).toBeInTheDocument()
   })
 
-  it('shows error state when loading fails', async () => {
-    ;(dataSourceAPI.listItems as any).mockRejectedValue(new Error('Network error'))
-
+  it('shows system info tab with health data', async () => {
     render(<Settings />)
-
-    await waitFor(() => {
-      expect(screen.getByText('Failed to load data source items')).toBeInTheDocument()
-    })
-
-    expect(screen.getByText('Retry')).toBeInTheDocument()
-  })
-
-  it('shows empty state when no items', async () => {
-    ;(dataSourceAPI.listItems as any).mockResolvedValue({ data: [] })
-
-    render(<Settings />)
-
-    await waitFor(() => {
-      expect(screen.getByText('No data source items configured')).toBeInTheDocument()
-    })
-  })
-
-  it('shows API identifiers in monospace', async () => {
-    render(<Settings />)
-
-    await waitFor(() => {
-      expect(screen.getByText('stock_basic')).toBeInTheDocument()
-    })
-
-    expect(screen.getByText('top10_holders')).toBeInTheDocument()
-    expect(screen.getByText('ak_trade_cal')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('系统信息'))
+    expect(screen.getByText('系统状态')).toBeInTheDocument()
+    expect(screen.getByText('CPU')).toBeInTheDocument()
+    expect(screen.getByText('内存')).toBeInTheDocument()
+    expect(screen.getByText('磁盘')).toBeInTheDocument()
   })
 })
 
