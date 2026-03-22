@@ -1,18 +1,9 @@
 import { ArrowDown, ArrowUp } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-    Bar,
-    CartesianGrid,
-    ComposedChart,
-    Legend,
-    Line,
-    ReferenceDot,
-    ResponsiveContainer,
-    Tooltip,
-    XAxis,
-    YAxis
-} from 'recharts'
+import EChartWrapper from './charts/EChartWrapper'
+import '../lib/echarts-advanced'
+import type { EChartsOption } from '../lib/echarts'
 import { themeColors } from '../lib/theme'
 
 interface StockPriceDataPoint {
@@ -44,52 +35,6 @@ interface TradingChartProps {
   benchmarkSymbol?: string
 }
 
-function LongEntryShape(props: any) {
-  const { cx, cy } = props
-  if (cx == null || cy == null) return null
-  return (
-    <g>
-      <circle cx={cx} cy={cy} r={6} fill="#ef4444" stroke="#fff" strokeWidth={1.5} />
-      <polygon points={`${cx},${cy - 3} ${cx - 3},${cy + 2} ${cx + 3},${cy + 2}`} fill="#fff" />
-    </g>
-  )
-}
-
-function ShortEntryShape(props: any) {
-  const { cx, cy } = props
-  if (cx == null || cy == null) return null
-  return (
-    <g>
-      <circle cx={cx} cy={cy} r={6} fill="#10b981" stroke="#fff" strokeWidth={1.5} />
-      <polygon points={`${cx},${cy + 3} ${cx - 3},${cy - 2} ${cx + 3},${cy - 2}`} fill="#fff" />
-    </g>
-  )
-}
-
-function LongExitShape(props: any) {
-  const { cx, cy } = props
-  if (cx == null || cy == null) return null
-  return (
-    <g>
-      <circle cx={cx} cy={cy} r={6} fill="#ef4444" stroke="#fff" strokeWidth={1.5} />
-      <line x1={cx - 2.5} y1={cy - 2.5} x2={cx + 2.5} y2={cy + 2.5} stroke="#fff" strokeWidth={1.5} />
-      <line x1={cx - 2.5} y1={cy + 2.5} x2={cx + 2.5} y2={cy - 2.5} stroke="#fff" strokeWidth={1.5} />
-    </g>
-  )
-}
-
-function ShortExitShape(props: any) {
-  const { cx, cy } = props
-  if (cx == null || cy == null) return null
-  return (
-    <g>
-      <circle cx={cx} cy={cy} r={6} fill="#10b981" stroke="#fff" strokeWidth={1.5} />
-      <line x1={cx - 2.5} y1={cy - 2.5} x2={cx + 2.5} y2={cy + 2.5} stroke="#fff" strokeWidth={1.5} />
-      <line x1={cx - 2.5} y1={cy + 2.5} x2={cx + 2.5} y2={cy - 2.5} stroke="#fff" strokeWidth={1.5} />
-    </g>
-  )
-}
-
 export default function TradingChart({
   stockPriceData,
   benchmarkData,
@@ -98,12 +43,9 @@ export default function TradingChart({
   benchmarkSymbol = 'Benchmark',
 }: TradingChartProps) {
   const { t } = useTranslation(['market', 'common'])
-  const [zoomState, setZoomState] = useState({ startIndex: 0, endIndex: 0 })
-  const [isDragging, setIsDragging] = useState(false)
-  const [dragStart, setDragStart] = useState(0)
-  const chartContainerRef = useRef<HTMLDivElement>(null)
-  const zoomStateRef = useRef(zoomState)
-  const chartDataLengthRef = useRef(0)
+  const [zoomRange, setZoomRange] = useState({ start: 70, end: 100 })
+  const longDirectionLabel = '\u591a'
+  const openOffsetLabel = '\u5f00'
   
   const { chartData, tradeMarkers } = useMemo(() => {
     if (!stockPriceData || stockPriceData.length === 0) {
@@ -135,11 +77,10 @@ export default function TradingChart({
         date: dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         fullDate: point.datetime,
         dateKey: dateKey,
-        open: point.open,
-        high: point.high,
-        low: point.low,
+        open: point.open ?? point.close,
+        high: point.high ?? point.close,
+        low: point.low ?? point.close,
         close: point.close,
-        stockPrice: point.close,
         benchmarkPrice: benchmarkValue,
       }
     })
@@ -168,8 +109,8 @@ export default function TradingChart({
 
           const dir = (trade.direction || '').toUpperCase()
           const ofs = (trade.offset || '').toUpperCase()
-          const isLong = dir === '多' || dir === 'LONG'
-          const isEntry = ofs === '开' || ofs === 'OPEN'
+          const isLong = dir === longDirectionLabel || dir === 'LONG'
+          const isEntry = ofs === openOffsetLabel || ofs === 'OPEN'
 
           markers.push({
             date: dateLabel,
@@ -182,59 +123,8 @@ export default function TradingChart({
         }
       })
     }
-
-    console.log('TradingChart - chartData points:', data.length, 'tradeMarkers:', markers.length)
-    if (markers.length > 0) console.log('TradingChart - marker sample:', markers[0])
-
     return { chartData: data, tradeMarkers: markers }
-  }, [stockPriceData, benchmarkData, trades])
-
-  // Keep refs in sync for native event handlers
-  useEffect(() => {
-    zoomStateRef.current = zoomState
-    chartDataLengthRef.current = chartData.length
-  }, [zoomState, chartData.length])
-
-  // Initialize zoom to show all data
-  useEffect(() => {
-    if (zoomState.endIndex === 0 && chartData.length > 0) {
-      setZoomState({ startIndex: 0, endIndex: chartData.length - 1 })
-    }
-  }, [zoomState.endIndex, chartData.length])
-
-  // Native wheel handler to prevent page scroll and zoom chart
-  useEffect(() => {
-    const el = chartContainerRef.current
-    if (!el) return
-
-    const handler = (e: WheelEvent) => {
-      e.preventDefault()
-      e.stopPropagation()
-      const state = zoomStateRef.current
-      const length = chartDataLengthRef.current
-      if (length === 0) return
-
-      const delta = e.deltaY > 0 ? 1 : -1
-      const zoomFactor = 0.1
-      const currentRange = state.endIndex - state.startIndex
-      const zoomAmount = Math.max(1, Math.floor(currentRange * zoomFactor))
-
-      if (delta > 0) {
-        const newStart = Math.max(0, state.startIndex - zoomAmount)
-        const newEnd = Math.min(length - 1, state.endIndex + zoomAmount)
-        setZoomState({ startIndex: newStart, endIndex: newEnd })
-      } else {
-        const newStart = Math.min(state.startIndex + zoomAmount, state.endIndex - 10)
-        const newEnd = Math.max(state.endIndex - zoomAmount, state.startIndex + 10)
-        if (newEnd > newStart + 5) {
-          setZoomState({ startIndex: newStart, endIndex: newEnd })
-        }
-      }
-    }
-
-    el.addEventListener('wheel', handler, { passive: false })
-    return () => el.removeEventListener('wheel', handler)
-  }, [])
+  }, [stockPriceData, benchmarkData, trades, longDirectionLabel, openOffsetLabel])
 
   if (chartData.length === 0) {
     return (
@@ -246,60 +136,165 @@ export default function TradingChart({
 
   const hasBenchmark = chartData.some(d => d.benchmarkPrice !== undefined)
 
-  // Get visible data based on zoom state
-  const visibleData = chartData.slice(zoomState.startIndex, zoomState.endIndex + 1)
+  const priceValues = chartData.flatMap((point) => [point.open, point.high, point.low, point.close])
+  const tradePrices = tradeMarkers.map((trade) => trade.price)
+  const allStockValues = [...priceValues, ...tradePrices]
+  const stockMin = allStockValues.length > 0 ? Math.min(...allStockValues) : 0
+  const stockMax = allStockValues.length > 0 ? Math.max(...allStockValues) : 100
+  const stockPadding = (stockMax - stockMin) * 0.08 || 1
 
-  // Calculate price domains from visible data (includes OHLC for candlesticks)
-  const visibleStockPrices = visibleData.flatMap(d =>
-    [d.open, d.high, d.low, d.close].filter((v): v is number => v != null)
-  )
-  const visibleTradePrices = tradeMarkers
-    .filter(t => visibleData.some(d => d.date === t.date))
-    .map(t => t.price)
-  const allVisiblePrices = [...visibleStockPrices, ...visibleTradePrices]
-  const stockMin = allVisiblePrices.length > 0 ? Math.min(...allVisiblePrices) : 0
-  const stockMax = allVisiblePrices.length > 0 ? Math.max(...allVisiblePrices) : 100
-  const stockPadding = (stockMax - stockMin) * 0.1 || 1
+  const benchmarkValues = chartData.map((point) => point.benchmarkPrice).filter((value): value is number => value !== undefined)
+  const benchMin = benchmarkValues.length > 0 ? Math.min(...benchmarkValues) : 0
+  const benchMax = benchmarkValues.length > 0 ? Math.max(...benchmarkValues) : 100
+  const benchPadding = (benchMax - benchMin) * 0.08 || 1
 
-  const benchmarkPricesArr = visibleData.map(d => d.benchmarkPrice).filter((p): p is number => p !== undefined)
-  const benchMin = benchmarkPricesArr.length > 0 ? Math.min(...benchmarkPricesArr) : 0
-  const benchMax = benchmarkPricesArr.length > 0 ? Math.max(...benchmarkPricesArr) : 100
-  const benchPadding = (benchMax - benchMin) * 0.1 || 1
+  const dateToIndex = new Map(chartData.map((point, index) => [point.date, index]))
+
+  const buildScatterSeries = (
+    name: string,
+    data: Array<{ date: string; price: number }>,
+    color: string,
+    symbol: string,
+  ) => ({
+    name,
+    type: 'scatter' as const,
+    data: data.map((point) => [dateToIndex.get(point.date) ?? 0, point.price]),
+    symbol,
+    symbolSize: 10,
+    itemStyle: {
+      color,
+      borderColor: '#ffffff',
+      borderWidth: 1.5,
+    },
+    tooltip: {
+      formatter: (_param: unknown) => name,
+    },
+    emphasis: {
+      scale: 1.2,
+    },
+    z: 5,
+  })
+
+  const longEntries = tradeMarkers.filter((trade) => trade.isLong && trade.isEntry)
+  const shortEntries = tradeMarkers.filter((trade) => !trade.isLong && trade.isEntry)
+  const longExits = tradeMarkers.filter((trade) => trade.isLong && !trade.isEntry)
+  const shortExits = tradeMarkers.filter((trade) => !trade.isLong && !trade.isEntry)
 
   const handleResetZoom = () => {
-    setZoomState({ startIndex: 0, endIndex: chartData.length - 1 })
+    setZoomRange({ start: 0, end: 100 })
   }
 
-  // Handle mouse drag to pan
-  const handleMouseDown = (e: React.MouseEvent) => {
-    setIsDragging(true)
-    setDragStart(e.clientX)
-  }
+  const option: EChartsOption = useMemo(() => ({
+    animation: false,
+    legend: {
+      bottom: 0,
+      data: [stockSymbol, ...(hasBenchmark ? [benchmarkSymbol] : [])],
+      textStyle: { color: themeColors.mutedForeground },
+    },
+    grid: { left: 56, right: hasBenchmark ? 64 : 24, top: 16, bottom: 52 },
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'cross' },
+      backgroundColor: themeColors.card,
+      borderColor: themeColors.border,
+      textStyle: { color: themeColors.foreground },
+      formatter: (params: unknown) => {
+        const items = Array.isArray(params) ? params as Array<{ dataIndex: number; seriesName: string }> : []
+        if (items.length === 0) return ''
+        const point = chartData[items[0].dataIndex]
+        if (!point) return ''
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging) return
-    const diff = dragStart - e.clientX
-    const pixelsPerPoint = 800 / (zoomState.endIndex - zoomState.startIndex)
-    const pointsToMove = Math.round(diff / pixelsPerPoint)
+        const lines = [
+          `<div style="margin-bottom:4px;color:${themeColors.mutedForeground}">${point.fullDate.split('T')[0]}</div>`,
+          `<div>${t('overview.open')}: <strong>${point.open.toFixed(2)}</strong></div>`,
+          `<div>${t('overview.high')}: <strong>${point.high.toFixed(2)}</strong></div>`,
+          `<div>${t('overview.low')}: <strong>${point.low.toFixed(2)}</strong></div>`,
+          `<div>${t('overview.close')}: <strong>${point.close.toFixed(2)}</strong></div>`,
+        ]
 
-    if (Math.abs(pointsToMove) > 0) {
-      const newStart = zoomState.startIndex + pointsToMove
-      const newEnd = zoomState.endIndex + pointsToMove
+        if (point.benchmarkPrice != null) {
+          lines.push(`<div style="margin-top:4px;padding-top:4px;border-top:1px solid ${themeColors.border}">${benchmarkSymbol}: <strong>${point.benchmarkPrice.toFixed(2)}</strong></div>`)
+        }
 
-      if (newStart >= 0 && newEnd < chartData.length) {
-        setZoomState({ startIndex: newStart, endIndex: newEnd })
-        setDragStart(e.clientX)
-      }
-    }
-  }
-
-  const handleMouseUp = () => {
-    setIsDragging(false)
-  }
-
-  const handleMouseLeave = () => {
-    setIsDragging(false)
-  }
+        return lines.join('')
+      },
+    },
+    axisPointer: {
+      link: [{ xAxisIndex: 'all' }],
+    },
+    xAxis: {
+      type: 'category',
+      data: chartData.map((point) => point.date),
+      boundaryGap: true,
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: { color: themeColors.mutedForeground, fontSize: 11 },
+    },
+    yAxis: [
+      {
+        type: 'value',
+        scale: true,
+        min: stockMin - stockPadding,
+        max: stockMax + stockPadding,
+        axisLine: { show: false },
+        axisTick: { show: false },
+        splitLine: { lineStyle: { color: themeColors.border, opacity: 0.5 } },
+        axisLabel: {
+          color: '#10b981',
+          formatter: (value: number) => value.toFixed(2),
+        },
+      },
+      {
+        type: 'value',
+        scale: true,
+        show: hasBenchmark,
+        min: benchMin - benchPadding,
+        max: benchMax + benchPadding,
+        position: 'right',
+        axisLine: { show: false },
+        axisTick: { show: false },
+        splitLine: { show: false },
+        axisLabel: {
+          color: '#f59e0b',
+          formatter: (value: number) => value.toFixed(0),
+        },
+      },
+    ],
+    dataZoom: [
+      { type: 'inside', start: zoomRange.start, end: zoomRange.end },
+      { type: 'slider', start: zoomRange.start, end: zoomRange.end, bottom: 20, height: 18 },
+    ],
+    series: [
+      {
+        name: stockSymbol,
+        type: 'candlestick',
+        data: chartData.map((point) => [point.open, point.close, point.low, point.high]),
+        itemStyle: {
+          color: '#ef4444',
+          color0: '#10b981',
+          borderColor: '#ef4444',
+          borderColor0: '#10b981',
+        },
+      },
+      ...(hasBenchmark
+        ? [{
+            name: benchmarkSymbol,
+            type: 'line' as const,
+            yAxisIndex: 1,
+            data: chartData.map((point) => point.benchmarkPrice ?? null),
+            showSymbol: false,
+            smooth: true,
+            connectNulls: true,
+            lineStyle: { color: '#f59e0b', width: 2 },
+            itemStyle: { color: '#f59e0b' },
+          }]
+        : []),
+      buildScatterSeries(t('chart.longEntry'), longEntries, '#ef4444', 'triangle'),
+      buildScatterSeries(t('chart.shortEntry'), shortEntries, '#10b981', 'triangle'),
+      buildScatterSeries(t('chart.longExit'), longExits, '#ef4444', 'diamond'),
+      buildScatterSeries(t('chart.shortExit'), shortExits, '#10b981', 'diamond'),
+    ],
+  }), [benchmarkSymbol, benchMax, benchMin, benchPadding, chartData, hasBenchmark, longEntries, longExits, shortEntries, shortExits, stockMax, stockMin, stockPadding, stockSymbol, t, zoomRange.end, zoomRange.start])
 
   return (
     <div className="w-full">
@@ -339,185 +334,7 @@ export default function TradingChart({
         </button>
       </div>
 
-      <div 
-        ref={chartContainerRef}
-        className={`h-80 select-none ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseLeave}
-      >
-        <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart
-            data={visibleData}
-            margin={{ top: 10, right: 60, left: 10, bottom: 10 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-            <XAxis
-              dataKey="date"
-              tick={{ fontSize: 11 }}
-              tickLine={false}
-              axisLine={false}
-              interval="preserveStartEnd"
-            />
-            {/* Left Y-axis: Stock Price */}
-            <YAxis
-              yAxisId="left"
-              orientation="left"
-              domain={[stockMin - stockPadding, stockMax + stockPadding]}
-              tick={{ fontSize: 11, fill: '#10b981' }}
-              tickLine={false}
-              axisLine={false}
-              tickFormatter={(value) => value.toFixed(2)}
-            />
-            {/* Right Y-axis: Benchmark Price */}
-            {hasBenchmark && (
-              <YAxis
-                yAxisId="right"
-                orientation="right"
-                domain={[benchMin - benchPadding, benchMax + benchPadding]}
-                tick={{ fontSize: 11, fill: '#f59e0b' }}
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={(value) => value.toFixed(0)}
-              />
-            )}
-            <Tooltip
-              contentStyle={{
-                backgroundColor: themeColors.card,
-                border: `1px solid ${themeColors.border}`,
-                borderRadius: '8px',
-              }}
-              labelStyle={{ color: themeColors.foreground }}
-              formatter={(value: any, name: any) => {
-                if (value === undefined || value === null) return ['N/A', name]
-                if (name === stockSymbol) {
-                  return [Number(value).toFixed(2), stockSymbol]
-                }
-                if (name === benchmarkSymbol) {
-                  return [Number(value).toFixed(2), benchmarkSymbol]
-                }
-                return [value, name]
-              }}
-              labelFormatter={(_label, payload) => {
-                if (payload && payload[0]) {
-                  const p = payload[0].payload
-                  return p.fullDate?.split('T')[0] || _label
-                }
-                return _label
-              }}
-              content={(props: any) => {
-                if (!props.active || !props.payload || !props.payload.length) return null
-                const data = props.payload[0].payload
-                return (
-                  <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
-                    <div className="text-xs text-muted-foreground mb-1">{data.fullDate?.split('T')[0]}</div>
-                    {data.open != null && (
-                      <div className="text-xs space-y-0.5">
-                        <div>{t('overview.open')}: <span className="font-medium">{data.open.toFixed(2)}</span></div>
-                        <div>{t('overview.high')}: <span className="font-medium">{data.high.toFixed(2)}</span></div>
-                        <div>{t('overview.low')}: <span className="font-medium">{data.low.toFixed(2)}</span></div>
-                        <div>{t('overview.close')}: <span className="font-medium">{data.close.toFixed(2)}</span></div>
-                      </div>
-                    )}
-                    {data.benchmarkPrice != null && (
-                      <div className="text-xs mt-1 pt-1 border-t border-border">
-                        <div>{benchmarkSymbol}: <span className="font-medium">{data.benchmarkPrice.toFixed(2)}</span></div>
-                      </div>
-                    )}
-                  </div>
-                )
-              }}
-            />
-            <Legend wrapperStyle={{ paddingTop: '10px' }} iconType="line" />
-            {/* Candlestick chart for stock price (left axis) */}
-            <Bar
-              yAxisId="left"
-              dataKey="close"
-              name={stockSymbol}
-              fill="transparent"
-              stroke="transparent"
-              isAnimationActive={false}
-              shape={(props: any) => {
-                const { x, y, width, height, payload } = props
-                if (!payload || payload.open == null || payload.high == null ||
-                    payload.low == null || payload.close == null || !height) return null
-
-                const { open, high, low, close } = payload
-                const domainBase = stockMin - stockPadding
-                const range = close - domainBase
-                if (range <= 0) return null
-
-                const ppu = height / range
-                const yForPrice = (price: number) => y + (close - price) * ppu
-
-                const yOpen = yForPrice(open)
-                const yClose = y
-                const yHigh = yForPrice(high)
-                const yLow = yForPrice(low)
-
-                const isUp = close >= open
-                const color = isUp ? '#ef4444' : '#10b981'
-                const bodyY = Math.min(yOpen, yClose)
-                const bodyHeight = Math.abs(yClose - yOpen) || 1
-                const wickX = x + width / 2
-
-                return (
-                  <g>
-                    <line x1={wickX} y1={yHigh} x2={wickX} y2={yLow} stroke={color} strokeWidth={1} />
-                    <rect
-                      x={x + width * 0.15}
-                      y={bodyY}
-                      width={width * 0.7}
-                      height={bodyHeight}
-                      fill={color}
-                      stroke={color}
-                      strokeWidth={0.5}
-                    />
-                  </g>
-                )
-              }}
-            />
-            {/* Benchmark price line (right axis) */}
-            {hasBenchmark && (
-              <Line
-                yAxisId="right"
-                type="monotone"
-                dataKey="benchmarkPrice"
-                name={benchmarkSymbol}
-                stroke="#f59e0b"
-                strokeWidth={2}
-                dot={false}
-                activeDot={{ r: 4, strokeWidth: 2 }}
-              />
-            )}
-            {/* Trade markers on stock price axis */}
-            {tradeMarkers
-              .filter(trade => {
-                const dateIndex = chartData.findIndex(d => d.date === trade.date)
-                return dateIndex >= zoomState.startIndex && dateIndex <= zoomState.endIndex
-              })
-              .map((trade, idx) => {
-                const ShapeComponent = trade.isEntry
-                  ? (trade.isLong ? LongEntryShape : ShortEntryShape)
-                  : (trade.isLong ? LongExitShape : ShortExitShape)
-
-                return (
-                  <ReferenceDot
-                    key={`trade-${idx}`}
-                    yAxisId="left"
-                    x={trade.date}
-                    y={trade.price}
-                    r={6}
-                    fill="transparent"
-                    stroke="transparent"
-                    shape={<ShapeComponent />}
-                  />
-                )
-              })}
-          </ComposedChart>
-        </ResponsiveContainer>
-      </div>
+      <EChartWrapper option={option} height={320} />
     </div>
   )
 }

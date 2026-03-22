@@ -16,20 +16,37 @@ import TabPanel from '../components/ui/TabPanel'
 import { marketDataAPI } from '../lib/api'
 import type { MarketSymbol, OHLCBar } from '../types'
 
-const TABS = [
-  { key: 'quotes', label: '实时行情', icon: <List size={16} /> },
-  { key: 'kline', label: 'K线图', icon: <LineChartIcon size={16} /> },
-  { key: 'sync', label: '数据同步', icon: <RefreshCw size={16} /> },
-  { key: 'calendar', label: '财经日历', icon: <Calendar size={16} /> },
-  { key: 'sentiment', label: '市场情绪', icon: <Gauge size={16} /> },
-]
-
-const KLINE_PERIODS = ['日K', '周K', '月K'] as const
-const INDUSTRIES = ['全部行业', '白酒', '银行', '光伏', '新能源', '半导体', '医药', '地产', '科技']
-
 export default function MarketData() {
   const { t } = useTranslation('market')
   const [activeTab, setActiveTab] = useState('quotes')
+  const tabs = useMemo(
+    () => [
+      { key: 'quotes', label: t('page.tabs.quotes'), icon: <List size={16} /> },
+      { key: 'kline', label: t('page.tabs.kline'), icon: <LineChartIcon size={16} /> },
+      { key: 'sync', label: t('page.tabs.sync'), icon: <RefreshCw size={16} /> },
+      { key: 'calendar', label: t('page.tabs.calendar'), icon: <Calendar size={16} /> },
+      { key: 'sentiment', label: t('page.tabs.sentiment'), icon: <Gauge size={16} /> },
+    ],
+    [t]
+  )
+  const klinePeriods = useMemo(
+    () => [t('page.periods.daily'), t('page.periods.weekly'), t('page.periods.monthly')],
+    [t]
+  )
+  const industries = useMemo(
+    () => [
+      t('page.allIndustries'),
+      t('page.industries.liquor'),
+      t('page.industries.bank'),
+      t('page.industries.solar'),
+      t('page.industries.newEnergy'),
+      t('page.industries.semiconductor'),
+      t('page.industries.healthcare'),
+      t('page.industries.property'),
+      t('page.industries.technology'),
+    ],
+    [t]
+  )
 
   // ── Quotes tab state ───────────────────────────────────────────────
   const [search, setSearch] = useState('')
@@ -49,23 +66,23 @@ export default function MarketData() {
       const q = search.toLowerCase()
       list = list.filter((s) => s.symbol.toLowerCase().includes(q) || s.name.toLowerCase().includes(q))
     }
-    if (industry && industry !== '全部行业') {
+    if (industry && industry !== t('page.allIndustries')) {
       list = list.filter((s) => s.industry?.includes(industry))
     }
     return list
-  }, [symbols, search, industry])
+  }, [industry, search, symbols, t])
 
   const symbolColumns: Column<MarketSymbol>[] = [
-    { key: 'symbol', label: '代码', sortable: true, className: 'font-mono' },
-    { key: 'name', label: '名称', sortable: true },
-    { key: 'exchange', label: '交易所' },
-    { key: 'industry', label: '行业' },
-    { key: 'list_date', label: '上市日期', render: (r) => r.list_date || '-' },
+    { key: 'symbol', label: t('page.columns.symbol'), sortable: true, className: 'font-mono' },
+    { key: 'name', label: t('page.columns.name'), sortable: true },
+    { key: 'exchange', label: t('page.columns.exchange') },
+    { key: 'industry', label: t('page.columns.industry') },
+    { key: 'list_date', label: t('page.columns.listDate'), render: (r) => r.list_date || '-' },
   ]
 
   // ── K-line tab state ───────────────────────────────────────────────
   const [klineSymbol, setKlineSymbol] = useState('600519.SH')
-  const [klinePeriod, setKlinePeriod] = useState<string>('日K')
+  const [klinePeriod, setKlinePeriod] = useState<string>(t('page.periods.daily'))
   const [showMA, setShowMA] = useState(true)
   const [showVol, setShowVol] = useState(true)
 
@@ -122,21 +139,21 @@ export default function MarketData() {
         <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
       </div>
 
-      <TabPanel tabs={TABS} activeTab={activeTab} onChange={setActiveTab}>
+      <TabPanel tabs={tabs} activeTab={activeTab} onChange={setActiveTab}>
         {/* ── Quotes Tab ──────────────────────────────── */}
         {activeTab === 'quotes' && (
           <div className="space-y-4">
             <FilterBar
               searchValue={search}
               onSearchChange={setSearch}
-              searchPlaceholder="搜索股票代码或名称..."
+              searchPlaceholder={t('page.quoteSearchPlaceholder')}
               filters={[
                 {
                   key: 'industry',
                   value: industry,
-                  options: INDUSTRIES.map((i) => ({ value: i === '全部行业' ? '' : i, label: i })),
+                  options: industries.map((item) => ({ value: item === t('page.allIndustries') ? '' : item, label: item })),
                   onChange: setIndustry,
-                  placeholder: '全部行业',
+                  placeholder: t('page.allIndustries'),
                 },
               ]}
             />
@@ -144,12 +161,12 @@ export default function MarketData() {
               columns={symbolColumns}
               data={filteredSymbols.slice(0, 100)}
               keyField="symbol"
-              emptyText="暂无数据"
+              emptyText={t('noData')}
               onRowClick={handleSelectSymbol}
             />
             {filteredSymbols.length > 100 && (
               <p className="text-xs text-muted-foreground text-center">
-                显示前 100 条，共 {filteredSymbols.length} 条
+                {t('page.showingTop', { count: filteredSymbols.length })}
               </p>
             )}
           </div>
@@ -160,7 +177,7 @@ export default function MarketData() {
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex items-center gap-2">
-                <label className="text-sm text-muted-foreground">股票:</label>
+                <label className="text-sm text-muted-foreground">{t('page.stockLabel')}</label>
                 <input
                   type="text"
                   value={klineSymbol}
@@ -170,7 +187,7 @@ export default function MarketData() {
               </div>
 
               <div className="flex gap-1">
-                {KLINE_PERIODS.map((p) => (
+                {klinePeriods.map((p) => (
                   <button
                     key={p}
                     onClick={() => setKlinePeriod(p)}
@@ -184,11 +201,11 @@ export default function MarketData() {
               <div className="flex items-center gap-3 ml-auto">
                 <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
                   <input type="checkbox" checked={showMA} onChange={(e) => setShowMA(e.target.checked)} className="rounded" />
-                  均线
+                  {t('page.movingAverage')}
                 </label>
                 <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
                   <input type="checkbox" checked={showVol} onChange={(e) => setShowVol(e.target.checked)} className="rounded" />
-                  成交量
+                  {t('page.volume')}
                 </label>
               </div>
             </div>
@@ -208,17 +225,17 @@ export default function MarketData() {
 
         {/* ── Sync Tab ──────────────────────────────── */}
         {activeTab === 'sync' && (
-          <p className="text-center text-muted-foreground py-8">暂无数据同步任务信息</p>
+          <p className="text-center text-muted-foreground py-8">{t('page.empty.sync')}</p>
         )}
 
         {/* ── Calendar Tab ──────────────────────────── */}
         {activeTab === 'calendar' && (
-          <p className="text-center text-muted-foreground py-8">暂无财经日历数据</p>
+          <p className="text-center text-muted-foreground py-8">{t('page.empty.calendar')}</p>
         )}
 
         {/* ── Sentiment Tab ─────────────────────────── */}
         {activeTab === 'sentiment' && (
-          <p className="text-center text-muted-foreground py-8">暂无市场情绪数据</p>
+          <p className="text-center text-muted-foreground py-8">{t('page.empty.sentiment')}</p>
         )}
       </TabPanel>
     </div>

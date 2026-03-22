@@ -335,7 +335,7 @@ export default function BacktestJobList({ onViewResults, onViewBulkSummary }: Ba
                               onViewResults(job.job_id)
                             }}
                             className="px-3 py-2 hover:bg-primary/10 text-primary rounded-md transition-colors text-sm font-medium"
-                            title="View results"
+                            title={t('common:view')}
                           >
                             <Eye className="h-5 w-5" />
                           </button>
@@ -343,7 +343,7 @@ export default function BacktestJobList({ onViewResults, onViewBulkSummary }: Ba
                             onClick={(e) => handleDelete(job.job_id, e)}
                             disabled={deleteMutation.isPending}
                             className="px-3 py-2 hover:bg-destructive/10 text-destructive rounded-md transition-colors disabled:opacity-50 text-sm font-medium"
-                            title="Delete job"
+                            title={t('common:delete')}
                           >
                             <Trash2 className="h-5 w-5" />
                           </button>
@@ -362,7 +362,7 @@ export default function BacktestJobList({ onViewResults, onViewBulkSummary }: Ba
                               onViewResults(job.job_id)
                             }}
                             className="px-3 py-2 hover:bg-primary/10 text-primary rounded-md transition-colors text-sm font-medium"
-                            title="View results"
+                            title={t('common:view')}
                           >
                             <Eye className="h-5 w-5" />
                           </button>
@@ -371,7 +371,7 @@ export default function BacktestJobList({ onViewResults, onViewBulkSummary }: Ba
                           onClick={(e) => handleDelete(job.job_id, e)}
                           disabled={deleteMutation.isPending}
                           className="px-3 py-2 hover:bg-destructive/10 text-destructive rounded-md transition-colors disabled:opacity-50 text-sm font-medium"
-                          title="Delete job"
+                          title={t('common:delete')}
                         >
                           <Trash2 className="h-5 w-5" />
                         </button>
@@ -603,7 +603,7 @@ function BulkJobCard({
                 <button
                   onClick={(e) => { e.stopPropagation(); onToggle() }}
                   className="px-3 py-2 hover:bg-primary/10 text-primary rounded-md transition-colors text-sm font-medium"
-                  title={expanded ? 'Collapse results' : 'Expand results'}
+                  title={expanded ? t('common:close') : t('common:view')}
                 >
                   {expanded ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
                 </button>
@@ -612,7 +612,7 @@ function BulkJobCard({
                 <button
                   onClick={(e) => { e.stopPropagation(); onViewBulkSummary(job.job_id) }}
                   className="px-3 py-2 hover:bg-primary/10 text-primary rounded-md transition-colors text-sm font-medium"
-                  title="View summary"
+                  title={t('common:view')}
                 >
                   <BarChart3 className="h-5 w-5" />
                 </button>
@@ -621,7 +621,7 @@ function BulkJobCard({
                 onClick={onDelete}
                 disabled={deleteIsPending}
                 className="px-3 py-2 hover:bg-destructive/10 text-destructive rounded-md transition-colors disabled:opacity-50 text-sm font-medium"
-                title="Delete bulk job"
+                title={t('common:delete')}
               >
                 <Trash2 className="h-5 w-5" />
               </button>
@@ -657,18 +657,18 @@ function BulkJobCard({
               onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
               className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
             >
-              Return {sortOrder === 'desc' ? <ArrowDown className="h-3 w-3" /> : <ArrowUp className="h-3 w-3" />}
+              {t('metrics.totalReturn')} {sortOrder === 'desc' ? <ArrowDown className="h-3 w-3" /> : <ArrowUp className="h-3 w-3" />}
             </button>
           </div>
 
           {/* Table header */}
           <div className="grid grid-cols-[1fr_80px_80px_80px_80px_60px] gap-2 px-4 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase border-b border-border bg-muted/10">
-            <span>Symbol</span>
-            <span className="text-right">Return</span>
-            <span className="text-right">Annual</span>
-            <span className="text-right">Sharpe</span>
-            <span className="text-right">MaxDD</span>
-            <span className="text-right">Status</span>
+            <span>{t('common:symbol')}</span>
+            <span className="text-right">{t('metrics.totalReturn')}</span>
+            <span className="text-right">{t('metrics.annualReturn')}</span>
+            <span className="text-right">{t('metrics.sharpeRatio')}</span>
+            <span className="text-right">{t('metrics.maxDrawdown')}</span>
+            <span className="text-right">{t('common:status')}</span>
           </div>
 
           {/* Rows */}
@@ -685,7 +685,7 @@ function BulkJobCard({
                   {child.symbol}
                   {child.symbol_name && <span className="text-muted-foreground ml-1">({child.symbol_name})</span>}
                   {childParams && Object.keys(childParams).length > 0 && (
-                    <span className="text-[10px] text-muted-foreground ml-2">Params: {Object.keys(childParams).length}</span>
+                    <span className="text-[10px] text-muted-foreground ml-2">{t('common:parameters')}: {Object.keys(childParams).length}</span>
                   )}
                 </span>
                 <span className={`text-right font-semibold ${ret !== undefined ? (ret >= 0 ? 'text-red-500' : 'text-green-500') : ''}`}>

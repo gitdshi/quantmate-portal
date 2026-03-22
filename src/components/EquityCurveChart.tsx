@@ -1,16 +1,7 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-    CartesianGrid,
-    Legend,
-    Line,
-    LineChart,
-    ReferenceLine,
-    ResponsiveContainer,
-    Tooltip,
-    XAxis,
-    YAxis,
-} from 'recharts'
+import EChartWrapper from './charts/EChartWrapper'
+import type { EChartsOption } from '../lib/echarts'
 import { themeColors } from '../lib/theme'
 
 interface EquityDataPoint {
@@ -130,124 +121,122 @@ export default function EquityCurveChart({
   const hasStockPrice = chartData.some(d => d.stockPriceNormalized !== undefined)
   const hasAnnualTrend = chartData.some(d => d.annualTrend !== undefined)
 
+  const option: EChartsOption = useMemo(() => ({
+    animation: false,
+    legend: {
+      bottom: 0,
+      data: [
+        t('results.strategyEquity'),
+        ...(hasStockPrice ? [t('results.priceNormalized', { symbol: stockSymbol })] : []),
+        ...(hasBenchmark ? [t('results.buyAndHold', { symbol: benchmarkSymbol })] : []),
+        ...(hasAnnualTrend ? [t('results.annualTrend')] : []),
+      ],
+      textStyle: { color: themeColors.mutedForeground },
+    },
+    grid: { left: 56, right: 24, top: 16, bottom: 52 },
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: themeColors.card,
+      borderColor: themeColors.border,
+      textStyle: { color: themeColors.foreground },
+      formatter: (params: unknown) => {
+        const items = Array.isArray(params) ? params as Array<{ dataIndex: number; seriesName: string; value: number }> : []
+        if (items.length === 0) return ''
+        const point = chartData[items[0].dataIndex]
+        if (!point) return ''
+
+        const rows = [`<div style="margin-bottom:4px;color:${themeColors.mutedForeground}">${point.fullDate}</div>`]
+        for (const item of items) {
+          if (item.value == null) continue
+          rows.push(`<div>${item.seriesName}: <strong>$${Number(item.value).toLocaleString()}</strong></div>`)
+        }
+        return rows.join('')
+      },
+    },
+    xAxis: {
+      type: 'category',
+      data: chartData.map((point) => point.date),
+      boundaryGap: false,
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: { color: themeColors.mutedForeground, fontSize: 12 },
+    },
+    yAxis: {
+      type: 'value',
+      min: minBalance - padding,
+      max: maxBalance + padding,
+      axisLine: { show: false },
+      axisTick: { show: false },
+      splitLine: { lineStyle: { color: themeColors.border, opacity: 0.5 } },
+      axisLabel: {
+        color: themeColors.mutedForeground,
+        formatter: (value: number) => `$${(value / 1000).toFixed(0)}k`,
+      },
+    },
+    series: [
+      {
+        name: t('results.strategyEquity'),
+        type: 'line' as const,
+        data: chartData.map((point) => point.balance),
+        smooth: true,
+        showSymbol: false,
+        lineStyle: { color: themeColors.primary, width: 2 },
+        itemStyle: { color: themeColors.primary },
+        markLine: {
+          symbol: ['none', 'none'],
+          lineStyle: {
+            color: themeColors.mutedForeground,
+            type: 'dashed',
+          },
+          label: {
+            formatter: t('results.initial'),
+            color: themeColors.mutedForeground,
+          },
+          data: [{ yAxis: initialCapital }],
+        },
+      },
+      ...(hasStockPrice
+        ? [{
+            name: t('results.priceNormalized', { symbol: stockSymbol }),
+            type: 'line' as const,
+            data: chartData.map((point) => point.stockPriceNormalized ?? null),
+            smooth: true,
+            showSymbol: false,
+            connectNulls: true,
+            lineStyle: { color: '#10b981', width: 2 },
+            itemStyle: { color: '#10b981' },
+          }]
+        : []),
+      ...(hasBenchmark
+        ? [{
+            name: t('results.buyAndHold', { symbol: benchmarkSymbol }),
+            type: 'line' as const,
+            data: chartData.map((point) => point.benchmark ?? null),
+            smooth: true,
+            showSymbol: false,
+            connectNulls: true,
+            lineStyle: { color: '#f59e0b', width: 2 },
+            itemStyle: { color: '#f59e0b' },
+          }]
+        : []),
+      ...(hasAnnualTrend
+        ? [{
+            name: t('results.annualTrend'),
+            type: 'line' as const,
+            data: chartData.map((point) => point.annualTrend ?? null),
+            smooth: true,
+            showSymbol: false,
+            connectNulls: true,
+            lineStyle: { color: '#8b5cf6', width: 1.5, type: 'dashed' as const },
+            itemStyle: { color: '#8b5cf6' },
+          }]
+        : []),
+    ],
+  }), [benchmarkSymbol, chartData, hasAnnualTrend, hasBenchmark, hasStockPrice, initialCapital, maxBalance, minBalance, padding, stockSymbol, t])
+
   return (
     <div className="w-full h-80">
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart
-          data={chartData}
-          margin={{ top: 10, right: 30, left: 10, bottom: 10 }}
-        >
-          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-          <XAxis
-            dataKey="date"
-            tick={{ fontSize: 12 }}
-            tickLine={false}
-            axisLine={false}
-            interval="preserveStartEnd"
-          />
-          <YAxis
-            domain={[minBalance - padding, maxBalance + padding]}
-            tick={{ fontSize: 12 }}
-            tickLine={false}
-            axisLine={false}
-            tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
-          />
-          <Tooltip
-            contentStyle={{
-              backgroundColor: themeColors.card,
-              border: `1px solid ${themeColors.border}`,
-              borderRadius: '8px',
-            }}
-            labelStyle={{ color: themeColors.foreground }}
-            formatter={(value: any, name: any) => {
-              if (value === undefined) return ['N/A', name]
-              if (name === 'balance') {
-                return [`$${value.toLocaleString()}`, t('results.strategyEquity')]
-              }
-              if (name === 'benchmark') {
-                return [`$${value.toLocaleString()}`, t('results.buyAndHold', { symbol: benchmarkSymbol })]
-              }
-              if (name === 'stockPriceNormalized') {
-                return [`$${value.toLocaleString()}`, t('results.priceNormalized', { symbol: stockSymbol })]
-              }
-              if (name === 'benchmarkPrice') {
-                return [`${value.toFixed(2)}`, `${benchmarkSymbol}`]
-              }
-              if (name === 'stockPrice') {
-                return [`${value.toFixed(2)}`, `${stockSymbol}`]
-              }
-              if (name === 'annualTrend') {
-                return [`$${value.toLocaleString()}`, t('results.annualTrend')]
-              }
-              return [value, name]
-            }}
-            labelFormatter={(label, payload) => {
-              if (payload && payload[0]) {
-                return payload[0].payload.fullDate
-              }
-              return label
-            }}
-          />
-          <Legend 
-            wrapperStyle={{ paddingTop: '10px' }}
-            iconType="line"
-          />
-          <ReferenceLine
-            y={initialCapital}
-            stroke={themeColors.mutedForeground}
-            strokeDasharray="5 5"
-            label={{
-              value: t('results.initial'),
-              position: 'right',
-              fill: themeColors.mutedForeground,
-              fontSize: 12,
-            }}
-          />
-          <Line
-            type="monotone"
-            dataKey="balance"
-            name={t('results.strategyEquity')}
-            stroke={themeColors.primary}
-            strokeWidth={2}
-            dot={false}
-            activeDot={{ r: 4, strokeWidth: 2 }}
-          />
-          {hasStockPrice && (
-            <Line
-              type="monotone"
-              dataKey="stockPriceNormalized"
-              name={t('results.priceNormalized', { symbol: stockSymbol })}
-              stroke="#10b981"
-              strokeWidth={2}
-              dot={false}
-              activeDot={{ r: 4, strokeWidth: 2 }}
-            />
-          )}
-          {hasBenchmark && (
-            <Line
-              type="monotone"
-              dataKey="benchmark"
-              name={t('results.buyAndHold', { symbol: benchmarkSymbol })}
-              stroke="#f59e0b"
-              strokeWidth={2}
-              dot={false}
-              activeDot={{ r: 4, strokeWidth: 2 }}
-              connectNulls={true}
-            />
-          )}
-          {hasAnnualTrend && (
-            <Line
-              type="monotone"
-              dataKey="annualTrend"
-              name={t('results.annualTrend')}
-              stroke="#8b5cf6"
-              strokeWidth={1.5}
-              strokeDasharray="5 5"
-              dot={false}
-            />
-          )}
-        </LineChart>
-      </ResponsiveContainer>
+      <EChartWrapper option={option} height="100%" />
     </div>
   )
 }

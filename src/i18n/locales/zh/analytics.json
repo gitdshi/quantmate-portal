@@ -1,0 +1,20 @@
+{
+  "title": "分析中心",
+  "subtitle": "技术分析、基本面分析与量化指标看板",
+  "exportReport": "导出报表",
+  "tabs": {
+    "tech": "技术分析",
+    "fundamental": "基本面",
+    "quant": "量化指标",
+    "custom": "自定义看板"
+  },
+  "empty": {
+    "tech": "暂无技术分析数据，请先在行情数据页选择标的后查看。",
+    "fundamental": "暂无基本面数据。",
+    "quant": "暂无量化指标数据。"
+  },
+  "custom": {
+    "inProgress": "自定义看板功能开发中。",
+    "supports": "支持图表、表格、KPI 和自定义指标。"
+  }
+}

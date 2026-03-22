@@ -1,5 +1,5 @@
 /**
- * Centralized theme tokens for use in JavaScript contexts (echarts, recharts,
+ * Centralized theme tokens for use in JavaScript contexts (echarts,
  * inline style props) where Tailwind utility classes are not applicable.
  *
  * All values reference the same CSS custom properties defined in index.css,

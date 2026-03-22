@@ -36,22 +36,6 @@ export default function BacktestResults({ jobId, onClose }: BacktestResultsProps
   const result = jobData?.result
   const stats = result?.statistics || {}
   
-  // Debug: Log the data structure
-  if (jobData && !isLoading) {
-    console.log('jobData:', jobData)
-    console.log('result:', result)
-    console.log('jobData.status:', jobData.status)
-    console.log('stock_price_curve length:', result?.stock_price_curve?.length)
-    console.log('benchmark_curve length:', result?.benchmark_curve?.length)
-    console.log('trades length:', result?.trades?.length)
-    if (result?.benchmark_curve) {
-      console.log('benchmark_curve sample:', result.benchmark_curve[0])
-    }
-    if (result?.trades && result.trades.length > 0) {
-      console.log('trades sample:', result.trades[0])
-    }
-  }
-  
   // Prefer job metadata `symbol_name` when available (job metadata is authoritative)
   const symbolName = jobData?.symbol_name || result?.symbol_name || ''
   const symbolCode = jobData?.symbol || result?.symbol || ''
@@ -69,9 +53,42 @@ export default function BacktestResults({ jobId, onClose }: BacktestResultsProps
     if (idx) return idx
 
     const benchmarkMap: Record<string, string> = {
-      '399300.SZ': 'HS300 (沪深300)',
+      '399300.SZ': t('form.benchmarkOptions.hs300'),
+      '000016.SH': t('form.benchmarkOptions.sse50'),
+      '000905.SH': t('form.benchmarkOptions.csi500'),
+      '399006.SZ': t('form.benchmarkOptions.chinext'),
+      '000001.SH': t('form.benchmarkOptions.sseComposite'),
     }
     return benchmarkMap[code] || code
+  }
+
+  const tradeTokens = {
+    long: '\u591a',
+    short: '\u7a7a',
+    open: '\u5f00',
+    close: '\u5e73',
+  }
+
+  const formatTradeDirection = (direction?: string) => {
+    const normalized = String(direction || '').toLowerCase()
+    if (normalized === tradeTokens.long || normalized === 'long' || normalized === 'buy') {
+      return t('results.directionLabels.long')
+    }
+    if (normalized === tradeTokens.short || normalized === 'short' || normalized === 'sell') {
+      return t('results.directionLabels.short')
+    }
+    return direction || '-'
+  }
+
+  const formatTradeOffset = (offset?: string) => {
+    const normalized = String(offset || '').toLowerCase()
+    if (normalized === tradeTokens.open || normalized === 'open') {
+      return t('results.offsetLabels.open')
+    }
+    if (normalized === tradeTokens.close || normalized === 'close') {
+      return t('results.offsetLabels.close')
+    }
+    return offset || '-'
   }
 
   // Load index list from backend to map codes to friendly labels
@@ -124,7 +141,9 @@ export default function BacktestResults({ jobId, onClose }: BacktestResultsProps
           <div>
             <h2 className="text-xl font-semibold">{t('results.title')}</h2>
             <p className="text-sm text-muted-foreground mt-1 font-medium">
-              {strategyName ? `${strategyName}${strategyVersion ? ` v${strategyVersion}` : ''} • ${symbolDisplay} • ${result.start_date} to ${result.end_date} • ${getBenchmarkLabel(benchmark)}` : `${symbolDisplay} • ${result.start_date} to ${result.end_date} • ${getBenchmarkLabel(benchmark)}`}
+              {strategyName
+                ? `${strategyName}${strategyVersion ? ` v${strategyVersion}` : ''} • ${symbolDisplay} • ${t('results.dateRange', { start: result.start_date, end: result.end_date })} • ${getBenchmarkLabel(benchmark)}`
+                : `${symbolDisplay} • ${t('results.dateRange', { start: result.start_date, end: result.end_date })} • ${getBenchmarkLabel(benchmark)}`}
             </p>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-muted rounded-md transition-colors">
@@ -315,7 +334,7 @@ export default function BacktestResults({ jobId, onClose }: BacktestResultsProps
                   </div>
                   <div>
                     <span className="text-muted-foreground">{t('common:period')}:</span>
-                    <span className="ml-2 font-medium">{result?.start_date} to {result?.end_date}</span>
+                    <span className="ml-2 font-medium">{t('results.dateRange', { start: result?.start_date, end: result?.end_date })}</span>
                   </div>
                 </div>
               </div>
@@ -370,13 +389,13 @@ export default function BacktestResults({ jobId, onClose }: BacktestResultsProps
                                 {trade.datetime ? new Date(trade.datetime).toLocaleString() : '-'}
                               </td>
                               <td className={`p-3 ${
-                                trade.direction === '多' || trade.direction === 'LONG'
+                                String(trade.direction || '').toLowerCase() === tradeTokens.long || trade.direction === 'LONG'
                                   ? 'text-red-500'
                                   : 'text-green-500'
                               }`}>
-                                {trade.direction}
+                                {formatTradeDirection(trade.direction)}
                               </td>
-                              <td className="p-3">{trade.offset}</td>
+                              <td className="p-3">{formatTradeOffset(trade.offset)}</td>
                               <td className="p-3 text-right font-mono">{trade.price?.toFixed(2)}</td>
                               <td className="p-3 text-right">{trade.volume}</td>
                             </tr>

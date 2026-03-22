@@ -2,6 +2,7 @@ import EChartWrapper from './EChartWrapper'
 import '../../lib/echarts-advanced'
 import type { EChartsOption } from '../../lib/echarts'
 import { themeColors } from '../../lib/theme'
+import { useTranslation } from 'react-i18next'
 
 interface CandlestickChartProps {
   dates: string[]
@@ -14,9 +15,11 @@ interface CandlestickChartProps {
 }
 
 export default function CandlestickChart({ dates, ohlc, volumes, height = 450, loading, indicators }: CandlestickChartProps) {
+  const { t } = useTranslation('market')
+
   const option: EChartsOption = {
     tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
-    legend: { bottom: 0, data: ['K线', ...(indicators?.map((i) => i.name) || [])] },
+    legend: { bottom: 0, data: [t('page.candlestickLegend'), ...(indicators?.map((i) => i.name) || []), ...(volumes ? [t('page.volume')] : [])] },
     grid: volumes
       ? [
           { left: 60, right: 20, top: 20, height: '55%' },
@@ -41,7 +44,7 @@ export default function CandlestickChart({ dates, ohlc, volumes, height = 450, l
     ],
     series: [
       {
-        name: 'K线',
+        name: t('page.candlestickLegend'),
         type: 'candlestick',
         data: ohlc,
         xAxisIndex: 0,
@@ -65,7 +68,7 @@ export default function CandlestickChart({ dates, ohlc, volumes, height = 450, l
       })),
       ...(volumes
         ? [{
-            name: '成交量',
+            name: t('page.volume'),
             type: 'bar' as const,
             data: volumes,
             xAxisIndex: 1,

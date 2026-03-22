@@ -1,4 +1,82 @@
 {
+  "management": {
+    "tabs": {
+      "pending": "Open Orders",
+      "filled": "Trades",
+      "history": "Order History",
+      "algo": "Algo Trading"
+    },
+    "status": {
+      "filled": "Filled",
+      "partial": "Partial Filled",
+      "pending": "Pending",
+      "cancelled": "Cancelled",
+      "rejected": "Rejected"
+    },
+    "title": "Trading",
+    "subtitle": "Order entry, execution details, and algo trading",
+    "newOrder": "New Order",
+    "cancelSuccess": "Order cancelled",
+    "cancelFailed": "Cancel failed",
+    "submitSuccess": "Order submitted",
+    "submitFailed": "Order submission failed",
+    "stats": {
+      "total": "Today Orders",
+      "filled": "Filled",
+      "pending": "Pending",
+      "cancelled": "Cancelled"
+    },
+    "columns": {
+      "symbol": "Symbol",
+      "direction": "Side",
+      "type": "Type",
+      "orderPrice": "Order Price",
+      "tradePrice": "Trade Price",
+      "quantity": "Order Qty",
+      "filledQty": "Filled Qty",
+      "tradeQty": "Trade Qty",
+      "status": "Status",
+      "strategy": "Strategy",
+      "time": "Time",
+      "tradeTime": "Trade Time",
+      "actions": "Actions"
+    },
+    "buy": "Buy",
+    "sell": "Sell",
+    "cancel": "Cancel",
+    "search": "Search symbol",
+    "all": "All",
+    "empty": {
+      "pending": "No orders",
+      "filled": "No trades",
+      "history": "No historical orders",
+      "algo": "No algo orders"
+    },
+    "algo": {
+      "title": "Algo Orders",
+      "twap": "TWAP Settings",
+      "vwap": "VWAP Settings",
+      "interval": "Slice Interval (sec)",
+      "ratio": "Child Ratio (%)",
+      "participation": "Participation Cap (%)",
+      "deviation": "Max Deviation (bp)"
+    },
+    "modal": {
+      "title": "New Order",
+      "cancel": "Cancel",
+      "submit": "Submit Order",
+      "symbol": "Ticker",
+      "direction": "Side",
+      "type": "Order Type",
+      "price": "Price",
+      "quantity": "Quantity",
+      "strategy": "Strategy (optional)",
+      "symbolPlaceholder": "e.g. 600519.SH",
+      "strategyPlaceholder": "Linked strategy name",
+      "limit": "Limit",
+      "market": "Market"
+    }
+  },
   "live": {
     "title": "Live Trading",
     "subtitle": "Live trading execution",
@@ -19,20 +97,48 @@
       "positions": "Positions",
       "performance": "Performance"
     },
-    "deploy": {
-      "title": "Deploy Strategy to Paper",
-      "strategy": "Strategy",
-      "selectStrategy": "Select strategy...",
-      "symbol": "Symbol",
-      "symbolPlaceholder": "e.g. rb2501.SHFE",
-      "parameters": "Parameters (JSON)",
-      "deploy": "Deploy",
-      "deployFailed": "Deploy failed"
+    "newSimulation": "New Paper Deployment",
+    "createSuccess": "Paper deployment created",
+    "createFailed": "Create failed",
+    "stopSuccess": "Stopped",
+    "deployments": {
+      "count": "Deployments",
+      "running": "Running",
+      "totalPnl": "Total P&L",
+      "avgReturn": "Average Return"
     },
-    "manualOrder": {
-      "title": "Manual Paper Order",
-      "submit": "Submit Paper Order",
-      "orderFailed": "Order failed"
+    "columns": {
+      "strategy": "Strategy",
+      "status": "Status",
+      "capital": "Initial Capital",
+      "pnl": "P&L",
+      "pnlPct": "Return",
+      "positions": "Positions",
+      "createdAt": "Created At",
+      "actions": "Actions",
+      "symbol": "Symbol",
+      "direction": "Direction",
+      "price": "Price",
+      "quantity": "Quantity",
+      "time": "Time",
+      "avgCost": "Avg Cost",
+      "currentPrice": "Current Price"
+    },
+    "empty": {
+      "deployments": "No paper deployments",
+      "orders": "No paper orders",
+      "positions": "No paper positions",
+      "performance": "No performance data"
+    },
+    "search": "Search symbol",
+    "performanceTitle": "Paper NAV Curve",
+    "modal": {
+      "title": "Create Paper Deployment",
+      "cancel": "Cancel",
+      "submit": "Create Deployment",
+      "strategy": "Select Strategy",
+      "strategyPlaceholder": "Select strategy...",
+      "capital": "Initial Capital"
     },
     "deployment": {
       "running": "Running",
@@ -43,6 +149,12 @@
       "stop": "Stop",
       "stopFailed": "Stop failed",
       "noDeployments": "No deployments yet"
+    },
+    "side": {
+      "buy": "Buy",
+      "sell": "Sell",
+      "long": "Long",
+      "short": "Short"
     },
     "cancelFailed": "Failed to cancel order",
     "loadDeploymentsFailed": "Failed to load deployments",

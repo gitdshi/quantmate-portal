@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   BarChart3,
   GitCompare,
@@ -24,13 +24,6 @@ import { showToast } from '../components/ui/Toast'
 import { backtestAPI, queueAPI, strategiesAPI } from '../lib/api'
 import type { BacktestResult, Strategy } from '../types'
 
-const TABS = [
-  { key: 'runs', label: '回测列表', icon: <List size={16} /> },
-  { key: 'result', label: '回测结果', icon: <TrendingUp size={16} /> },
-  { key: 'compare', label: '策略对比', icon: <GitCompare size={16} /> },
-  { key: 'optimize', label: '参数优化', icon: <Settings2 size={16} /> },
-]
-
 export default function Backtest() {
   const { t } = useTranslation('backtest')
   const queryClient = useQueryClient()
@@ -39,6 +32,16 @@ export default function Backtest() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [selectedResult, setSelectedResult] = useState<BacktestResult | null>(null)
+
+  const tabs = useMemo(
+    () => [
+      { key: 'runs', label: t('page.tabs.runs'), icon: <List size={16} /> },
+      { key: 'result', label: t('page.tabs.result'), icon: <TrendingUp size={16} /> },
+      { key: 'compare', label: t('page.tabs.compare'), icon: <GitCompare size={16} /> },
+      { key: 'optimize', label: t('page.tabs.optimize'), icon: <Settings2 size={16} /> },
+    ],
+    [t]
+  )
 
   // New backtest form
   const [btForm, setBtForm] = useState({
@@ -78,11 +81,11 @@ export default function Backtest() {
       benchmark: data.benchmark,
     }),
     onSuccess: () => {
-      showToast('回测任务已提交', 'success')
+      showToast(t('page.submitSuccess'), 'success')
       setNewBtModal(false)
       queryClient.invalidateQueries({ queryKey: ['backtest', 'history'] })
     },
-    onError: () => showToast('提交失败', 'error'),
+    onError: () => showToast(t('submitFailed'), 'error'),
   })
 
   // ── Filtered list ──────────────────────────────────────────────────
@@ -98,14 +101,14 @@ export default function Backtest() {
 
   // ── Columns ────────────────────────────────────────────────────────
   const runColumns: Column<BacktestResult>[] = [
-    { key: 'job_id', label: 'ID', className: 'font-mono text-xs', render: (r) => r.job_id.slice(0, 8) },
-    { key: 'strategy_name', label: '策略', render: (r) => r.strategy_name || '-' },
-    { key: 'symbol', label: '标的', className: 'font-mono' },
-    { key: 'status', label: '状态', render: (r) => <Badge variant={r.status === 'finished' ? 'success' : r.status === 'failed' ? 'destructive' : r.status === 'started' ? 'primary' : 'muted'}>{r.status === 'finished' ? '已完成' : r.status === 'failed' ? '失败' : r.status === 'started' ? '运行中' : '排队中'}</Badge> },
-    { key: 'total_return', label: '收益率', sortable: true, render: (r) => r.statistics ? <span className={r.statistics.total_return >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>{r.statistics.total_return >= 0 ? '+' : ''}{(r.statistics.total_return * 100).toFixed(2)}%</span> : '-' },
+    { key: 'job_id', label: t('jobList.id'), className: 'font-mono text-xs', render: (r) => r.job_id.slice(0, 8) },
+    { key: 'strategy_name', label: t('jobList.strategy'), render: (r) => r.strategy_name || '-' },
+    { key: 'symbol', label: t('symbol'), className: 'font-mono' },
+    { key: 'status', label: t('jobList.status'), render: (r) => <Badge variant={r.status === 'finished' ? 'success' : r.status === 'failed' ? 'destructive' : r.status === 'started' ? 'primary' : 'muted'}>{r.status === 'finished' ? t('status.finished') : r.status === 'failed' ? t('status.failed') : r.status === 'started' ? t('status.running') : t('status.queued')}</Badge> },
+    { key: 'total_return', label: t('metrics.totalReturn'), sortable: true, render: (r) => r.statistics ? <span className={r.statistics.total_return >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>{r.statistics.total_return >= 0 ? '+' : ''}{(r.statistics.total_return * 100).toFixed(2)}%</span> : '-' },
     { key: 'sharpe', label: 'Sharpe', render: (r) => r.statistics?.sharpe_ratio?.toFixed(2) || '-' },
-    { key: 'max_dd', label: '最大回撤', render: (r) => r.statistics ? <span className="text-red-600 dark:text-red-400">{(r.statistics.max_drawdown * 100).toFixed(2)}%</span> : '-' },
-    { key: 'start_date', label: '日期', render: (r) => `${r.start_date} ~ ${r.end_date}` },
+    { key: 'max_dd', label: t('metrics.maxDrawdown'), render: (r) => r.statistics ? <span className="text-red-600 dark:text-red-400">{(r.statistics.max_drawdown * 100).toFixed(2)}%</span> : '-' },
+    { key: 'start_date', label: t('common:date', { defaultValue: 'Date' }), render: (r) => `${r.start_date} ~ ${r.end_date}` },
   ]
 
   // ── Result section derived data ────────────────────────────────────
@@ -117,40 +120,40 @@ export default function Backtest() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">回测评估</h1>
-          <p className="text-sm text-muted-foreground">策略回测引擎 · 多维度绩效分析</p>
+          <h1 className="text-2xl font-bold text-foreground">{t('page.title')}</h1>
+          <p className="text-sm text-muted-foreground">{t('page.subtitle')}</p>
         </div>
         <button onClick={() => setNewBtModal(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-primary text-white hover:opacity-90">
-          <Plus size={16} /> 新建回测
+          <Plus size={16} /> {t('page.newBacktest')}
         </button>
       </div>
 
-      <TabPanel tabs={TABS} activeTab={activeTab} onChange={setActiveTab}>
+      <TabPanel tabs={tabs} activeTab={activeTab} onChange={setActiveTab}>
         {/* ── Runs ─────────────────────────────────────── */}
         {activeTab === 'runs' && (
           <div className="space-y-4">
             <FilterBar
               searchValue={search}
               onSearchChange={setSearch}
-              searchPlaceholder="搜索策略..."
+              searchPlaceholder={t('page.searchPlaceholder')}
               filters={[{
                 key: 'status',
                 value: statusFilter,
                 options: [
-                  { value: 'finished', label: '已完成' },
-                  { value: 'started', label: '运行中' },
-                  { value: 'failed', label: '失败' },
-                  { value: 'queued', label: '排队中' },
+                  { value: 'finished', label: t('status.finished') },
+                  { value: 'started', label: t('status.running') },
+                  { value: 'failed', label: t('status.failed') },
+                  { value: 'queued', label: t('status.queued') },
                 ],
                 onChange: setStatusFilter,
-                placeholder: '全部状态',
+                placeholder: t('page.allStatuses'),
               }]}
             />
             <DataTable
               columns={runColumns}
               data={filtered}
               keyField="job_id"
-              emptyText="暂无回测记录"
+              emptyText={t('page.emptyRuns')}
               onRowClick={(row) => { setSelectedResult(row); setActiveTab('result') }}
             />
           </div>
@@ -160,28 +163,28 @@ export default function Backtest() {
         {activeTab === 'result' && (
           <div className="space-y-4">
             {!result ? (
-              <div className="text-center py-12 text-muted-foreground">请从回测列表选择一条记录查看</div>
+              <div className="text-center py-12 text-muted-foreground">{t('page.selectRun')}</div>
             ) : (
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <StatCard label="总收益率" value={stats ? `${stats.total_return >= 0 ? '+' : ''}${(stats.total_return * 100).toFixed(2)}%` : '-'} changeType={stats && stats.total_return >= 0 ? 'positive' : 'negative'} />
-                  <StatCard label="年化收益" value={stats ? `${stats.annual_return >= 0 ? '+' : ''}${(stats.annual_return * 100).toFixed(2)}%` : '-'} changeType={stats && stats.annual_return >= 0 ? 'positive' : 'negative'} />
-                  <StatCard label="Sharpe 比率" value={stats?.sharpe_ratio?.toFixed(2) || '-'} />
-                  <StatCard label="最大回撤" value={stats ? `${(stats.max_drawdown * 100).toFixed(2)}%` : '-'} changeType="negative" />
+                  <StatCard label={t('metrics.totalReturn')} value={stats ? `${stats.total_return >= 0 ? '+' : ''}${(stats.total_return * 100).toFixed(2)}%` : '-'} changeType={stats && stats.total_return >= 0 ? 'positive' : 'negative'} />
+                  <StatCard label={t('metrics.annualReturn')} value={stats ? `${stats.annual_return >= 0 ? '+' : ''}${(stats.annual_return * 100).toFixed(2)}%` : '-'} changeType={stats && stats.annual_return >= 0 ? 'positive' : 'negative'} />
+                  <StatCard label={t('metrics.sharpeRatio')} value={stats?.sharpe_ratio?.toFixed(2) || '-'} />
+                  <StatCard label={t('metrics.maxDrawdown')} value={stats ? `${(stats.max_drawdown * 100).toFixed(2)}%` : '-'} changeType="negative" />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <StatCard label="胜率" value={stats ? `${(stats.winning_rate * 100).toFixed(1)}%` : '-'} />
-                  <StatCard label="盈亏比" value={stats?.profit_factor?.toFixed(2) || '-'} />
-                  <StatCard label="总交易次数" value={stats?.total_trades ?? '-'} />
-                  <StatCard label="标的" value={result.symbol} />
+                  <StatCard label={t('metrics.winRate')} value={stats ? `${(stats.winning_rate * 100).toFixed(1)}%` : '-'} />
+                  <StatCard label={t('metrics.profitFactor')} value={stats?.profit_factor?.toFixed(2) || '-'} />
+                  <StatCard label={t('metrics.totalTrades')} value={stats?.total_trades ?? '-'} />
+                  <StatCard label={t('symbol')} value={result.symbol} />
                 </div>
 
                 <div className="rounded-lg border border-border bg-card p-5">
-                  <h3 className="font-semibold text-card-foreground mb-4">净值曲线</h3>
+                  <h3 className="font-semibold text-card-foreground mb-4">{t('results.equity')}</h3>
                   {/* TODO: Connect to detailed equity curve API when available */}
                   <div className="text-center py-12 text-muted-foreground">
-                    策略: {result.strategy_name} | {result.start_date} ~ {result.end_date}
-                    <br />详细净值曲线数据待接入
+                    {t('results.strategyDateSummary', { strategy: result.strategy_name, start: result.start_date, end: result.end_date })}
+                    <br />{t('results.equityPending')}
                   </div>
                 </div>
               </>
@@ -193,7 +196,7 @@ export default function Backtest() {
         {activeTab === 'compare' && (
           <div className="space-y-4">
             <div className="rounded-lg border border-border bg-card p-5">
-              <h3 className="font-semibold text-card-foreground mb-4">选择策略对比</h3>
+              <h3 className="font-semibold text-card-foreground mb-4">{t('page.compareTitle')}</h3>
               <div className="flex flex-wrap gap-3 mb-4">
                 {(strategies.length > 0 ? strategies.slice(0, 4) : [
                   { id: 1, name: 'DualMA_Cross' },
@@ -208,7 +211,7 @@ export default function Backtest() {
                 ))}
               </div>
               <button className="px-3 py-1.5 text-sm rounded-md bg-primary text-white hover:opacity-90">
-                生成对比
+                {t('comparison.generate')}
               </button>
             </div>
 
@@ -217,21 +220,21 @@ export default function Backtest() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted">
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">指标</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t('comparison.metric')}</th>
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">DualMA_Cross</th>
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">RSI_Reversal</th>
                   </tr>
                 </thead>
                 <tbody>
                   {[
-                    { label: '总收益率', v1: '+23.50%', v2: '+18.20%' },
-                    { label: '年化收益', v1: '+31.20%', v2: '+24.30%' },
-                    { label: 'Sharpe', v1: '1.42', v2: '1.18' },
-                    { label: '最大回撤', v1: '-12.30%', v2: '-15.80%' },
-                    { label: '胜率', v1: '62.5%', v2: '58.3%' },
-                    { label: '盈亏比', v1: '1.85', v2: '1.62' },
-                    { label: '总交易次数', v1: '48', v2: '36' },
-                    { label: 'Calmar 比率', v1: '2.54', v2: '1.54' },
+                    { label: t('metrics.totalReturn'), v1: '+23.50%', v2: '+18.20%' },
+                    { label: t('metrics.annualReturn'), v1: '+31.20%', v2: '+24.30%' },
+                    { label: t('comparison.sharpe'), v1: '1.42', v2: '1.18' },
+                    { label: t('metrics.maxDrawdown'), v1: '-12.30%', v2: '-15.80%' },
+                    { label: t('metrics.winRate'), v1: '62.5%', v2: '58.3%' },
+                    { label: t('metrics.profitFactor'), v1: '1.85', v2: '1.62' },
+                    { label: t('metrics.totalTrades'), v1: '48', v2: '36' },
+                    { label: t('comparison.calmarRatio'), v1: '2.54', v2: '1.54' },
                   ].map((row) => (
                     <tr key={row.label} className="border-b border-border">
                       <td className="px-4 py-2 font-medium">{row.label}</td>
@@ -251,10 +254,10 @@ export default function Backtest() {
             {/* TODO: Connect to optimization API */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="rounded-lg border border-border bg-card p-5">
-                <h3 className="font-semibold text-card-foreground mb-4">参数配置</h3>
+                <h3 className="font-semibold text-card-foreground mb-4">{t('page.optimizationConfig')}</h3>
                 <div className="flex flex-col gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1">策略</label>
+                    <label className="block text-sm font-medium mb-1">{t('strategy')}</label>
                     <select className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background">
                       <option>DualMA_Cross</option>
                       <option>RSI_Reversal</option>
@@ -262,38 +265,38 @@ export default function Backtest() {
                   </div>
                   <div className="grid grid-cols-3 gap-3">
                     <div>
-                      <label className="block text-xs text-muted-foreground mb-1">参数 short_window</label>
+                      <label className="block text-xs text-muted-foreground mb-1">{t('optimization.parameterLabel', { name: 'short_window' })}</label>
                       <div className="flex gap-2">
-                        <input type="number" defaultValue={3} className="w-full px-2 py-1 text-sm rounded-md border border-border bg-background" placeholder="最小" />
-                        <input type="number" defaultValue={15} className="w-full px-2 py-1 text-sm rounded-md border border-border bg-background" placeholder="最大" />
+                        <input type="number" defaultValue={3} className="w-full px-2 py-1 text-sm rounded-md border border-border bg-background" placeholder={t('optimization.minValue')} />
+                        <input type="number" defaultValue={15} className="w-full px-2 py-1 text-sm rounded-md border border-border bg-background" placeholder={t('optimization.maxValue')} />
                       </div>
                     </div>
                     <div>
-                      <label className="block text-xs text-muted-foreground mb-1">参数 long_window</label>
+                      <label className="block text-xs text-muted-foreground mb-1">{t('optimization.parameterLabel', { name: 'long_window' })}</label>
                       <div className="flex gap-2">
-                        <input type="number" defaultValue={10} className="w-full px-2 py-1 text-sm rounded-md border border-border bg-background" placeholder="最小" />
-                        <input type="number" defaultValue={60} className="w-full px-2 py-1 text-sm rounded-md border border-border bg-background" placeholder="最大" />
+                        <input type="number" defaultValue={10} className="w-full px-2 py-1 text-sm rounded-md border border-border bg-background" placeholder={t('optimization.minValue')} />
+                        <input type="number" defaultValue={60} className="w-full px-2 py-1 text-sm rounded-md border border-border bg-background" placeholder={t('optimization.maxValue')} />
                       </div>
                     </div>
                     <div>
-                      <label className="block text-xs text-muted-foreground mb-1">优化目标</label>
+                      <label className="block text-xs text-muted-foreground mb-1">{t('optimization.objective')}</label>
                       <select className="w-full px-2 py-1 text-sm rounded-md border border-border bg-background">
                         <option>Sharpe</option>
-                        <option>总收益率</option>
+                        <option>{t('metrics.totalReturn')}</option>
                         <option>Calmar</option>
                       </select>
                     </div>
                   </div>
-                  <button className="px-3 py-1.5 text-sm rounded-md bg-primary text-white hover:opacity-90" onClick={() => showToast('优化任务已提交', 'success')}>
-                    <Play size={14} className="inline mr-1" />开始优化 (共 143 组合)
+                  <button className="px-3 py-1.5 text-sm rounded-md bg-primary text-white hover:opacity-90" onClick={() => showToast(t('page.optimizeSuccess'), 'success')}>
+                    <Play size={14} className="inline mr-1" />{t('optimization.combinations', { count: 143 })}
                   </button>
                 </div>
               </div>
 
               <div className="rounded-lg border border-border bg-card p-5">
-                <h3 className="font-semibold text-card-foreground mb-4">优化结果热力图</h3>
+                <h3 className="font-semibold text-card-foreground mb-4">{t('page.optimizationHeatmap')}</h3>
                 <div className="text-center py-8 text-muted-foreground text-sm">
-                  请先配置参数范围并开始优化
+                  {t('optimization.pending')}
                 </div>
               </div>
             </div>
@@ -302,21 +305,21 @@ export default function Backtest() {
       </TabPanel>
 
       {/* New Backtest Modal */}
-      <Modal open={newBtModal} onClose={() => setNewBtModal(false)} title="新建回测" footer={
+      <Modal open={newBtModal} onClose={() => setNewBtModal(false)} title={t('page.newBacktest')} footer={
         <>
-          <button onClick={() => setNewBtModal(false)} className="px-4 py-2 text-sm rounded-md border border-border hover:bg-muted">取消</button>
+          <button onClick={() => setNewBtModal(false)} className="px-4 py-2 text-sm rounded-md border border-border hover:bg-muted">{t('common:cancel')}</button>
           <button
             onClick={() => submitMutation.mutate(btForm)}
             disabled={submitMutation.isPending}
             className="px-4 py-2 text-sm rounded-md bg-primary text-white hover:opacity-90 disabled:opacity-50"
           >
-            开始回测
+            {t('runBacktest')}
           </button>
         </>
       }>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">策略</label>
+            <label className="block text-sm font-medium mb-1">{t('strategy')}</label>
             <select value={btForm.strategy_class} onChange={(e) => setBtForm({ ...btForm, strategy_class: e.target.value })} className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background">
               {strategies.length > 0
                 ? strategies.map((s) => <option key={s.id} value={s.class_name || s.name}>{s.name}</option>)
@@ -325,27 +328,27 @@ export default function Backtest() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">标的</label>
+            <label className="block text-sm font-medium mb-1">{t('symbol')}</label>
             <input type="text" value={btForm.symbol} onChange={(e) => setBtForm({ ...btForm, symbol: e.target.value })} className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">开始日期</label>
+            <label className="block text-sm font-medium mb-1">{t('startDate')}</label>
             <input type="date" value={btForm.start_date} onChange={(e) => setBtForm({ ...btForm, start_date: e.target.value })} className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">结束日期</label>
+            <label className="block text-sm font-medium mb-1">{t('endDate')}</label>
             <input type="date" value={btForm.end_date} onChange={(e) => setBtForm({ ...btForm, end_date: e.target.value })} className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">初始资金</label>
+            <label className="block text-sm font-medium mb-1">{t('initialCapital')}</label>
             <input type="number" value={btForm.initial_capital} onChange={(e) => setBtForm({ ...btForm, initial_capital: +e.target.value })} className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">基准</label>
+            <label className="block text-sm font-medium mb-1">{t('form.benchmark')}</label>
             <select value={btForm.benchmark} onChange={(e) => setBtForm({ ...btForm, benchmark: e.target.value })} className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background">
-              <option value="000300.SH">沪深300</option>
-              <option value="000016.SH">上证50</option>
-              <option value="000905.SH">中证500</option>
+              <option value="000300.SH">{t('form.benchmarkOptions.hs300')}</option>
+              <option value="000016.SH">{t('form.benchmarkOptions.sse50')}</option>
+              <option value="000905.SH">{t('form.benchmarkOptions.csi500')}</option>
             </select>
           </div>
         </div>

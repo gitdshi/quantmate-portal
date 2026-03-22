@@ -1,6 +1,49 @@
 {
   "title": "Market Data",
   "subtitle": "View real-time market data and technical indicators",
+  "page": {
+    "tabs": {
+      "quotes": "Realtime Quotes",
+      "kline": "K-Line Chart",
+      "sync": "Data Sync",
+      "calendar": "Economic Calendar",
+      "sentiment": "Market Sentiment"
+    },
+    "columns": {
+      "symbol": "Symbol",
+      "name": "Name",
+      "exchange": "Exchange",
+      "industry": "Industry",
+      "listDate": "Listed Date"
+    },
+    "quoteSearchPlaceholder": "Search stock code or name...",
+    "allIndustries": "All Industries",
+    "showingTop": "Showing first 100 rows, {{count}} total",
+    "stockLabel": "Symbol:",
+    "movingAverage": "Moving Averages",
+    "candlestickLegend": "Candlestick",
+    "volume": "Volume",
+    "empty": {
+      "sync": "No data sync task information available",
+      "calendar": "No economic calendar data available",
+      "sentiment": "No market sentiment data available"
+    },
+    "periods": {
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly"
+    },
+    "industries": {
+      "liquor": "Liquor",
+      "bank": "Banking",
+      "solar": "Solar",
+      "newEnergy": "New Energy",
+      "semiconductor": "Semiconductor",
+      "healthcare": "Healthcare",
+      "property": "Property",
+      "technology": "Technology"
+    }
+  },
   "symbolSearch": "Symbol Search",
   "selectSymbol": "Select a symbol from the search to view market data",
   "clearSelection": "Clear selection",

@@ -1,6 +1,6 @@
 {
   "title": "策略研究",
-  "subtitle": "管理和开发交易策略",
+  "subtitle": "管理和开发交易策�?,
   "tabs": {
     "files": "策略文件",
     "optimize": "参数优化"
@@ -10,19 +10,19 @@
   "createStrategy": "创建策略",
   "editStrategy": "编辑策略",
   "deleteStrategy": "删除策略",
-  "deleteConfirm": "确定要删除策略 '{{name}}' 吗？",
+  "deleteConfirm": "确定要删除策略“{{name}}”吗�?,
   "strategyName": "策略名称",
   "className": "类名",
   "code": "代码",
   "version": "版本",
-  "selectStrategy": "选择一个策略进行查看",
+  "selectStrategy": "选择一个策略进行查�?,
   "loadDbFailed": "加载策略失败",
   "loadFileFailed": "加载策略文件失败",
   "loadComparisonFailed": "加载对比失败",
   "loadContentFailed": "加载策略内容失败",
   "loadDetailsFailed": "加载策略详情失败",
-  "deployPaperTrading": "部署到模拟交易",
-  "selectOrCreate": "选择一个策略查看或创建新策略",
+  "deployPaperTrading": "部署到模拟交�?,
+  "selectOrCreate": "选择一个策略查看或创建新策�?,
   "files": {
     "title": "策略文件",
     "fileList": "文件列表",
@@ -31,16 +31,16 @@
     "sourceData": "数据目录",
     "sourceProject": "项目目录",
     "sourceBoth": "全部",
-    "loadFromFile": "从文件加载",
+    "loadFromFile": "从文件加�?,
     "selectPyFile": "请选择 .py 文件",
-    "noClassesFound": "文件中未找到策略类"
+    "noClassesFound": "文件中未找到策略�?
   },
   "fileList": {
-    "strategyCount": "策略 ({{count}})"
+    "strategyCount": "策略（{{count}}�?
   },
   "editor": {
     "fullscreen": "全屏编辑",
-    "exitFullscreen": "退出全屏",
+    "exitFullscreen": "退出全�?,
     "save": "保存",
     "cancel": "取消",
     "codeHint": "# 在此输入策略代码"
@@ -49,23 +49,23 @@
     "title": "历史版本",
     "version": "版本",
     "restore": "还原",
-    "restoreConfirm": "还原版本 {{version}} 到 '{{name}}'？",
+    "restoreConfirm": "确认将版�?{{version}} 还原到“{{name}}”？",
     "restored": "版本还原成功",
     "restoreFailed": "版本还原失败",
     "loadFailed": "加载历史版本失败",
     "noHistory": "暂无历史记录",
     "historyLabel": "历史版本",
-    "diffLabel": "与当前版本的差异：",
+    "diffLabel": "与当前版本的差异�?,
     "versionNumber": "版本 #{{id}}"
   },
   "sync": {
-    "syncToFile": "同步到文件",
+    "syncToFile": "同步到文�?,
     "syncToDb": "同步到数据库",
-    "scanning": "扫描中...",
-    "syncing": "同步中...",
+    "scanning": "扫描�?..",
+    "syncing": "同步�?..",
     "syncComplete": "同步完成",
     "syncFailed": "同步失败",
-    "syncedMessage": "同步完成：{{toData}} 到数据目录，{{toProject}} 到项目目录，{{unchanged}} 无变化"
+    "syncedMessage": "同步完成：{{toData}} 到数据目录，{{toProject}} 到项目目录，{{unchanged}} 无变�?
   },
   "form": {
     "name": "策略名称",
@@ -78,22 +78,22 @@
     "code": "策略代码",
     "save": "保存",
     "cancel": "取消",
-    "creating": "创建中...",
-    "saving": "保存中...",
-    "loadFromFile": "从文件加载",
+    "creating": "创建�?..",
+    "saving": "保存�?..",
+    "loadFromFile": "从文件加�?,
     "classNameHelp": "代码中的 Python 类名",
-    "parametersJsonHelp": "JSON 格式的策略参数，将在回测中作为默认值使用。",
+    "parametersJsonHelp": "JSON 格式的策略参数，将在回测中作为默认值使用�?,
     "codeRequired": "策略代码 *",
     "codeOptional": "策略代码（可选）",
     "codeEditHint": "在此输入 VnPy 策略代码",
-    "codeCreateHint": "可选的策略代码 - 稍后可以添加。",
-    "multipleClassesFound": "找到多个类 - 请选择一个",
+    "codeCreateHint": "策略代码可稍后补充�?,
+    "multipleClassesFound": "找到多个类，请选择一个�?,
     "selectedClassNotFound": "未找到所选类",
     "namePlaceholder": "我的交易策略",
     "classNamePlaceholder": "MyStrategyClass",
     "descriptionPlaceholder": "策略描述...",
-    "defaultParametersJson": "默认参数 (JSON)",
-    "paramsJsonInvalid": "参数必须是 JSON 对象",
+    "defaultParametersJson": "默认参数（JSON�?,
+    "paramsJsonInvalid": "参数必须�?JSON 对象",
     "paramsJsonError": "参数 JSON 无效：{{error}}",
     "saveFailed": "保存策略失败"
   },
@@ -110,24 +110,24 @@
   "hideDiff": "隐藏差异",
   "comparison": {
     "title": "策略对比",
-    "identical": "一致",
+    "identical": "一�?,
     "different": "存在差异",
     "onlyInData": "仅在数据目录",
     "onlyInProject": "仅在项目目录"
   },
   "list": {
-    "loadingStrategies": "加载策略中...",
+    "loadingStrategies": "加载策略�?..",
     "noStrategies": "暂无策略",
-    "createFirst": "创建您的第一个策略以开始使用",
+    "createFirst": "创建您的第一个策略以开始使�?,
     "viewDetails": "查看详情",
     "editStrategy": "编辑策略",
     "deleteStrategy": "删除策略"
   },
   "view": {
-    "userId": "用户 ID：",
-    "created": "创建时间：",
+    "userId": "用户 ID�?,
+    "created": "创建时间�?,
     "strategyCode": "策略代码",
-    "noCode": "此策略暂无代码。",
+    "noCode": "此策略暂无代码�?,
     "addCode": "添加代码",
     "updated": "更新时间",
     "class": "类名",
@@ -135,11 +135,11 @@
   },
   "builtin": {
     "title": "内置策略",
-    "loadingStrategies": "加载策略中...",
-    "noStrategies": "暂无可用的内置策略",
-    "previewCode": "预览下方的策略代码",
-    "selectToPreview": "选择一个策略进行预览",
-    "useStrategy": "使用此策略"
+    "loadingStrategies": "加载策略�?..",
+    "noStrategies": "暂无可用的内置策�?,
+    "previewCode": "预览下方的策略代�?,
+    "selectToPreview": "选择一个策略进行预�?,
+    "useStrategy": "使用此策�?
   },
   "optimization": {
     "title": "策略优化",
@@ -149,21 +149,21 @@
     "selectStrategy": "选择策略",
     "symbol": "标的",
     "symbolPlaceholder": "例如 AAPL",
-    "startDate": "开始日期",
+    "startDate": "开始日�?,
     "endDate": "结束日期",
     "initialCapital": "初始资金",
     "parameterRanges": "参数范围",
     "addParameter": "+ 添加参数",
-    "enterParamName": "输入参数名称：",
-    "starting": "启动中...",
-    "startOptimization": "开始优化",
+    "enterParamName": "输入参数名称�?,
+    "starting": "启动�?..",
+    "startOptimization": "开始优�?,
     "results": "结果",
     "noResults": "配置参数并开始优化以查看结果",
-    "bestParameters": "最优参数",
-    "totalReturn": "总收益",
+    "bestParameters": "最优参�?,
+    "totalReturn": "总收�?,
     "sharpeRatio": "夏普比率",
-    "maxDrawdown": "最大回撤",
-    "allResults": "所有结果 ({{count}})",
+    "maxDrawdown": "最大回�?,
+    "allResults": "所有结果（{{count}}�?,
     "params": "参数",
     "return": "收益",
     "sharpe": "夏普",
@@ -171,9 +171,175 @@
   },
   "parameterForm": {
     "key": "键名",
-    "value": "值",
-    "parameterNamePlaceholder": "参数名",
-    "valuePlaceholder": "值",
+    "value": "�?,
+    "parameterNamePlaceholder": "参数�?,
+    "valuePlaceholder": "�?,
     "addParameter": "添加参数"
+  },
+  "templates": {
+    "dualMa": {
+      "name": "双均线交�?,
+      "description": "经典趋势跟随策略，通过快慢均线交叉产生买卖信号�?
+    },
+    "rsi": {
+      "name": "RSI 反转",
+      "description": "基于 RSI 超买超卖区间的均值回归模板�?
+    },
+    "bollinger": {
+      "name": "布林带突�?,
+      "description": "围绕布林带开口扩张的波动率突破策略�?
+    },
+    "alpha": {
+      "name": "多因�?Alpha",
+      "description": "支持因子打分和调仓节奏配置的选股模板�?
+    },
+    "pair": {
+      "name": "配对交易",
+      "description": "面向协整价差交易的统计套利模板�?
+    },
+    "grid": {
+      "name": "网格交易",
+      "description": "适合震荡行情的区间做市与网格下单模板�?
+    }
+  },
+  "page": {
+    "title": "策略研究工作�?,
+    "subtitle": "基于真实后端数据重构策略工作流，集中完成编辑、校验与版本管理�?,
+    "tabs": {
+      "workspace": "工作�?,
+      "templates": "模板�?
+    },
+    "actions": {
+      "import": "导入策略",
+      "new": "新建策略",
+      "edit": "编辑",
+      "backtest": "回测",
+      "duplicate": "复制",
+      "delete": "删除",
+      "format": "格式�?,
+      "validate": "语法校验",
+      "save": "保存",
+      "view": "查看",
+      "rollback": "回滚",
+      "useTemplate": "使用模板",
+      "preview": "预览",
+      "cancel": "取消",
+      "confirm": "确认",
+      "create": "创建",
+      "importSubmit": "导入",
+      "selectFile": "选择文件"
+    },
+    "searchPlaceholder": "按名称、类名或描述搜索策略...",
+    "filters": {
+      "allType": "全部类型",
+      "allStatus": "全部状�?
+    },
+    "table": {
+      "loading": "正在加载策略...",
+      "builtin": "内置",
+      "custom": "自定�?
+    },
+    "status": {
+      "active": "启用",
+      "draft": "草稿"
+    },
+    "types": {
+      "cta": "CTA",
+      "alpha": "Alpha",
+      "statArb": "统计套利",
+      "grid": "网格",
+      "ai": "AI",
+      "custom": "自定�?
+    },
+    "list": {
+      "title": "策略列表",
+      "subtitle": "先选中一个策略，再进入代码、参数和历史版本的精细化处理�?,
+      "count": "{{count}} �?,
+      "emptyTitle": "没有符合条件的策�?,
+      "emptyDescription": "请调整筛选条件，或直接创建一个新的策略草稿�?,
+      "noDescription": "暂无描述",
+      "version": "v{{version}}"
+    },
+    "detail": {
+      "loading": "正在加载最新策略数�?..",
+      "emptyTitle": "尚未选择策略",
+      "emptyDescription": "从左侧选择一个已有策略，或从模板库新建草稿后开始编辑�?,
+      "metaClass": "类名：{{className}}",
+      "metaVersion": "版本：v{{version}}",
+      "metaSource": "来源：{{source}}",
+      "metaUpdated": "更新时间：{{value}}",
+      "tabs": {
+        "code": "代码编辑",
+        "parameters": "参数面板",
+        "history": "版本历史"
+      },
+      "code": {
+        "validationPending": "等待校验",
+        "lastModified": "最后修改：{{value}}"
+      },
+      "parameters": {
+        "title": "策略参数",
+        "subtitle": "快速编辑核心数值参数，同时保持完整 JSON 配置一致�?,
+        "jsonLabel": "参数 JSON",
+        "empty": "当前没有可展示的参数，可直接在下�?JSON 编辑器中补充�?
+      }
+    },
+    "history": {
+      "title": "版本历史",
+      "subtitle": "查看历史快照、预览旧代码，并在需要时回滚到之前的版本�?,
+      "empty": "该策略暂无历史版本�?,
+      "defaultAuthor": "系统",
+      "previewSubtitle": "来自策略代码历史的快照预览�?,
+      "columns": {
+        "version": "版本",
+        "time": "时间",
+        "author": "作�?,
+        "note": "备注",
+        "actions": "操作"
+      },
+      "notes": {
+        "latest": "最新修订版本，包含最近一次参数优化�?,
+        "mid": "中间修订版本，包含结构性更新�?,
+        "initial": "初始存档版本�?
+      }
+    },
+    "templates": {
+      "title": "策略模板�?,
+      "subtitle": "按照原型布局整理模板入口，并与真实内置策略目录做能力映射�?,
+      "availableOnServer": "后端可用",
+      "localStarter": "本地起始模板",
+      "previewTitle": "模板预览",
+      "previewDescription": "选择一个模板卡片，查看起始代码并创建新的策略草稿�?,
+      "fallbackDescription": "可直接继续扩展的起始模板�?
+    },
+    "modals": {
+      "createTitle": "创建策略草稿",
+      "createSubtitle": "可从空白开始，也可选用模板，然后保存到真实策略接口中�?,
+      "name": "策略名称",
+      "namePlaceholder": "例如 MomentumAlpha_v2",
+      "type": "策略类型",
+      "description": "描述",
+      "descriptionPlaceholder": "简要说明策略目标、市场假设和核心优势...",
+      "template": "起始模板",
+      "blankTemplate": "空白策略",
+      "defaultName": "我的策略",
+      "blankDescription": "自定义策略草稿�?,
+      "importTitle": "导入 Python 策略",
+      "importSubtitle": "解析已有 .py 策略文件，并继续在工作台中编辑�?,
+      "importHint": "拖入 .py 文件，或点击此处上传",
+      "importSupport": "支持 Python (.py)，建�?500KB 以内"
+    },
+    "toasts": {
+      "loadListFailed": "加载策略列表失败",
+      "loadDetailFailed": "加载策略详情失败",
+      "validationFailed": "策略校验未通过，请先修复代码后再重试�?,
+      "validationPassed": "策略校验通过",
+      "parametersInvalid": "参数必须是合法的 JSON 对象",
+      "saveFailed": "保存策略失败",
+      "saved": "策略已保�?,
+      "draftCreated": "策略草稿已创建，请继续编辑后保存�?,
+      "duplicated": "已基�?{{name}} 创建一个复制草�?,
+      "imported": "策略文件已导�?,
+      "importFailed": "导入策略文件失败"
+    }
   }
-}

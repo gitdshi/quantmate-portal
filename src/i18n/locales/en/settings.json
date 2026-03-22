@@ -1,6 +1,162 @@
 {
   "title": "Settings",
   "subtitle": "Manage data sources and system configuration",
+  "page": {
+    "title": "Settings",
+    "subtitle": "General, data source, trading, notifications, UI, and system information",
+    "save": "Save Settings",
+    "saved": "Settings saved",
+    "tabs": {
+      "general": "General Settings",
+      "datasource": "Data Source",
+      "trading": "Trading Parameters",
+      "notification": "Notifications",
+      "ui": "UI Settings",
+      "system": "System Info"
+    },
+    "general": {
+      "language": "Language",
+      "timezone": "Timezone",
+      "dateFormat": "Date Format",
+      "currency": "Default Currency",
+      "autoSave": "Auto Save",
+      "zh": "Simplified Chinese",
+      "en": "English",
+      "cny": "Chinese Yuan (CNY)",
+      "usd": "US Dollar (USD)",
+      "timezones": {
+        "shanghai": "Asia/Shanghai (UTC+8)",
+        "newYork": "America/New_York (UTC-5)"
+      }
+    },
+    "datasource": {
+      "tushareTitle": "Tushare Pro",
+      "tushareDesc": "A-share daily, financial, and money flow data",
+      "token": "API Token",
+      "tokenPlaceholder": "Enter Tushare Pro token",
+      "daily": "Daily Bars",
+      "adj": "Adjustment Factors",
+      "income": "Income Statement",
+      "balance": "Balance Sheet",
+      "cashflow": "Cash Flow",
+      "fina": "Financial Metrics",
+      "margin": "Margin Trading",
+      "moneyflow": "Money Flow",
+      "akshareTitle": "AkShare",
+      "akshareDesc": "Index and macroeconomic data",
+      "index": "Index Data",
+      "macro": "Macro Data"
+    },
+    "trading": {
+      "title": "Trading Parameters",
+      "riskTitle": "Risk Controls",
+      "defaultCapital": "Default Capital",
+      "commissionRate": "Commission Rate",
+      "slippage": "Estimated Slippage",
+      "minOrderAmount": "Minimum Order Size",
+      "maxDrawdown": "Max Drawdown Limit",
+      "maxPositionPct": "Max Position per Symbol",
+      "stopLossPct": "Stop Loss Ratio",
+      "dailyLossLimit": "Daily Loss Limit"
+    },
+    "notification": {
+      "strategyAlert": ["Strategy Status Alerts", "Notify on strategy start, stop, and runtime issues"],
+      "tradeExec": ["Trade Execution Alerts", "Notify on fills, cancellations, and execution events"],
+      "riskAlert": ["Risk Alerts", "Notify when risk limits are breached"],
+      "systemAlert": ["System Alerts", "Notify on system failures and service changes"],
+      "dailyReport": ["Daily Reports", "Push a daily performance report after market close"]
+    },
+    "ui": {
+      "theme": "Theme Mode",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "Follow System",
+      "colorScheme": "Accent Color",
+      "blue": "Blue",
+      "green": "Green",
+      "purple": "Purple",
+      "orange": "Orange",
+      "chartLib": "Chart Library",
+      "pageSize": "Rows per Page",
+      "sidebarCollapsed": "Collapse sidebar by default"
+    },
+    "system": {
+      "title": "System Status",
+      "empty": "No system information available"
+    }
+  },
+  "accountPage": {
+    "tabs": {
+      "profile": "Profile",
+      "security": "Security",
+      "apikeys": "API Keys",
+      "sessions": "Sessions",
+      "billing": "Billing"
+    },
+    "title": "Account Security",
+    "subtitle": "Profile, security settings, API keys, and billing",
+    "keyCreated": "API key created",
+    "keyDeleted": "API key deleted",
+    "createFailed": "Create failed",
+    "current": "Current",
+    "revokeSession": "Revoke",
+    "deleteKey": "Delete",
+    "emptyKeys": "No API keys yet",
+    "emptySessions": "No active sessions",
+    "emptyBilling": "No usage data yet",
+    "saveProfile": "Save Profile",
+    "updatePassword": "Update Password",
+    "createKey": "Create Key",
+    "proPlan": "Pro Plan",
+    "fields": {
+      "displayName": "Display Name",
+      "email": "Email",
+      "phone": "Phone",
+      "company": "Company / Organization",
+      "bio": "Bio",
+      "currentPassword": "Current Password",
+      "newPassword": "New Password",
+      "confirmPassword": "Confirm New Password",
+      "name": "Name",
+      "key": "Key",
+      "permissions": "Permissions",
+      "createdAt": "Created At",
+      "lastUsed": "Last Used",
+      "status": "Status",
+      "actions": "Actions",
+      "twoFactor": "Two-Factor Authentication",
+      "twoFactorDesc": "Add an extra layer of account protection"
+    },
+    "methods": {
+      "totp": ["TOTP Authenticator", "Google Authenticator / Authy"],
+      "sms": ["SMS Verification", "Send verification codes to your phone"],
+      "email": ["Email Verification", "Send verification codes to your inbox"]
+    },
+    "status": {
+      "active": "Active",
+      "revoked": "Revoked"
+    },
+    "modal": {
+      "title": "Create API Key",
+      "cancel": "Cancel",
+      "submit": "Create Key",
+      "name": "Key Name",
+      "permissions": "Permission Scope",
+      "placeholder": "e.g. Backtest Script",
+      "defaultName": "New Key",
+      "permissionLabels": [
+        "Data Read (data:read)",
+        "Data Write (data:write)",
+        "Backtest (backtest)",
+        "Trade (trade)",
+        "Admin (admin)"
+      ]
+    },
+    "profileDefaults": {
+      "displayName": "Daniel",
+      "bio": "Quantitative trading researcher"
+    }
+  },
   "accountSecurity": {
     "title": "Account Security",
     "subtitle": "Manage account security settings",

@@ -1,6 +1,49 @@
 {
   "title": "行情数据",
   "subtitle": "查看实时行情数据和技术指标",
+  "page": {
+    "tabs": {
+      "quotes": "实时行情",
+      "kline": "K线图",
+      "sync": "数据同步",
+      "calendar": "财经日历",
+      "sentiment": "市场情绪"
+    },
+    "columns": {
+      "symbol": "代码",
+      "name": "名称",
+      "exchange": "交易所",
+      "industry": "行业",
+      "listDate": "上市日期"
+    },
+    "quoteSearchPlaceholder": "搜索股票代码或名称...",
+    "allIndustries": "全部行业",
+    "showingTop": "显示前 100 条，共 {{count}} 条",
+    "stockLabel": "股票:",
+    "movingAverage": "均线",
+    "candlestickLegend": "K线",
+    "volume": "成交量",
+    "empty": {
+      "sync": "暂无数据同步任务信息",
+      "calendar": "暂无财经日历数据",
+      "sentiment": "暂无市场情绪数据"
+    },
+    "periods": {
+      "daily": "日K",
+      "weekly": "周K",
+      "monthly": "月K"
+    },
+    "industries": {
+      "liquor": "白酒",
+      "bank": "银行",
+      "solar": "光伏",
+      "newEnergy": "新能源",
+      "semiconductor": "半导体",
+      "healthcare": "医药",
+      "property": "地产",
+      "technology": "科技"
+    }
+  },
   "symbolSearch": "标的搜索",
   "selectSymbol": "从搜索中选择标的以查看行情数据",
   "clearSelection": "清除选择",

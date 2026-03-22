@@ -1,6 +1,58 @@
 {
   "title": "Dashboard",
   "subtitle": "Overview of your trading system status",
+  "page": {
+    "stats": {
+      "totalAssets": "Total Assets",
+      "dailyPnl": "Daily P&L",
+      "activeStrategies": "Active Strategies",
+      "unreadAlerts": "Unread Alerts"
+    },
+    "navTitle": "NAV Trend",
+    "navSeries": {
+      "portfolio": "NAV",
+      "benchmark": "Benchmark"
+    },
+    "allocationTitle": "Position Allocation",
+    "positionsTitle": "Current Positions",
+    "ordersTitle": "Recent Orders",
+    "alertsTitle": "Alert Feed",
+    "strategyStatusTitle": "Strategy Status",
+    "table": {
+      "symbol": "Symbol",
+      "name": "Name",
+      "direction": "Direction",
+      "quantity": "Quantity",
+      "avgCost": "Avg Cost",
+      "marketPrice": "Market Price",
+      "marketValue": "Market Value",
+      "pnl": "P&L",
+      "pnlPct": "P&L %",
+      "price": "Price",
+      "status": "Status",
+      "level": "Level",
+      "message": "Message",
+      "time": "Time"
+    },
+    "badges": {
+      "long": "Long",
+      "short": "Short",
+      "buy": "Buy",
+      "sell": "Sell",
+      "running": "Running",
+      "error": "Error",
+      "stopped": "Stopped"
+    },
+    "metrics": {
+      "dailyReturn": "Daily Return",
+      "totalReturn": "Total Return"
+    },
+    "empty": {
+      "positions": "No positions",
+      "orders": "No recent orders",
+      "alerts": "No alerts"
+    }
+  },
   "activeJobs": "Active Jobs",
   "queuedJobs": "Queued Jobs",
   "completed": "Completed",

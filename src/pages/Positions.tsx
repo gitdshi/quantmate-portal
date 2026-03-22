@@ -39,60 +39,60 @@ export default function Positions() {
   const totalPnl = positions.reduce((s, p) => s + p.pnl, 0)
 
   const handleClose = async (pos: Position) => {
-    const ok = await showConfirm('确认平仓', `确定平仓 ${pos.name || pos.symbol}？`)
+    const ok = await showConfirm(t('page.modals.closeConfirmTitle'), t('page.modals.closeConfirmMessage', { name: pos.name || pos.symbol }))
     if (ok) {
       try {
         await portfolioAPI.close({ symbol: pos.symbol, quantity: pos.quantity, price: pos.market_price })
-        showToast('平仓指令已发送', 'success')
+        showToast(t('page.modals.closeSuccess'), 'success')
       } catch {
-        showToast('平仓失败', 'error')
+        showToast(t('page.modals.closeFailed'), 'error')
       }
     }
   }
 
-  const columns: Column<Position>[] = [
-    { key: 'symbol', label: '代码', sortable: true, className: 'font-mono' },
-    { key: 'name', label: '名称' },
-    { key: 'strategy', label: '策略' },
-    { key: 'direction', label: '方向', render: (r) => <Badge variant={r.direction === 'short' ? 'destructive' : 'success'}>{r.direction === 'short' ? '空' : '多'}</Badge> },
-    { key: 'quantity', label: '数量', sortable: true },
-    { key: 'avg_cost', label: '成本价', render: (r) => `¥${r.avg_cost.toFixed(2)}` },
-    { key: 'market_price', label: '现价', render: (r) => `¥${r.market_price.toFixed(2)}` },
-    { key: 'market_value', label: '市值', sortable: true, render: (r) => `¥${r.market_value.toLocaleString()}` },
-    { key: 'pnl', label: '盈亏', sortable: true, render: (r) => <span className={r.pnl >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>{r.pnl >= 0 ? '+' : ''}¥{Math.abs(r.pnl).toLocaleString()}</span> },
-    { key: 'pnl_pct', label: '盈亏%', sortable: true, render: (r) => <span className={r.pnl_pct >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>{r.pnl_pct >= 0 ? '+' : ''}{r.pnl_pct.toFixed(2)}%</span> },
-    { key: 'actions', label: '操作', render: (r) => (
-      <button onClick={() => handleClose(r)} className="px-2 py-1 text-xs rounded border border-border hover:bg-muted">平仓</button>
+  const columns: Column<Position>[] = useMemo(() => [
+    { key: 'symbol', label: t('page.table.symbol'), sortable: true, className: 'font-mono' },
+    { key: 'name', label: t('page.table.name') },
+    { key: 'strategy', label: t('page.table.strategy') },
+    { key: 'direction', label: t('page.table.direction'), render: (r) => <Badge variant={r.direction === 'short' ? 'destructive' : 'success'}>{r.direction === 'short' ? t('page.direction.short') : t('page.direction.long')}</Badge> },
+    { key: 'quantity', label: t('page.table.quantity'), sortable: true },
+    { key: 'avg_cost', label: t('page.table.avgCost'), render: (r) => `¥${r.avg_cost.toFixed(2)}` },
+    { key: 'market_price', label: t('page.table.marketPrice'), render: (r) => `¥${r.market_price.toFixed(2)}` },
+    { key: 'market_value', label: t('page.table.marketValue'), sortable: true, render: (r) => `¥${r.market_value.toLocaleString()}` },
+    { key: 'pnl', label: t('page.table.pnl'), sortable: true, render: (r) => <span className={r.pnl >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>{r.pnl >= 0 ? '+' : ''}¥{Math.abs(r.pnl).toLocaleString()}</span> },
+    { key: 'pnl_pct', label: t('page.table.pnlPct'), sortable: true, render: (r) => <span className={r.pnl_pct >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>{r.pnl_pct >= 0 ? '+' : ''}{r.pnl_pct.toFixed(2)}%</span> },
+    { key: 'actions', label: t('page.table.actions'), render: (r) => (
+      <button onClick={() => handleClose(r)} className="px-2 py-1 text-xs rounded border border-border hover:bg-muted">{t('page.actions.closePosition')}</button>
     )},
-  ]
+  ], [t])
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">持仓管理</h1>
-        <p className="text-sm text-muted-foreground">实时持仓 · 盈亏分析</p>
+        <h1 className="text-2xl font-bold text-foreground">{t('positions.title')}</h1>
+        <p className="text-sm text-muted-foreground">{t('positions.subtitle')}</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard label="持仓数量" value={positions.length} />
-        <StatCard label="持仓市值" value={`¥${totalMV.toLocaleString()}`} />
-        <StatCard label="总浮动盈亏" value={`${totalPnl >= 0 ? '+' : ''}¥${totalPnl.toLocaleString()}`} changeType={totalPnl >= 0 ? 'positive' : 'negative'} />
+        <StatCard label={t('page.stats.positionCount')} value={positions.length} />
+        <StatCard label={t('page.stats.positionValue')} value={`¥${totalMV.toLocaleString()}`} />
+        <StatCard label={t('page.stats.floatingPnl')} value={`${totalPnl >= 0 ? '+' : ''}¥${totalPnl.toLocaleString()}`} changeType={totalPnl >= 0 ? 'positive' : 'negative'} />
       </div>
 
       <FilterBar
         searchValue={search}
         onSearchChange={setSearch}
-        searchPlaceholder="搜索持仓..."
+        searchPlaceholder={t('page.filters.searchPositions')}
         filters={[{
           key: 'strategy',
           value: strategyFilter,
           options: strategies.map((s) => ({ value: s, label: s })),
           onChange: setStrategyFilter,
-          placeholder: '全部策略',
+          placeholder: t('page.filters.allStrategies'),
         }]}
       />
 
-      <DataTable columns={columns} data={filtered} keyField="symbol" emptyText="暂无持仓" />
+      <DataTable columns={columns} data={filtered} keyField="symbol" emptyText={t('page.empty.positions')} />
     </div>
   )
 }

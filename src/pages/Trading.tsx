@@ -1,14 +1,7 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import {
-  ArrowDownUp,
-  Clock,
-  History,
-  ListOrdered,
-  Plus,
-  Settings,
-  X,
-} from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { ArrowDownUp, History, ListOrdered, Plus, Settings, X } from 'lucide-react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import Badge from '../components/ui/Badge'
 import DataTable, { type Column } from '../components/ui/DataTable'
@@ -33,28 +26,12 @@ interface Order {
   updated_at?: string
 }
 
-const TABS = [
-  { key: 'pending', label: '当日委托', icon: <ListOrdered size={16} /> },
-  { key: 'filled', label: '成交明细', icon: <ArrowDownUp size={16} /> },
-  { key: 'history', label: '历史委托', icon: <History size={16} /> },
-  { key: 'algo', label: '算法交易', icon: <Settings size={16} /> },
-]
-
-const STATUS_MAP: Record<string, { label: string; variant: 'success' | 'warning' | 'danger' | 'primary' | 'muted' }> = {
-  filled: { label: '已成交', variant: 'success' },
-  partial: { label: '部分成交', variant: 'warning' },
-  pending: { label: '待成交', variant: 'primary' },
-  cancelled: { label: '已撤单', variant: 'muted' },
-  rejected: { label: '已拒绝', variant: 'danger' },
-}
-
 export default function Trading() {
+  const { t } = useTranslation('trading')
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState('pending')
   const [orderModal, setOrderModal] = useState(false)
   const [search, setSearch] = useState('')
-
-  // ── Form state ──
   const [form, setForm] = useState({
     symbol: '',
     direction: 'buy',
@@ -63,6 +40,24 @@ export default function Trading() {
     quantity: '',
     strategy: '',
   })
+
+  const tabs = [
+    { key: 'pending', label: t('management.tabs.pending'), icon: <ListOrdered size={16} /> },
+    { key: 'filled', label: t('management.tabs.filled'), icon: <ArrowDownUp size={16} /> },
+    { key: 'history', label: t('management.tabs.history'), icon: <History size={16} /> },
+    { key: 'algo', label: t('management.tabs.algo'), icon: <Settings size={16} /> },
+  ]
+
+  const statusMap: Record<
+    string,
+    { label: string; variant: 'success' | 'warning' | 'danger' | 'primary' | 'muted' }
+  > = {
+    filled: { label: t('management.status.filled'), variant: 'success' },
+    partial: { label: t('management.status.partial'), variant: 'warning' },
+    pending: { label: t('management.status.pending'), variant: 'primary' },
+    cancelled: { label: t('management.status.cancelled'), variant: 'muted' },
+    rejected: { label: t('management.status.rejected'), variant: 'danger' },
+  }
 
   const { data: orders = [] } = useQuery<Order[]>({
     queryKey: ['orders', activeTab],
@@ -77,10 +72,10 @@ export default function Trading() {
   const cancelMutation = useMutation({
     mutationFn: (id: string) => tradingAPI.cancelOrder(Number(id)),
     onSuccess: () => {
-      showToast('撤单成功', 'success')
+      showToast(t('management.cancelSuccess'), 'success')
       queryClient.invalidateQueries({ queryKey: ['orders'] })
     },
-    onError: () => showToast('撤单失败', 'error'),
+    onError: () => showToast(t('management.cancelFailed'), 'error'),
   })
 
   const submitMutation = useMutation({
@@ -93,133 +88,155 @@ export default function Trading() {
         quantity: Number(form.quantity),
       }),
     onSuccess: () => {
-      showToast('委托已提交', 'success')
+      showToast(t('management.submitSuccess'), 'success')
       setOrderModal(false)
       setForm({ symbol: '', direction: 'buy', order_type: 'limit', price: '', quantity: '', strategy: '' })
       queryClient.invalidateQueries({ queryKey: ['orders'] })
     },
-    onError: () => showToast('委托提交失败', 'error'),
+    onError: () => showToast(t('management.submitFailed'), 'error'),
   })
 
-  const filtered = orders.filter(
-    (o) => !search || o.symbol?.toLowerCase().includes(search.toLowerCase()),
-  )
+  const filtered = orders.filter((order) => !search || order.symbol?.toLowerCase().includes(search.toLowerCase()))
 
   const todayStats = {
     total: orders.length,
-    filled: orders.filter((o) => o.status === 'filled').length,
-    pending: orders.filter((o) => o.status === 'pending' || o.status === 'partial').length,
-    cancelled: orders.filter((o) => o.status === 'cancelled').length,
+    filled: orders.filter((order) => order.status === 'filled').length,
+    pending: orders.filter((order) => order.status === 'pending' || order.status === 'partial').length,
+    cancelled: orders.filter((order) => order.status === 'cancelled').length,
   }
 
   const pendingCols: Column<Order>[] = [
-    { key: 'symbol', label: '代码' },
-    { key: 'direction', label: '方向', render: (o) => <Badge variant={o.direction === 'buy' ? 'success' : 'danger'}>{o.direction === 'buy' ? '买入' : '卖出'}</Badge> },
-    { key: 'order_type', label: '类型' },
-    { key: 'price', label: '委托价', render: (o) => `¥${o.price.toFixed(2)}` },
-    { key: 'quantity', label: '委托量' },
-    { key: 'filled_qty', label: '已成交', render: (o) => o.filled_qty ?? 0 },
-    { key: 'status', label: '状态', render: (o) => { const s = STATUS_MAP[o.status]; return s ? <Badge variant={s.variant}>{s.label}</Badge> : o.status } },
-    { key: 'strategy', label: '策略', render: (o) => o.strategy || '-' },
-    { key: 'created_at', label: '时间', render: (o) => new Date(o.created_at).toLocaleTimeString() },
+    { key: 'symbol', label: t('management.columns.symbol') },
+    {
+      key: 'direction',
+      label: t('management.columns.direction'),
+      render: (order) => <Badge variant={order.direction === 'buy' ? 'success' : 'danger'}>{order.direction === 'buy' ? t('management.buy') : t('management.sell')}</Badge>,
+    },
+    { key: 'order_type', label: t('management.columns.type') },
+    { key: 'price', label: t('management.columns.orderPrice'), render: (order) => `?${order.price.toFixed(2)}` },
+    { key: 'quantity', label: t('management.columns.quantity') },
+    { key: 'filled_qty', label: t('management.columns.filledQty'), render: (order) => order.filled_qty ?? 0 },
+    {
+      key: 'status',
+      label: t('management.columns.status'),
+      render: (order) => {
+        const mapped = statusMap[order.status]
+        return mapped ? <Badge variant={mapped.variant}>{mapped.label}</Badge> : order.status
+      },
+    },
+    { key: 'strategy', label: t('management.columns.strategy'), render: (order) => order.strategy || '-' },
+    { key: 'created_at', label: t('management.columns.time'), render: (order) => new Date(order.created_at).toLocaleTimeString() },
     {
       key: 'id',
-      label: '操作',
-      render: (o) =>
-        o.status === 'pending' || o.status === 'partial' ? (
-          <button onClick={() => cancelMutation.mutate(o.id)} className="text-red-500 hover:text-red-700 text-xs"><X size={14} className="inline mr-0.5" />撤单</button>
+      label: t('management.columns.actions'),
+      render: (order) =>
+        order.status === 'pending' || order.status === 'partial' ? (
+          <button onClick={() => cancelMutation.mutate(order.id)} className="text-red-500 hover:text-red-700 text-xs">
+            <X size={14} className="inline mr-0.5" />
+            {t('management.cancel')}
+          </button>
         ) : null,
     },
   ]
 
   const filledCols: Column<Order>[] = [
-    { key: 'symbol', label: '代码' },
-    { key: 'direction', label: '方向', render: (o) => <Badge variant={o.direction === 'buy' ? 'success' : 'danger'}>{o.direction === 'buy' ? '买入' : '卖出'}</Badge> },
-    { key: 'price', label: '成交价', render: (o) => `¥${o.price.toFixed(2)}` },
-    { key: 'quantity', label: '成交量' },
-    { key: 'strategy', label: '策略', render: (o) => o.strategy || '-' },
-    { key: 'created_at', label: '成交时间', render: (o) => new Date(o.created_at).toLocaleTimeString() },
+    { key: 'symbol', label: t('management.columns.symbol') },
+    {
+      key: 'direction',
+      label: t('management.columns.direction'),
+      render: (order) => <Badge variant={order.direction === 'buy' ? 'success' : 'danger'}>{order.direction === 'buy' ? t('management.buy') : t('management.sell')}</Badge>,
+    },
+    { key: 'price', label: t('management.columns.tradePrice'), render: (order) => `?${order.price.toFixed(2)}` },
+    { key: 'quantity', label: t('management.columns.tradeQty') },
+    { key: 'strategy', label: t('management.columns.strategy'), render: (order) => order.strategy || '-' },
+    { key: 'created_at', label: t('management.columns.tradeTime'), render: (order) => new Date(order.created_at).toLocaleTimeString() },
   ]
-
-
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">交易管理</h1>
-          <p className="text-sm text-muted-foreground">委托下单 · 成交明细 · 算法交易</p>
+          <h1 className="text-2xl font-bold text-foreground">{t('management.title')}</h1>
+          <p className="text-sm text-muted-foreground">{t('management.subtitle')}</p>
         </div>
-        <button onClick={() => setOrderModal(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-primary text-white hover:opacity-90"><Plus size={16} />新委托</button>
+        <button onClick={() => setOrderModal(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-primary text-white hover:opacity-90">
+          <Plus size={16} />
+          {t('management.newOrder')}
+        </button>
       </div>
 
-      <TabPanel tabs={TABS} activeTab={activeTab} onChange={setActiveTab}>
-        {/* ── Pending ──────────────────────────────────── */}
+      <TabPanel tabs={tabs} activeTab={activeTab} onChange={setActiveTab}>
         {activeTab === 'pending' && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <StatCard label="今日委托" value={todayStats.total} />
-              <StatCard label="已成交" value={todayStats.filled} changeType="positive" />
-              <StatCard label="待成交" value={todayStats.pending} changeType="neutral" />
-              <StatCard label="已撤单" value={todayStats.cancelled} />
+              <StatCard label={t('management.stats.total')} value={todayStats.total} />
+              <StatCard label={t('management.stats.filled')} value={todayStats.filled} changeType="positive" />
+              <StatCard label={t('management.stats.pending')} value={todayStats.pending} changeType="neutral" />
+              <StatCard label={t('management.stats.cancelled')} value={todayStats.cancelled} />
             </div>
             <FilterBar
-              filters={[{ key: 'search', label: '搜索代码', type: 'search' as const }]}
+              filters={[{ key: 'search', label: t('management.search'), type: 'search' as const }]}
               values={{ search }}
               onChange={(v) => setSearch((v.search as string) || '')}
             />
-            <DataTable columns={pendingCols} data={filtered} emptyText="暂无委托" />
+            <DataTable columns={pendingCols} data={filtered} emptyText={t('management.empty.pending')} />
           </div>
         )}
 
-        {/* ── Filled ──────────────────────────────────── */}
         {activeTab === 'filled' && (
           <div className="space-y-4">
             <FilterBar
-              filters={[{ key: 'search', label: '搜索代码', type: 'search' as const }]}
+              filters={[{ key: 'search', label: t('management.search'), type: 'search' as const }]}
               values={{ search }}
               onChange={(v) => setSearch((v.search as string) || '')}
             />
-            <DataTable columns={filledCols} data={filtered.filter((o) => o.status === 'filled')} emptyText="暂无成交" />
+            <DataTable columns={filledCols} data={filtered.filter((order) => order.status === 'filled')} emptyText={t('management.empty.filled')} />
           </div>
         )}
 
-        {/* ── History ─────────────────────────────────── */}
         {activeTab === 'history' && (
           <div className="space-y-4">
             <FilterBar
               filters={[
-                { key: 'search', label: '搜索代码', type: 'search' as const },
-                { key: 'status', label: '状态', type: 'select' as const, options: [{ label: '全部', value: '' }, { label: '已成交', value: 'filled' }, { label: '已撤单', value: 'cancelled' }] },
+                { key: 'search', label: t('management.search'), type: 'search' as const },
+                {
+                  key: 'status',
+                  label: t('management.columns.status'),
+                  type: 'select' as const,
+                  options: [
+                    { label: t('management.all'), value: '' },
+                    { label: t('management.status.filled'), value: 'filled' },
+                    { label: t('management.status.cancelled'), value: 'cancelled' },
+                  ],
+                },
               ]}
               values={{ search }}
               onChange={(v) => setSearch((v.search as string) || '')}
             />
-            <DataTable columns={pendingCols} data={filtered} emptyText="暂无历史委托" />
+            <DataTable columns={pendingCols} data={filtered} emptyText={t('management.empty.history')} />
           </div>
         )}
 
-        {/* ── Algo Trading ────────────────────────────── */}
         {activeTab === 'algo' && (
           <div className="space-y-4">
             <div className="rounded-lg border border-border bg-card p-5">
-              <h3 className="font-semibold text-card-foreground mb-4">算法订单</h3>
-              <p className="text-center text-muted-foreground py-8">暂无算法委托</p>
+              <h3 className="font-semibold text-card-foreground mb-4">{t('management.algo.title')}</h3>
+              <p className="text-center text-muted-foreground py-8">{t('management.empty.algo')}</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="rounded-lg border border-border bg-card p-5">
-                <h3 className="font-semibold text-card-foreground mb-3">TWAP 配置</h3>
+                <h3 className="font-semibold text-card-foreground mb-3">{t('management.algo.twap')}</h3>
                 <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div><label className="block text-muted-foreground mb-1">拆单间隔 (秒)</label><input type="number" defaultValue={30} className="w-full px-3 py-1.5 rounded-md border border-border bg-background" /></div>
-                  <div><label className="block text-muted-foreground mb-1">子单比例 (%)</label><input type="number" defaultValue={5} className="w-full px-3 py-1.5 rounded-md border border-border bg-background" /></div>
+                  <div><label className="block text-muted-foreground mb-1">{t('management.algo.interval')}</label><input type="number" defaultValue={30} className="w-full px-3 py-1.5 rounded-md border border-border bg-background" /></div>
+                  <div><label className="block text-muted-foreground mb-1">{t('management.algo.ratio')}</label><input type="number" defaultValue={5} className="w-full px-3 py-1.5 rounded-md border border-border bg-background" /></div>
                 </div>
               </div>
               <div className="rounded-lg border border-border bg-card p-5">
-                <h3 className="font-semibold text-card-foreground mb-3">VWAP 配置</h3>
+                <h3 className="font-semibold text-card-foreground mb-3">{t('management.algo.vwap')}</h3>
                 <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div><label className="block text-muted-foreground mb-1">参与率上限 (%)</label><input type="number" defaultValue={20} className="w-full px-3 py-1.5 rounded-md border border-border bg-background" /></div>
-                  <div><label className="block text-muted-foreground mb-1">最大偏离 (bp)</label><input type="number" defaultValue={5} className="w-full px-3 py-1.5 rounded-md border border-border bg-background" /></div>
+                  <div><label className="block text-muted-foreground mb-1">{t('management.algo.participation')}</label><input type="number" defaultValue={20} className="w-full px-3 py-1.5 rounded-md border border-border bg-background" /></div>
+                  <div><label className="block text-muted-foreground mb-1">{t('management.algo.deviation')}</label><input type="number" defaultValue={5} className="w-full px-3 py-1.5 rounded-md border border-border bg-background" /></div>
                 </div>
               </div>
             </div>
@@ -227,30 +244,38 @@ export default function Trading() {
         )}
       </TabPanel>
 
-      {/* Order Modal */}
-      <Modal open={orderModal} onClose={() => setOrderModal(false)} title="新委托" footer={
-        <>
-          <button onClick={() => setOrderModal(false)} className="px-4 py-2 text-sm rounded-md border border-border hover:bg-muted">取消</button>
-          <button onClick={() => submitMutation.mutate()} disabled={!form.symbol || !form.quantity} className="px-4 py-2 text-sm rounded-md bg-primary text-white hover:opacity-90 disabled:opacity-50">提交委托</button>
-        </>
-      }>
+      <Modal
+        open={orderModal}
+        onClose={() => setOrderModal(false)}
+        title={t('management.modal.title')}
+        footer={
+          <>
+            <button onClick={() => setOrderModal(false)} className="px-4 py-2 text-sm rounded-md border border-border hover:bg-muted">
+              {t('management.modal.cancel')}
+            </button>
+            <button onClick={() => submitMutation.mutate()} disabled={!form.symbol || !form.quantity} className="px-4 py-2 text-sm rounded-md bg-primary text-white hover:opacity-90 disabled:opacity-50">
+              {t('management.modal.submit')}
+            </button>
+          </>
+        }
+      >
         <div className="flex flex-col gap-4">
-          <div><label className="block text-sm font-medium mb-1">证券代码</label><input value={form.symbol} onChange={(e) => setForm({ ...form, symbol: e.target.value })} className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background" placeholder="例如: 600519.SH" /></div>
+          <div><label className="block text-sm font-medium mb-1">{t('management.modal.symbol')}</label><input value={form.symbol} onChange={(event) => setForm({ ...form, symbol: event.target.value })} className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background" placeholder={t('management.modal.symbolPlaceholder')} /></div>
           <div className="grid grid-cols-2 gap-3">
-            <div><label className="block text-sm font-medium mb-1">方向</label>
-              <select value={form.direction} onChange={(e) => setForm({ ...form, direction: e.target.value })} className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background">
-                <option value="buy">买入</option><option value="sell">卖出</option>
+            <div><label className="block text-sm font-medium mb-1">{t('management.modal.direction')}</label>
+              <select value={form.direction} onChange={(event) => setForm({ ...form, direction: event.target.value })} className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background">
+                <option value="buy">{t('management.buy')}</option><option value="sell">{t('management.sell')}</option>
               </select></div>
-            <div><label className="block text-sm font-medium mb-1">类型</label>
-              <select value={form.order_type} onChange={(e) => setForm({ ...form, order_type: e.target.value })} className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background">
-                <option value="limit">限价</option><option value="market">市价</option>
+            <div><label className="block text-sm font-medium mb-1">{t('management.modal.type')}</label>
+              <select value={form.order_type} onChange={(event) => setForm({ ...form, order_type: event.target.value })} className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background">
+                <option value="limit">{t('management.modal.limit')}</option><option value="market">{t('management.modal.market')}</option>
               </select></div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div><label className="block text-sm font-medium mb-1">委托价</label><input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background" /></div>
-            <div><label className="block text-sm font-medium mb-1">数量</label><input type="number" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background" /></div>
+            <div><label className="block text-sm font-medium mb-1">{t('management.modal.price')}</label><input type="number" value={form.price} onChange={(event) => setForm({ ...form, price: event.target.value })} className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background" /></div>
+            <div><label className="block text-sm font-medium mb-1">{t('management.modal.quantity')}</label><input type="number" value={form.quantity} onChange={(event) => setForm({ ...form, quantity: event.target.value })} className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background" /></div>
           </div>
-          <div><label className="block text-sm font-medium mb-1">策略 (可选)</label><input value={form.strategy} onChange={(e) => setForm({ ...form, strategy: e.target.value })} className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background" placeholder="关联策略名称" /></div>
+          <div><label className="block text-sm font-medium mb-1">{t('management.modal.strategy')}</label><input value={form.strategy} onChange={(event) => setForm({ ...form, strategy: event.target.value })} className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background" placeholder={t('management.modal.strategyPlaceholder')} /></div>
         </div>
       </Modal>
     </div>

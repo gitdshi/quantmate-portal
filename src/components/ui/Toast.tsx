@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { CheckCircle, XCircle, Info, X } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 export interface ToastItem {
   id: number
@@ -76,6 +77,7 @@ export function showConfirm(title: string, message: string): Promise<boolean> {
 }
 
 export function ConfirmDialog() {
+  const { t } = useTranslation('common')
   const [state, setState] = useState<ConfirmState>(confirmState)
 
   useEffect(() => {
@@ -98,8 +100,8 @@ export function ConfirmDialog() {
         <h3 className="text-lg font-semibold mb-2">{state.title}</h3>
         <p className="text-sm text-muted-foreground mb-6">{state.message}</p>
         <div className="flex justify-end gap-3">
-          <button onClick={() => handleClose(false)} className="px-4 py-2 text-sm rounded-md border border-border hover:bg-muted">取消</button>
-          <button onClick={() => handleClose(true)} className="px-4 py-2 text-sm rounded-md bg-destructive text-white hover:opacity-90">确认</button>
+          <button onClick={() => handleClose(false)} className="px-4 py-2 text-sm rounded-md border border-border hover:bg-muted">{t('cancel')}</button>
+          <button onClick={() => handleClose(true)} className="px-4 py-2 text-sm rounded-md bg-destructive text-white hover:opacity-90">{t('confirm')}</button>
         </div>
       </div>
     </div>

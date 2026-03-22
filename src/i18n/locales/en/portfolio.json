@@ -1,6 +1,118 @@
 {
   "title": "Portfolio",
   "subtitle": "Manage portfolios and asset allocation",
+  "page": {
+    "tabs": {
+      "overview": "Overview",
+      "positions": "Positions",
+      "risk": "Risk Analysis",
+      "allocation": "Asset Allocation"
+    },
+    "actions": {
+      "riskSettings": "Risk Settings",
+      "rebalance": "Rebalance",
+      "applyTarget": "Apply Target Allocation",
+      "executeRebalance": "Execute Rebalance",
+      "closePosition": "Close Position"
+    },
+    "stats": {
+      "totalValue": "Total Value",
+      "positionValue": "Position Value",
+      "availableCash": "Available Cash",
+      "positionRatio": "Position Ratio",
+      "totalPnl": "Total P&L",
+      "dailyPnl": "Daily P&L",
+      "maxDrawdown": "Max Drawdown",
+      "sharpe30d": "Sharpe (30d)",
+      "positionCount": "Positions",
+      "floatingPnl": "Floating P&L",
+      "varDay": "VaR (95%, 1d)",
+      "betaHs300": "Beta (vs CSI 300)"
+    },
+    "sections": {
+      "nav": "NAV Trend",
+      "holdings": "Holdings Distribution",
+      "riskRules": "Risk Rules",
+      "currentAllocation": "Current Allocation",
+      "targetAllocation": "Target Allocation"
+    },
+    "filters": {
+      "searchPositions": "Search positions...",
+      "allStrategies": "All Strategies",
+      "allDirections": "All Directions"
+    },
+    "table": {
+      "symbol": "Symbol",
+      "name": "Name",
+      "strategy": "Strategy",
+      "direction": "Direction",
+      "quantity": "Quantity",
+      "avgCost": "Avg Cost",
+      "marketPrice": "Market Price",
+      "marketValue": "Market Value",
+      "pnl": "P&L",
+      "pnlPct": "P&L %",
+      "actions": "Actions",
+      "rule": "Rule",
+      "threshold": "Threshold",
+      "current": "Current",
+      "status": "Status",
+      "item": "Adjustment",
+      "operation": "Action",
+      "target": "Target"
+    },
+    "direction": {
+      "long": "Long",
+      "short": "Short"
+    },
+    "riskRules": {
+      "singlePosition": "Single Position Limit",
+      "totalPosition": "Total Position Limit",
+      "dailyLoss": "Max Daily Loss",
+      "drawdown": "Max Drawdown Limit",
+      "concentration": "Sector Concentration"
+    },
+    "riskStatus": {
+      "normal": "Normal",
+      "exceeded": "Exceeded"
+    },
+    "marketRisk": {
+      "lower": "Lower than market risk",
+      "higher": "Higher than market risk"
+    },
+    "modals": {
+      "riskTitle": "Risk Settings",
+      "riskSaved": "Risk settings saved",
+      "rebalanceTitle": "Portfolio Rebalance",
+      "rebalanceSubmitted": "Rebalance order submitted. Please wait...",
+      "rebalanceHint": "The system will generate rebalance suggestions from the target weights.",
+      "reduce": "Reduce {{value}}%",
+      "increase": "Increase {{value}}%",
+      "buy": "Buy {{value}}%",
+      "closeConfirmTitle": "Confirm Close",
+      "closeConfirmMessage": "Close {{name}}?",
+      "closeSuccess": "Close order submitted",
+      "closeFailed": "Close position failed"
+    },
+    "fields": {
+      "singlePosition": "Single position max (%)",
+      "totalPosition": "Total position limit (%)",
+      "dailyLoss": "Max daily loss (%)",
+      "drawdown": "Max drawdown limit (%)",
+      "concentration": "Sector concentration limit (%)"
+    },
+    "targetPrefix": "Target {{value}}%",
+    "targetApplied": "Target allocation applied",
+    "rebalanceItems": {
+      "maotai": "Kweichow Moutai",
+      "bankEtf": "Bank ETF",
+      "solarEtf": "Solar ETF",
+      "techEtf": "Tech ETF"
+    },
+    "empty": {
+      "positions": "No positions"
+    }
+  },
   "analytics": {
     "title": "Analytics",
     "subtitle": "In-depth trading performance analysis",

@@ -22,13 +22,6 @@ import { analyticsAPI, portfolioAPI } from '../lib/api'
 import { chartPalette, themeColors } from '../lib/theme'
 import type { DashboardMetrics, Position, RiskMetrics } from '../types'
 
-const TABS = [
-  { key: 'overview', label: '组合概览', icon: <Briefcase size={16} /> },
-  { key: 'positions', label: '持仓明细', icon: <Wallet size={16} /> },
-  { key: 'risk', label: '风险分析', icon: <Shield size={16} /> },
-  { key: 'allocation', label: '资产配置', icon: <PieChartIcon size={16} /> },
-]
-
 export default function Portfolio() {
   const { t } = useTranslation('portfolio')
   const [activeTab, setActiveTab] = useState('overview')
@@ -90,34 +83,55 @@ export default function Portfolio() {
       .sort((a, b) => b.pct - a.pct)
   }, [positions])
 
+  const tabs = useMemo(() => [
+    { key: 'overview', label: t('page.tabs.overview'), icon: <Briefcase size={16} /> },
+    { key: 'positions', label: t('page.tabs.positions'), icon: <Wallet size={16} /> },
+    { key: 'risk', label: t('page.tabs.risk'), icon: <Shield size={16} /> },
+    { key: 'allocation', label: t('page.tabs.allocation'), icon: <PieChartIcon size={16} /> },
+  ], [t])
+
   // ── Risk rules (placeholder) ───────────────────────────────────────
-  const riskRules = [
-    { rule: '单股最大仓位', threshold: '≤ 20%', current: holdingsDistrib[0]?.pct ? `${holdingsDistrib[0].pct}%` : '0%', ok: (holdingsDistrib[0]?.pct ?? 0) <= 20 },
-    { rule: '总仓位上限', threshold: '≤ 80%', current: `${positionRatio}%`, ok: +positionRatio <= 80 },
-    { rule: '单日最大亏损', threshold: '≤ 3%', current: `${Math.abs(stats?.daily_pnl_pct ?? 0).toFixed(1)}%`, ok: Math.abs(stats?.daily_pnl_pct ?? 0) <= 3 },
-    { rule: '最大回撤限制', threshold: '≤ 15%', current: `${(riskData?.max_drawdown ?? dashData?.risk_metrics?.max_drawdown ?? 0).toFixed(1)}%`, ok: (riskData?.max_drawdown ?? dashData?.risk_metrics?.max_drawdown ?? 0) <= 15 },
-    { rule: '行业集中度', threshold: '≤ 30%', current: `${(riskData?.concentration ?? 0).toFixed(1)}%`, ok: (riskData?.concentration ?? 0) <= 30 },
-  ]
+  const riskRules = useMemo(() => [
+    { rule: t('page.riskRules.singlePosition'), threshold: '≤ 20%', current: holdingsDistrib[0]?.pct ? `${holdingsDistrib[0].pct}%` : '0%', ok: (holdingsDistrib[0]?.pct ?? 0) <= 20 },
+    { rule: t('page.riskRules.totalPosition'), threshold: '≤ 80%', current: `${positionRatio}%`, ok: +positionRatio <= 80 },
+    { rule: t('page.riskRules.dailyLoss'), threshold: '≤ 3%', current: `${Math.abs(stats?.daily_pnl_pct ?? 0).toFixed(1)}%`, ok: Math.abs(stats?.daily_pnl_pct ?? 0) <= 3 },
+    { rule: t('page.riskRules.drawdown'), threshold: '≤ 15%', current: `${(riskData?.max_drawdown ?? dashData?.risk_metrics?.max_drawdown ?? 0).toFixed(1)}%`, ok: (riskData?.max_drawdown ?? dashData?.risk_metrics?.max_drawdown ?? 0) <= 15 },
+    { rule: t('page.riskRules.concentration'), threshold: '≤ 30%', current: `${(riskData?.concentration ?? 0).toFixed(1)}%`, ok: (riskData?.concentration ?? 0) <= 30 },
+  ], [dashData?.risk_metrics?.max_drawdown, holdingsDistrib, positionRatio, riskData?.concentration, riskData?.max_drawdown, stats?.daily_pnl_pct, t])
 
   // ── Columns ────────────────────────────────────────────────────────
-  const posColumns: Column<Position>[] = [
-    { key: 'symbol', label: '代码', sortable: true, className: 'font-mono' },
-    { key: 'name', label: '名称' },
-    { key: 'strategy', label: '策略' },
-    { key: 'direction', label: '方向', render: (r) => <Badge variant={r.direction === 'short' ? 'destructive' : 'success'}>{r.direction === 'short' ? '空' : '多'}</Badge> },
-    { key: 'quantity', label: '数量', sortable: true },
-    { key: 'avg_cost', label: '成本价', render: (r) => `¥${r.avg_cost.toFixed(2)}` },
-    { key: 'market_price', label: '现价', render: (r) => `¥${r.market_price.toFixed(2)}` },
-    { key: 'market_value', label: '市值', sortable: true, render: (r) => `¥${r.market_value.toLocaleString()}` },
+  const posColumns: Column<Position>[] = useMemo(() => [
+    { key: 'symbol', label: t('page.table.symbol'), sortable: true, className: 'font-mono' },
+    { key: 'name', label: t('page.table.name') },
+    { key: 'strategy', label: t('page.table.strategy') },
+    { key: 'direction', label: t('page.table.direction'), render: (r) => <Badge variant={r.direction === 'short' ? 'destructive' : 'success'}>{r.direction === 'short' ? t('page.direction.short') : t('page.direction.long')}</Badge> },
+    { key: 'quantity', label: t('page.table.quantity'), sortable: true },
+    { key: 'avg_cost', label: t('page.table.avgCost'), render: (r) => `¥${r.avg_cost.toFixed(2)}` },
+    { key: 'market_price', label: t('page.table.marketPrice'), render: (r) => `¥${r.market_price.toFixed(2)}` },
+    { key: 'market_value', label: t('page.table.marketValue'), sortable: true, render: (r) => `¥${r.market_value.toLocaleString()}` },
     {
-      key: 'pnl', label: '盈亏', sortable: true,
+      key: 'pnl', label: t('page.table.pnl'), sortable: true,
       render: (r) => <span className={r.pnl >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>{r.pnl >= 0 ? '+' : ''}¥{Math.abs(r.pnl).toLocaleString()}</span>,
     },
     {
-      key: 'pnl_pct', label: '盈亏%', sortable: true,
+      key: 'pnl_pct', label: t('page.table.pnlPct'), sortable: true,
       render: (r) => <span className={r.pnl_pct >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>{r.pnl_pct >= 0 ? '+' : ''}{r.pnl_pct.toFixed(2)}%</span>,
     },
-  ]
+  ], [t])
+
+  const targetAllocations = useMemo(() => [
+    { name: t('analytics.sectorAllocation'), target: 30, color: themeColors.primary },
+    { name: t('risk.topPosition'), target: 25, color: '#22c55e' },
+    { name: t('risk.top3Positions'), target: 20, color: '#eab308' },
+    { name: t('risk.top5Positions'), target: 25, color: '#ef4444' },
+  ], [t])
+
+  const rebalanceItems = useMemo(() => [
+    { name: t('page.rebalanceItems.maotai'), action: t('page.modals.reduce', { value: '62.2' }), target: '30%', isReduce: true },
+    { name: t('page.rebalanceItems.bankEtf'), action: t('page.modals.buy', { value: '25' }), target: '25%', isReduce: false },
+    { name: t('page.rebalanceItems.solarEtf'), action: t('page.modals.increase', { value: '12.2' }), target: '20%', isReduce: false },
+    { name: t('page.rebalanceItems.techEtf'), action: t('page.modals.buy', { value: '25' }), target: '25%', isReduce: false },
+  ], [t])
 
   const loading = dashLoading || posLoading
 
@@ -130,37 +144,37 @@ export default function Portfolio() {
           <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => setRiskModalOpen(true)} className="px-3 py-1.5 text-sm rounded-md border border-border hover:bg-muted">风控设置</button>
-          <button onClick={() => setRebalanceModalOpen(true)} className="px-3 py-1.5 text-sm rounded-md bg-primary text-white hover:opacity-90">再平衡</button>
+          <button onClick={() => setRiskModalOpen(true)} className="px-3 py-1.5 text-sm rounded-md border border-border hover:bg-muted">{t('page.actions.riskSettings')}</button>
+          <button onClick={() => setRebalanceModalOpen(true)} className="px-3 py-1.5 text-sm rounded-md bg-primary text-white hover:opacity-90">{t('page.actions.rebalance')}</button>
         </div>
       </div>
 
-      <TabPanel tabs={TABS} activeTab={activeTab} onChange={setActiveTab}>
+      <TabPanel tabs={tabs} activeTab={activeTab} onChange={setActiveTab}>
         {/* ── Overview ────────────────────────────────── */}
         {activeTab === 'overview' && (
           <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <StatCard label="总市值" value={`¥${totalValue.toLocaleString()}`} icon={Wallet} iconColor="text-blue-500" />
-              <StatCard label="持仓市值" value={`¥${positionVale.toLocaleString()}`} icon={Briefcase} iconColor="text-green-500" />
-              <StatCard label="可用资金" value={`¥${cash.toLocaleString()}`} icon={BarChart3} iconColor="text-purple-500" />
-              <StatCard label="仓位比例" value={`${positionRatio}%`} icon={PieChartIcon} iconColor="text-yellow-500" />
+              <StatCard label={t('page.stats.totalValue')} value={`¥${totalValue.toLocaleString()}`} icon={Wallet} iconColor="text-blue-500" />
+              <StatCard label={t('page.stats.positionValue')} value={`¥${positionVale.toLocaleString()}`} icon={Briefcase} iconColor="text-green-500" />
+              <StatCard label={t('page.stats.availableCash')} value={`¥${cash.toLocaleString()}`} icon={BarChart3} iconColor="text-purple-500" />
+              <StatCard label={t('page.stats.positionRatio')} value={`${positionRatio}%`} icon={PieChartIcon} iconColor="text-yellow-500" />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <StatCard label="总盈亏" value={`${(stats?.total_pnl ?? 0) >= 0 ? '+' : ''}¥${(stats?.total_pnl ?? 0).toLocaleString()}`} changeType={(stats?.total_pnl ?? 0) >= 0 ? 'positive' : 'negative'} />
-              <StatCard label="今日盈亏" value={`${(stats?.daily_pnl ?? 0) >= 0 ? '+' : ''}¥${(stats?.daily_pnl ?? 0).toLocaleString()}`} change={`${(stats?.daily_pnl_pct ?? 0) >= 0 ? '+' : ''}${(stats?.daily_pnl_pct ?? 0).toFixed(2)}%`} changeType={(stats?.daily_pnl ?? 0) >= 0 ? 'positive' : 'negative'} />
-              <StatCard label="最大回撤" value={`-${(dashData?.risk_metrics?.max_drawdown ?? 0).toFixed(1)}%`} changeType="negative" />
-              <StatCard label="Sharpe(30d)" value={(dashData?.risk_metrics?.sharpe_ratio ?? 0).toFixed(2)} />
+              <StatCard label={t('page.stats.totalPnl')} value={`${(stats?.total_pnl ?? 0) >= 0 ? '+' : ''}¥${(stats?.total_pnl ?? 0).toLocaleString()}`} changeType={(stats?.total_pnl ?? 0) >= 0 ? 'positive' : 'negative'} />
+              <StatCard label={t('page.stats.dailyPnl')} value={`${(stats?.daily_pnl ?? 0) >= 0 ? '+' : ''}¥${(stats?.daily_pnl ?? 0).toLocaleString()}`} change={`${(stats?.daily_pnl_pct ?? 0) >= 0 ? '+' : ''}${(stats?.daily_pnl_pct ?? 0).toFixed(2)}%`} changeType={(stats?.daily_pnl ?? 0) >= 0 ? 'positive' : 'negative'} />
+              <StatCard label={t('page.stats.maxDrawdown')} value={`-${(dashData?.risk_metrics?.max_drawdown ?? 0).toFixed(1)}%`} changeType="negative" />
+              <StatCard label={t('page.stats.sharpe30d')} value={(dashData?.risk_metrics?.sharpe_ratio ?? 0).toFixed(2)} />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="rounded-lg border border-border bg-card p-5">
-                <h3 className="font-semibold text-card-foreground mb-4">净值走势</h3>
-                <LineChart xData={navDates} series={[{ name: '净值', data: navValues, areaStyle: true }]} height={220} loading={loading} />
+                <h3 className="font-semibold text-card-foreground mb-4">{t('page.sections.nav')}</h3>
+                <LineChart xData={navDates} series={[{ name: t('page.sections.nav'), data: navValues, areaStyle: true }]} height={220} loading={loading} />
               </div>
 
               <div className="rounded-lg border border-border bg-card p-5">
-                <h3 className="font-semibold text-card-foreground mb-4">持仓分布</h3>
+                <h3 className="font-semibold text-card-foreground mb-4">{t('page.sections.holdings')}</h3>
                 <div className="flex flex-col gap-3 pt-2">
                   {holdingsDistrib.slice(0, 5).map((h, i) => {
                     const colors = chartPalette
@@ -188,25 +202,25 @@ export default function Portfolio() {
             <FilterBar
               searchValue={search}
               onSearchChange={setSearch}
-              searchPlaceholder="搜索持仓..."
+              searchPlaceholder={t('page.filters.searchPositions')}
               filters={[
                 {
                   key: 'strategy',
                   value: strategyFilter,
                   options: strategies.map((s) => ({ value: s, label: s })),
                   onChange: setStrategyFilter,
-                  placeholder: '全部策略',
+                  placeholder: t('page.filters.allStrategies'),
                 },
                 {
                   key: 'direction',
                   value: dirFilter,
-                  options: [{ value: 'long', label: '多' }, { value: 'short', label: '空' }],
+                  options: [{ value: 'long', label: t('page.direction.long') }, { value: 'short', label: t('page.direction.short') }],
                   onChange: setDirFilter,
-                  placeholder: '全部方向',
+                  placeholder: t('page.filters.allDirections'),
                 },
               ]}
             />
-            <DataTable columns={posColumns} data={filteredPositions} keyField="symbol" emptyText="暂无持仓" />
+            <DataTable columns={posColumns} data={filteredPositions} keyField="symbol" emptyText={t('page.empty.positions')} />
           </div>
         )}
 
@@ -214,20 +228,20 @@ export default function Portfolio() {
         {activeTab === 'risk' && (
           <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <StatCard label="VaR (95%, 1天)" value={`¥${(riskData?.value_at_risk ?? 0).toLocaleString()}`} subtitle={`占总资产 ${totalValue > 0 ? ((riskData?.value_at_risk ?? 0) / totalValue * 100).toFixed(2) : '0'}%`} changeType="negative" />
-              <StatCard label="最大回撤" value={`${(riskData?.max_drawdown ?? 0).toFixed(1)}%`} changeType="negative" />
-              <StatCard label="Beta (vs 沪深300)" value={(riskData?.beta ?? 0).toFixed(2)} subtitle={riskData?.beta && riskData.beta < 1 ? '低于市场风险' : '高于市场风险'} />
+              <StatCard label={t('page.stats.varDay')} value={`¥${(riskData?.value_at_risk ?? 0).toLocaleString()}`} subtitle={`${t('risk.valueAtRisk')} ${totalValue > 0 ? ((riskData?.value_at_risk ?? 0) / totalValue * 100).toFixed(2) : '0'}%`} changeType="negative" />
+              <StatCard label={t('page.stats.maxDrawdown')} value={`${(riskData?.max_drawdown ?? 0).toFixed(1)}%`} changeType="negative" />
+              <StatCard label={t('page.stats.betaHs300')} value={(riskData?.beta ?? 0).toFixed(2)} subtitle={riskData?.beta && riskData.beta < 1 ? t('page.marketRisk.lower') : t('page.marketRisk.higher')} />
             </div>
 
             <div className="rounded-lg border border-border bg-card p-5">
-              <h3 className="font-semibold text-card-foreground mb-4">风控规则</h3>
+              <h3 className="font-semibold text-card-foreground mb-4">{t('page.sections.riskRules')}</h3>
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border">
-                    <th className="px-4 py-2 text-left font-medium text-muted-foreground">规则</th>
-                    <th className="px-4 py-2 text-left font-medium text-muted-foreground">阈值</th>
-                    <th className="px-4 py-2 text-left font-medium text-muted-foreground">当前值</th>
-                    <th className="px-4 py-2 text-left font-medium text-muted-foreground">状态</th>
+                    <th className="px-4 py-2 text-left font-medium text-muted-foreground">{t('page.table.rule')}</th>
+                    <th className="px-4 py-2 text-left font-medium text-muted-foreground">{t('page.table.threshold')}</th>
+                    <th className="px-4 py-2 text-left font-medium text-muted-foreground">{t('page.table.current')}</th>
+                    <th className="px-4 py-2 text-left font-medium text-muted-foreground">{t('page.table.status')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -236,7 +250,7 @@ export default function Portfolio() {
                       <td className="px-4 py-2">{r.rule}</td>
                       <td className="px-4 py-2">{r.threshold}</td>
                       <td className="px-4 py-2">{r.current}</td>
-                      <td className="px-4 py-2"><Badge variant={r.ok ? 'success' : 'destructive'}>{r.ok ? '正常' : '超限'}</Badge></td>
+                      <td className="px-4 py-2"><Badge variant={r.ok ? 'success' : 'destructive'}>{r.ok ? t('page.riskStatus.normal') : t('page.riskStatus.exceeded')}</Badge></td>
                     </tr>
                   ))}
                 </tbody>
@@ -251,7 +265,7 @@ export default function Portfolio() {
             {/* TODO: Connect to real allocation/optimization API when available */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="rounded-lg border border-border bg-card p-5">
-                <h3 className="font-semibold text-card-foreground mb-4">当前配置</h3>
+                <h3 className="font-semibold text-card-foreground mb-4">{t('page.sections.currentAllocation')}</h3>
                 <div className="flex flex-col gap-3">
                   {(dashData?.sector_allocation ?? []).map((s, i) => {
                     const colors = chartPalette
@@ -271,18 +285,13 @@ export default function Portfolio() {
               </div>
 
               <div className="rounded-lg border border-border bg-card p-5">
-                <h3 className="font-semibold text-card-foreground mb-4">目标配置</h3>
+                <h3 className="font-semibold text-card-foreground mb-4">{t('page.sections.targetAllocation')}</h3>
                 <div className="flex flex-col gap-3">
-                  {[
-                    { name: '白酒行业', target: 30, color: themeColors.primary },
-                    { name: '银行行业', target: 25, color: '#22c55e' },
-                    { name: '光伏行业', target: 20, color: '#eab308' },
-                    { name: '科技行业', target: 25, color: '#ef4444' },
-                  ].map((a) => (
+                  {targetAllocations.map((a) => (
                     <div key={a.name}>
                       <div className="flex justify-between text-[13px] mb-1">
                         <span>{a.name}</span>
-                        <span>目标 {a.target}%</span>
+                        <span>{t('page.targetPrefix', { value: a.target })}</span>
                       </div>
                       <div className="h-2 rounded-full bg-muted overflow-hidden">
                         <div className="h-full rounded-full" style={{ width: `${a.target}%`, background: a.color }} />
@@ -291,10 +300,10 @@ export default function Portfolio() {
                   ))}
                 </div>
                 <button
-                  onClick={() => showToast('目标配置已应用', 'success')}
+                  onClick={() => showToast(t('page.targetApplied'), 'success')}
                   className="mt-4 px-3 py-1.5 text-sm rounded-md bg-primary text-white hover:opacity-90"
                 >
-                  应用目标配置
+                  {t('page.actions.applyTarget')}
                 </button>
               </div>
             </div>
@@ -303,19 +312,19 @@ export default function Portfolio() {
       </TabPanel>
 
       {/* Risk Settings Modal */}
-      <Modal open={riskModalOpen} onClose={() => setRiskModalOpen(false)} title="风控设置" footer={
+      <Modal open={riskModalOpen} onClose={() => setRiskModalOpen(false)} title={t('page.modals.riskTitle')} footer={
         <>
-          <button onClick={() => setRiskModalOpen(false)} className="px-4 py-2 text-sm rounded-md border border-border hover:bg-muted">取消</button>
-          <button onClick={() => { setRiskModalOpen(false); showToast('风控设置已保存', 'success') }} className="px-4 py-2 text-sm rounded-md bg-primary text-white hover:opacity-90">保存</button>
+          <button onClick={() => setRiskModalOpen(false)} className="px-4 py-2 text-sm rounded-md border border-border hover:bg-muted">{t('common:cancel')}</button>
+          <button onClick={() => { setRiskModalOpen(false); showToast(t('page.modals.riskSaved'), 'success') }} className="px-4 py-2 text-sm rounded-md bg-primary text-white hover:opacity-90">{t('common:save')}</button>
         </>
       }>
         <div className="flex flex-col gap-4">
           {[
-            { label: '单股最大仓位 (%)', defaultValue: 20 },
-            { label: '总仓位上限 (%)', defaultValue: 80 },
-            { label: '单日最大亏损 (%)', defaultValue: 3 },
-            { label: '最大回撤限制 (%)', defaultValue: 15 },
-            { label: '行业集中度上限 (%)', defaultValue: 30 },
+            { label: t('page.fields.singlePosition'), defaultValue: 20 },
+            { label: t('page.fields.totalPosition'), defaultValue: 80 },
+            { label: t('page.fields.dailyLoss'), defaultValue: 3 },
+            { label: t('page.fields.drawdown'), defaultValue: 15 },
+            { label: t('page.fields.concentration'), defaultValue: 30 },
           ].map((field) => (
             <div key={field.label}>
               <label className="block text-sm font-medium text-foreground mb-1">{field.label}</label>
@@ -326,28 +335,23 @@ export default function Portfolio() {
       </Modal>
 
       {/* Rebalance Modal */}
-      <Modal open={rebalanceModalOpen} onClose={() => setRebalanceModalOpen(false)} title="组合再平衡" footer={
+      <Modal open={rebalanceModalOpen} onClose={() => setRebalanceModalOpen(false)} title={t('page.modals.rebalanceTitle')} footer={
         <>
-          <button onClick={() => setRebalanceModalOpen(false)} className="px-4 py-2 text-sm rounded-md border border-border hover:bg-muted">取消</button>
-          <button onClick={() => { setRebalanceModalOpen(false); showToast('再平衡指令已发送，请稍候...', 'success') }} className="px-4 py-2 text-sm rounded-md bg-primary text-white hover:opacity-90">执行再平衡</button>
+          <button onClick={() => setRebalanceModalOpen(false)} className="px-4 py-2 text-sm rounded-md border border-border hover:bg-muted">{t('common:cancel')}</button>
+          <button onClick={() => { setRebalanceModalOpen(false); showToast(t('page.modals.rebalanceSubmitted'), 'success') }} className="px-4 py-2 text-sm rounded-md bg-primary text-white hover:opacity-90">{t('page.actions.executeRebalance')}</button>
         </>
       }>
-        <p className="text-sm text-muted-foreground mb-4">系统将根据目标配置权重，自动生成调仓建议。</p>
+        <p className="text-sm text-muted-foreground mb-4">{t('page.modals.rebalanceHint')}</p>
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border">
-              <th className="px-3 py-2 text-left font-medium text-muted-foreground">调整项</th>
-              <th className="px-3 py-2 text-left font-medium text-muted-foreground">操作</th>
-              <th className="px-3 py-2 text-left font-medium text-muted-foreground">目标</th>
+              <th className="px-3 py-2 text-left font-medium text-muted-foreground">{t('page.table.item')}</th>
+              <th className="px-3 py-2 text-left font-medium text-muted-foreground">{t('page.table.operation')}</th>
+              <th className="px-3 py-2 text-left font-medium text-muted-foreground">{t('page.table.target')}</th>
             </tr>
           </thead>
           <tbody>
-            {[
-              { name: '贵州茅台', action: '减持 62.2%', target: '30%', isReduce: true },
-              { name: '银行 ETF', action: '买入 25%', target: '25%', isReduce: false },
-              { name: '光伏 ETF', action: '增持 12.2%', target: '20%', isReduce: false },
-              { name: '科技 ETF', action: '买入 25%', target: '25%', isReduce: false },
-            ].map((item) => (
+            {rebalanceItems.map((item) => (
               <tr key={item.name} className="border-b border-border">
                 <td className="px-3 py-2">{item.name}</td>
                 <td className={`px-3 py-2 ${item.isReduce ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>{item.action}</td>

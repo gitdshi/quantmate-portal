@@ -1,5 +1,6 @@
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 export interface Column<T> {
   key: string
@@ -20,10 +21,12 @@ interface DataTableProps<T> {
 }
 
 export default function DataTable<T extends Record<string, any>>({
-  columns, data, keyField = 'id', emptyText = '暂无数据', onRowClick, className = '',
+  columns, data, keyField = 'id', emptyText, onRowClick, className = '',
 }: DataTableProps<T>) {
+  const { t } = useTranslation('common')
   const [sortKey, setSortKey] = useState<string | null>(null)
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+  const resolvedEmptyText = emptyText ?? t('noData')
 
   const handleSort = (key: string) => {
     if (sortKey === key) {
@@ -68,7 +71,7 @@ export default function DataTable<T extends Record<string, any>>({
           {sorted.length === 0 ? (
             <tr>
               <td colSpan={columns.length} className="px-4 py-8 text-center text-muted-foreground">
-                {emptyText}
+                {resolvedEmptyText}
               </td>
             </tr>
           ) : (

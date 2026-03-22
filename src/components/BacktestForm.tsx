@@ -3,7 +3,6 @@ import { Play, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { marketDataAPI, queueAPI, strategiesAPI } from '../lib/api'
-import { useAuthStore } from '../stores/auth'
 import SymbolSearch from './SymbolSearch'
 
 interface BacktestFormProps {
@@ -23,9 +22,6 @@ interface Strategy {
 export default function BacktestForm({ onClose = () => undefined, onSubmitSuccess }: BacktestFormProps) {
   const { t } = useTranslation(['backtest', 'common'])
   const queryClient = useQueryClient()
-  const { user } = useAuthStore()
-
-  console.log('Current user:', user)
 
   const [strategyId, setStrategyId] = useState<string>('')
   const [symbol, setSymbol] = useState('')
@@ -40,14 +36,25 @@ export default function BacktestForm({ onClose = () => undefined, onSubmitSucces
   const [activeTab, setActiveTab] = useState<'basic' | 'parameters'>('basic')
   const [parameters, setParameters] = useState<string>('{}')
 
-  // Benchmark options (can be extended later)
-  const [benchmarkOptions, setBenchmarkOptions] = useState<{value:string,label:string}[]>([
-    { value: '399300.SZ', label: 'HS300 (沪深300)' },
-    { value: '000016.SH', label: 'SSE50 (上证50)' },
-    { value: '000905.SH', label: 'CSI500 (中证500)' },
-    { value: '399006.SZ', label: 'ChiNext (创业板指)' },
-    { value: '000001.SH', label: 'SSE Composite (上证综指)' },
+  const [benchmarkOptions, setBenchmarkOptions] = useState<{ value: string; label?: string }[]>([
+    { value: '399300.SZ' },
+    { value: '000016.SH' },
+    { value: '000905.SH' },
+    { value: '399006.SZ' },
+    { value: '000001.SH' },
   ])
+
+  const getBenchmarkLabel = useMemo(() => {
+    const labelMap: Record<string, string> = {
+      '399300.SZ': t('form.benchmarkOptions.hs300'),
+      '000016.SH': t('form.benchmarkOptions.sse50'),
+      '000905.SH': t('form.benchmarkOptions.csi500'),
+      '399006.SZ': t('form.benchmarkOptions.chinext'),
+      '000001.SH': t('form.benchmarkOptions.sseComposite'),
+    }
+
+    return (option: { value: string; label?: string }) => labelMap[option.value] || option.label || option.value
+  }, [t])
 
   // Load benchmark index options from backend
   useEffect(() => {
@@ -81,10 +88,7 @@ export default function BacktestForm({ onClose = () => undefined, onSubmitSucces
   const { data: strategiesData, isLoading: isLoadingStrategies, isError: isErrorStrategies } = useQuery({
     queryKey: ['strategies'],
     queryFn: async () => {
-      const result = await strategiesAPI.list()
-      console.log('Strategies API response:', result)
-      console.log('Strategies data:', result?.data)
-      return result
+      return strategiesAPI.list()
     },
     staleTime: 0,
     refetchOnMount: true,
@@ -101,14 +105,6 @@ export default function BacktestForm({ onClose = () => undefined, onSubmitSucces
     return []
   }, [strategiesData])
   
-  console.log('Final strategies array:', strategies)
-  try {
-    console.log('Final strategies JSON:', JSON.stringify(strategies, null, 2))
-  } catch (e) {
-    console.log('Could not stringify strategies', e)
-  }
-
-
   // Auto-select first active strategy
   useEffect(() => {
     if (!strategyId && strategies.length > 0) {
@@ -116,7 +112,6 @@ export default function BacktestForm({ onClose = () => undefined, onSubmitSucces
       if (firstActive) {
         setStrategyId(String(firstActive.id))
         // Load strategy's default parameters
-        console.log('Auto-selected strategy:', firstActive)
         if (firstActive.parameters) {
           setParameters(JSON.stringify(firstActive.parameters, null, 2))
         }
@@ -136,9 +131,7 @@ export default function BacktestForm({ onClose = () => undefined, onSubmitSucces
           try {
             const resp = await strategiesAPI.get(parseInt(strategyId))
             const data = resp?.data
-            console.log('Fetched strategy details for backtest form (status:', resp?.status, '):', data)
             const paramsObj = data?.parameters || {}
-            console.log('Populating parameters state with:', paramsObj)
             setParameters(JSON.stringify(paramsObj, null, 2))
           } catch (e) {
             console.error('Failed to fetch strategy details for parameters:', e)
@@ -430,7 +423,7 @@ export default function BacktestForm({ onClose = () => undefined, onSubmitSucces
             >
               {benchmarkOptions.map((option) => (
                 <option key={option.value} value={option.value}>
-                  {option.label}
+                  {getBenchmarkLabel(option)}
                 </option>
               ))}
             </select>

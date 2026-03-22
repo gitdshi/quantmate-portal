@@ -1,6 +1,118 @@
 {
   "title": "组合管理",
   "subtitle": "管理投资组合和资产配置",
+  "page": {
+    "tabs": {
+      "overview": "组合概览",
+      "positions": "持仓明细",
+      "risk": "风险分析",
+      "allocation": "资产配置"
+    },
+    "actions": {
+      "riskSettings": "风控设置",
+      "rebalance": "再平衡",
+      "applyTarget": "应用目标配置",
+      "executeRebalance": "执行再平衡",
+      "closePosition": "平仓"
+    },
+    "stats": {
+      "totalValue": "总市值",
+      "positionValue": "持仓市值",
+      "availableCash": "可用资金",
+      "positionRatio": "仓位比例",
+      "totalPnl": "总盈亏",
+      "dailyPnl": "今日盈亏",
+      "maxDrawdown": "最大回撤",
+      "sharpe30d": "Sharpe(30d)",
+      "positionCount": "持仓数量",
+      "floatingPnl": "总浮动盈亏",
+      "varDay": "VaR (95%, 1天)",
+      "betaHs300": "Beta (vs 沪深300)"
+    },
+    "sections": {
+      "nav": "净值走势",
+      "holdings": "持仓分布",
+      "riskRules": "风控规则",
+      "currentAllocation": "当前配置",
+      "targetAllocation": "目标配置"
+    },
+    "filters": {
+      "searchPositions": "搜索持仓...",
+      "allStrategies": "全部策略",
+      "allDirections": "全部方向"
+    },
+    "table": {
+      "symbol": "代码",
+      "name": "名称",
+      "strategy": "策略",
+      "direction": "方向",
+      "quantity": "数量",
+      "avgCost": "成本价",
+      "marketPrice": "现价",
+      "marketValue": "市值",
+      "pnl": "盈亏",
+      "pnlPct": "盈亏%",
+      "actions": "操作",
+      "rule": "规则",
+      "threshold": "阈值",
+      "current": "当前值",
+      "status": "状态",
+      "item": "调整项",
+      "operation": "操作",
+      "target": "目标"
+    },
+    "direction": {
+      "long": "多",
+      "short": "空"
+    },
+    "riskRules": {
+      "singlePosition": "单股最大仓位",
+      "totalPosition": "总仓位上限",
+      "dailyLoss": "单日最大亏损",
+      "drawdown": "最大回撤限制",
+      "concentration": "行业集中度"
+    },
+    "riskStatus": {
+      "normal": "正常",
+      "exceeded": "超限"
+    },
+    "marketRisk": {
+      "lower": "低于市场风险",
+      "higher": "高于市场风险"
+    },
+    "modals": {
+      "riskTitle": "风控设置",
+      "riskSaved": "风控设置已保存",
+      "rebalanceTitle": "组合再平衡",
+      "rebalanceSubmitted": "再平衡指令已发送，请稍候...",
+      "rebalanceHint": "系统将根据目标配置权重，自动生成调仓建议。",
+      "reduce": "减持 {{value}}%",
+      "increase": "增持 {{value}}%",
+      "buy": "买入 {{value}}%",
+      "closeConfirmTitle": "确认平仓",
+      "closeConfirmMessage": "确定平仓 {{name}}？",
+      "closeSuccess": "平仓指令已发送",
+      "closeFailed": "平仓失败"
+    },
+    "fields": {
+      "singlePosition": "单股最大仓位 (%)",
+      "totalPosition": "总仓位上限 (%)",
+      "dailyLoss": "单日最大亏损 (%)",
+      "drawdown": "最大回撤限制 (%)",
+      "concentration": "行业集中度上限 (%)"
+    },
+    "targetPrefix": "目标 {{value}}%",
+    "targetApplied": "目标配置已应用",
+    "rebalanceItems": {
+      "maotai": "贵州茅台",
+      "bankEtf": "银行 ETF",
+      "solarEtf": "光伏 ETF",
+      "techEtf": "科技 ETF"
+    },
+    "empty": {
+      "positions": "暂无持仓"
+    }
+  },
   "analytics": {
     "title": "分析中心",
     "subtitle": "深度分析交易表现",

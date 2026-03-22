@@ -1,13 +1,7 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import {
-  Bell,
-  BellRing,
-  History,
-  Mail,
-  Plus,
-  Settings,
-} from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Bell, BellRing, History, Mail, Plus, Settings } from 'lucide-react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import Badge from '../components/ui/Badge'
 import DataTable, { type Column } from '../components/ui/DataTable'
@@ -40,13 +34,6 @@ interface AlertRule {
   last_triggered?: string
 }
 
-const TABS = [
-  { key: 'live', label: '实时告警', icon: <BellRing size={16} /> },
-  { key: 'rules', label: '告警规则', icon: <Settings size={16} /> },
-  { key: 'history', label: '告警历史', icon: <History size={16} /> },
-  { key: 'channels', label: '通知渠道', icon: <Bell size={16} /> },
-]
-
 const LEVEL_MAP: Record<string, { color: string; variant: 'danger' | 'warning' | 'primary' }> = {
   critical: { color: 'border-red-500', variant: 'danger' },
   warning: { color: 'border-yellow-500', variant: 'warning' },
@@ -54,56 +41,82 @@ const LEVEL_MAP: Record<string, { color: string; variant: 'danger' | 'warning' |
 }
 
 export default function Monitoring() {
+  const { t } = useTranslation('monitoring')
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState('live')
   const [newRuleModal, setNewRuleModal] = useState(false)
   const [search, setSearch] = useState('')
 
+  const tabs = [
+    { key: 'live', label: t('page.tabs.live'), icon: <BellRing size={16} /> },
+    { key: 'rules', label: t('page.tabs.rules'), icon: <Settings size={16} /> },
+    { key: 'history', label: t('page.tabs.history'), icon: <History size={16} /> },
+    { key: 'channels', label: t('page.tabs.channels'), icon: <Bell size={16} /> },
+  ]
+
+  const levelLabel = (level: string) => t(`page.levelLabels.${level}`, { defaultValue: level })
+
   const { data: liveAlerts = [] } = useQuery<Alert[]>({
     queryKey: ['alerts-live'],
-    queryFn: () => alertsAPI.listHistory({ page: 1, page_size: 100 }).then((r) => {
-      const d = r.data
-      const list: Alert[] = Array.isArray(d) ? d : d?.data ?? []
-      return list.filter((a) => !a.acknowledged)
-    }),
+    queryFn: () =>
+      alertsAPI.listHistory({ page: 1, page_size: 100 }).then((r) => {
+        const d = r.data
+        const list: Alert[] = Array.isArray(d) ? d : d?.data ?? []
+        return list.filter((a) => !a.acknowledged)
+      }),
     refetchInterval: 5_000,
     enabled: activeTab === 'live',
   })
 
   const { data: alertHistory = [] } = useQuery<Alert[]>({
     queryKey: ['alerts-history'],
-    queryFn: () => alertsAPI.listHistory().then((r) => {
-      const d = r.data
-      return Array.isArray(d) ? d : d?.data ?? []
-    }),
+    queryFn: () =>
+      alertsAPI.listHistory().then((r) => {
+        const d = r.data
+        return Array.isArray(d) ? d : d?.data ?? []
+      }),
     enabled: activeTab === 'history',
   })
 
   const { data: rules = [] } = useQuery<AlertRule[]>({
     queryKey: ['alert-rules'],
-    queryFn: () => alertsAPI.listRules().then((r) => {
-      const d = r.data
-      return Array.isArray(d) ? d : d?.data ?? []
-    }),
+    queryFn: () =>
+      alertsAPI.listRules().then((r) => {
+        const d = r.data
+        return Array.isArray(d) ? d : d?.data ?? []
+      }),
     enabled: activeTab === 'rules',
+  })
+
+  const { data: channels = [] } = useQuery<
+    { id: number; channel_type: string; config: Record<string, unknown> }[]
+  >({
+    queryKey: ['alert-channels'],
+    queryFn: () =>
+      alertsAPI.listChannels().then((r) => {
+        const d = r.data
+        return Array.isArray(d) ? d : d?.data ?? []
+      }),
+    enabled: activeTab === 'channels',
   })
 
   const ackMutation = useMutation({
     mutationFn: (id: string) => alertsAPI.acknowledgeAlert(Number(id)),
     onSuccess: () => {
-      showToast('已确认', 'success')
+      showToast(t('page.ackSuccess'), 'success')
       queryClient.invalidateQueries({ queryKey: ['alerts-live'] })
     },
   })
 
   const createRuleMutation = useMutation({
-    mutationFn: (data: { name: string; metric: string; comparator: string; threshold: number; level?: string }) => alertsAPI.createRule(data),
+    mutationFn: (data: { name: string; metric: string; comparator: string; threshold: number; level?: string }) =>
+      alertsAPI.createRule(data),
     onSuccess: () => {
-      showToast('规则已创建', 'success')
+      showToast(t('page.ruleCreated'), 'success')
       setNewRuleModal(false)
       queryClient.invalidateQueries({ queryKey: ['alert-rules'] })
     },
-    onError: () => showToast('创建失败', 'error'),
+    onError: () => showToast(t('page.createFailed'), 'error'),
   })
 
   const toggleRule = useMutation({
@@ -119,53 +132,82 @@ export default function Monitoring() {
   }
 
   const histCols: Column<Alert>[] = [
-    { key: 'level', label: '级别', render: (a) => { const l = LEVEL_MAP[a.level]; return l ? <Badge variant={l.variant}>{a.level}</Badge> : a.level } },
-    { key: 'title', label: '标题' },
-    { key: 'message', label: '详情' },
-    { key: 'source', label: '来源' },
-    { key: 'created_at', label: '时间', render: (a) => new Date(a.created_at).toLocaleString() },
-    { key: 'acknowledged', label: '状态', render: (a) => <Badge variant={a.acknowledged ? 'muted' : 'warning'}>{a.acknowledged ? '已确认' : '未确认'}</Badge> },
+    {
+      key: 'level',
+      label: t('page.columns.level'),
+      render: (a) => {
+        const mapped = LEVEL_MAP[a.level]
+        return mapped ? <Badge variant={mapped.variant}>{levelLabel(a.level)}</Badge> : a.level
+      },
+    },
+    { key: 'title', label: t('page.columns.title') },
+    { key: 'message', label: t('page.columns.message') },
+    { key: 'source', label: t('page.columns.source') },
+    {
+      key: 'created_at',
+      label: t('page.columns.time'),
+      render: (a) => new Date(a.created_at).toLocaleString(),
+    },
+    {
+      key: 'acknowledged',
+      label: t('page.columns.status'),
+      render: (a) => (
+        <Badge variant={a.acknowledged ? 'muted' : 'warning'}>
+          {a.acknowledged ? t('page.status.acknowledged') : t('page.status.unacknowledged')}
+        </Badge>
+      ),
+    },
   ]
 
   const ruleCols: Column<AlertRule>[] = [
-    { key: 'name', label: '规则名称' },
-    { key: 'type', label: '类型', render: (r) => <Badge variant="primary">{r.type}</Badge> },
-    { key: 'condition', label: '触发条件' },
-    { key: 'level', label: '级别', render: (r) => { const l = LEVEL_MAP[r.level]; return l ? <Badge variant={l.variant}>{r.level}</Badge> : r.level } },
-    { key: 'channels', label: '通知渠道', render: (r) => r.channels.join(', ') },
-    { key: 'last_triggered', label: '上次触发', render: (r) => r.last_triggered || '-' },
-    { key: 'enabled', label: '启用', render: (r) => <ToggleSwitch checked={r.enabled} onChange={() => toggleRule.mutate(r)} /> },
+    { key: 'name', label: t('page.columns.name') },
+    { key: 'type', label: t('page.columns.type'), render: (r) => <Badge variant="primary">{r.type}</Badge> },
+    { key: 'condition', label: t('page.columns.condition') },
+    {
+      key: 'level',
+      label: t('page.columns.level'),
+      render: (r) => {
+        const mapped = LEVEL_MAP[r.level]
+        return mapped ? <Badge variant={mapped.variant}>{levelLabel(r.level)}</Badge> : r.level
+      },
+    },
+    { key: 'channels', label: t('page.columns.channels'), render: (r) => r.channels.join(', ') },
+    {
+      key: 'last_triggered',
+      label: t('page.columns.lastTriggered'),
+      render: (r) => r.last_triggered || '-',
+    },
+    {
+      key: 'enabled',
+      label: t('page.columns.enabled'),
+      render: (r) => <ToggleSwitch checked={r.enabled} onChange={() => toggleRule.mutate(r)} />,
+    },
   ]
-
-  // Channel state from API
-  const { data: channels = [] } = useQuery<{ id: number; channel_type: string; config: Record<string, unknown> }[]>({
-    queryKey: ['alert-channels'],
-    queryFn: () => alertsAPI.listChannels().then((r) => {
-      const d = r.data
-      return Array.isArray(d) ? d : d?.data ?? []
-    }),
-    enabled: activeTab === 'channels',
-  })
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">监控告警</h1>
-          <p className="text-sm text-muted-foreground">实时告警 · 告警规则 · 通知渠道</p>
+          <h1 className="text-2xl font-bold text-foreground">{t('page.title')}</h1>
+          <p className="text-sm text-muted-foreground">{t('page.subtitle')}</p>
         </div>
-        <button onClick={() => setNewRuleModal(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-primary text-white hover:opacity-90"><Plus size={16} />新建规则</button>
+        <button
+          onClick={() => setNewRuleModal(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-primary text-white hover:opacity-90"
+        >
+          <Plus size={16} />
+          {t('page.newRule')}
+        </button>
       </div>
 
-      <TabPanel tabs={TABS} activeTab={activeTab} onChange={setActiveTab}>
-        {/* ── Live Alerts ──────────────────────────────── */}
+      <TabPanel tabs={tabs} activeTab={activeTab} onChange={setActiveTab}>
         {activeTab === 'live' && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <StatCard label="活跃告警" value={stats.active} changeType="negative" />
-              <StatCard label="严重" value={stats.critical} changeType="negative" />
-              <StatCard label="今日触发" value={stats.today} />
-              <StatCard label="活跃规则" value={stats.rules} changeType="positive" />
+              <StatCard label={t('page.stats.active')} value={stats.active} changeType="negative" />
+              <StatCard label={t('page.stats.critical')} value={stats.critical} changeType="negative" />
+              <StatCard label={t('page.stats.today')} value={stats.today} />
+              <StatCard label={t('page.stats.rules')} value={stats.rules} changeType="positive" />
             </div>
             <div className="space-y-3">
               {liveAlerts.map((alert) => {
@@ -175,7 +217,7 @@ export default function Monitoring() {
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <Badge variant={level.variant}>{alert.level}</Badge>
+                          <Badge variant={level.variant}>{levelLabel(alert.level)}</Badge>
                           <span className="font-semibold text-card-foreground">{alert.title}</span>
                           <span className="text-xs text-muted-foreground">{alert.source}</span>
                         </div>
@@ -183,38 +225,52 @@ export default function Monitoring() {
                         <p className="text-xs text-muted-foreground mt-1">{new Date(alert.created_at).toLocaleString()}</p>
                       </div>
                       {!alert.acknowledged && (
-                        <button onClick={() => ackMutation.mutate(alert.id)} className="text-xs px-2 py-1 rounded border border-border hover:bg-muted">确认</button>
+                        <button
+                          onClick={() => ackMutation.mutate(alert.id)}
+                          className="text-xs px-2 py-1 rounded border border-border hover:bg-muted"
+                        >
+                          {t('page.confirm')}
+                        </button>
                       )}
                     </div>
                   </div>
                 )
               })}
-              {liveAlerts.length === 0 && <p className="text-center text-muted-foreground py-8">暂无活跃告警</p>}
+              {liveAlerts.length === 0 && (
+                <p className="text-center text-muted-foreground py-8">{t('page.empty.live')}</p>
+              )}
             </div>
           </div>
         )}
 
-        {/* ── Rules ───────────────────────────────────── */}
         {activeTab === 'rules' && (
-          <DataTable columns={ruleCols} data={rules} emptyText="暂无告警规则" />
+          <DataTable columns={ruleCols} data={rules} emptyText={t('page.empty.rules')} />
         )}
 
-        {/* ── History ─────────────────────────────────── */}
         {activeTab === 'history' && (
           <div className="space-y-4">
             <FilterBar
               filters={[
-                { key: 'search', label: '搜索', type: 'search' as const },
-                { key: 'level', label: '级别', type: 'select' as const, options: [{ label: '全部', value: '' }, { label: '严重', value: 'critical' }, { label: '警告', value: 'warning' }, { label: '信息', value: 'info' }] },
+                { key: 'search', label: t('page.search'), type: 'search' as const },
+                {
+                  key: 'level',
+                  label: t('page.columns.level'),
+                  type: 'select' as const,
+                  options: [
+                    { label: t('page.all'), value: '' },
+                    { label: levelLabel('critical'), value: 'critical' },
+                    { label: levelLabel('warning'), value: 'warning' },
+                    { label: levelLabel('info'), value: 'info' },
+                  ],
+                },
               ]}
               values={{ search }}
               onChange={(v) => setSearch((v.search as string) || '')}
             />
-            <DataTable columns={histCols} data={alertHistory} emptyText="暂无告警历史" />
+            <DataTable columns={histCols} data={alertHistory} emptyText={t('page.empty.history')} />
           </div>
         )}
 
-        {/* ── Channels ────────────────────────────────── */}
         {activeTab === 'channels' && (
           <div className="space-y-4">
             {channels.length > 0 ? (
@@ -222,48 +278,98 @@ export default function Monitoring() {
                 {channels.map((ch) => (
                   <div key={ch.id} className="rounded-lg border border-border bg-card p-5">
                     <div className="flex items-center gap-3 mb-4">
-                      <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center"><Mail size={20} className="text-blue-600" /></div>
+                      <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                        <Mail size={20} className="text-blue-600" />
+                      </div>
                       <div className="flex-1">
                         <h3 className="font-semibold text-card-foreground">{ch.channel_type}</h3>
                       </div>
                     </div>
-                    <pre className="text-xs text-muted-foreground whitespace-pre-wrap">{JSON.stringify(ch.config, null, 2)}</pre>
+                    <pre className="text-xs text-muted-foreground whitespace-pre-wrap">
+                      {JSON.stringify(ch.config, null, 2)}
+                    </pre>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-center text-muted-foreground py-8">暂无通知渠道，请点击“新建规则”添加</p>
+              <p className="text-center text-muted-foreground py-8">{t('page.empty.channels')}</p>
             )}
           </div>
         )}
       </TabPanel>
 
-      {/* New Rule Modal */}
-      <Modal open={newRuleModal} onClose={() => setNewRuleModal(false)} title="新建告警规则" footer={
-        <>
-          <button onClick={() => setNewRuleModal(false)} className="px-4 py-2 text-sm rounded-md border border-border hover:bg-muted">取消</button>
-          <button onClick={() => createRuleMutation.mutate({ name: '新规则', metric: 'drawdown', comparator: '>', threshold: 5, level: 'warning' })} className="px-4 py-2 text-sm rounded-md bg-primary text-white hover:opacity-90">创建规则</button>
-        </>
-      }>
+      <Modal
+        open={newRuleModal}
+        onClose={() => setNewRuleModal(false)}
+        title={t('page.modal.title')}
+        footer={
+          <>
+            <button
+              onClick={() => setNewRuleModal(false)}
+              className="px-4 py-2 text-sm rounded-md border border-border hover:bg-muted"
+            >
+              {t('page.modal.cancel')}
+            </button>
+            <button
+              onClick={() =>
+                createRuleMutation.mutate({
+                  name: t('page.modal.defaultName'),
+                  metric: 'drawdown',
+                  comparator: '>',
+                  threshold: 5,
+                  level: 'warning',
+                })
+              }
+              className="px-4 py-2 text-sm rounded-md bg-primary text-white hover:opacity-90"
+            >
+              {t('page.modal.submit')}
+            </button>
+          </>
+        }
+      >
         <div className="flex flex-col gap-4">
-          <div><label className="block text-sm font-medium mb-1">规则名称</label><input className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background" placeholder="例如: 回撤超限告警" /></div>
-          <div className="grid grid-cols-2 gap-3">
-            <div><label className="block text-sm font-medium mb-1">类型</label>
-              <select className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background">
-                <option>风控</option><option>策略监控</option><option>数据监控</option><option>交易</option>
-              </select></div>
-            <div><label className="block text-sm font-medium mb-1">级别</label>
-              <select className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background">
-                <option value="critical">严重</option><option value="warning">警告</option><option value="info">信息</option>
-              </select></div>
-          </div>
-          <div><label className="block text-sm font-medium mb-1">触发条件</label><input className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background" placeholder="例如: 最大回撤 > 5%" /></div>
           <div>
-            <label className="block text-sm font-medium mb-1">通知渠道</label>
+            <label className="block text-sm font-medium mb-1">{t('page.modal.name')}</label>
+            <input
+              className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background"
+              placeholder={t('page.modal.namePlaceholder')}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium mb-1">{t('page.modal.type')}</label>
+              <select className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background">
+                <option>{t('page.modal.types.risk')}</option>
+                <option>{t('page.modal.types.strategy')}</option>
+                <option>{t('page.modal.types.data')}</option>
+                <option>{t('page.modal.types.trading')}</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">{t('page.modal.level')}</label>
+              <select className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background">
+                <option value="critical">{levelLabel('critical')}</option>
+                <option value="warning">{levelLabel('warning')}</option>
+                <option value="info">{levelLabel('info')}</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">{t('page.modal.condition')}</label>
+            <input
+              className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background"
+              placeholder={t('page.modal.conditionPlaceholder')}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">{t('page.modal.channelLabel')}</label>
             <div className="flex gap-4 text-sm">
-              <label className="flex items-center gap-1.5"><input type="checkbox" defaultChecked />企业微信</label>
-              <label className="flex items-center gap-1.5"><input type="checkbox" defaultChecked />邮件</label>
-              <label className="flex items-center gap-1.5"><input type="checkbox" />短信</label>
+              {['wechat', 'email', 'sms'].map((key, index) => (
+                <label key={key} className="flex items-center gap-1.5">
+                  <input type="checkbox" defaultChecked={index < 2} />
+                  {t(`page.modal.channelOptions.${key}`)}
+                </label>
+              ))}
             </div>
           </div>
         </div>

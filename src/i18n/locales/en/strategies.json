@@ -86,8 +86,8 @@
     "codeRequired": "Strategy Code *",
     "codeOptional": "Strategy Code (optional)",
     "codeEditHint": "Enter your VnPy strategy code here",
-    "codeCreateHint": "Optional strategy code — you can add code later.",
-    "multipleClassesFound": "Multiple classes found — choose one",
+    "codeCreateHint": "Optional strategy code. You can add code later.",
+    "multipleClassesFound": "Multiple classes found. Choose one.",
     "selectedClassNotFound": "Selected class not found",
     "namePlaceholder": "My Trading Strategy",
     "classNamePlaceholder": "MyStrategyClass",
@@ -148,7 +148,7 @@
     "strategy": "Strategy",
     "selectStrategy": "Select Strategy",
     "symbol": "Symbol",
-    "symbolPlaceholder": "e.g., AAPL",
+    "symbolPlaceholder": "e.g. AAPL",
     "startDate": "Start Date",
     "endDate": "End Date",
     "initialCapital": "Initial Capital",
@@ -175,5 +175,171 @@
     "parameterNamePlaceholder": "parameter_name",
     "valuePlaceholder": "value",
     "addParameter": "Add parameter"
+  },
+  "templates": {
+    "dualMa": {
+      "name": "Dual MA Crossover",
+      "description": "Classic trend-following strategy driven by fast and slow moving averages."
+    },
+    "rsi": {
+      "name": "RSI Reversal",
+      "description": "Mean-reversion setup based on RSI oversold and overbought signals."
+    },
+    "bollinger": {
+      "name": "Bollinger Breakout",
+      "description": "Volatility breakout strategy built around Bollinger Band expansion."
+    },
+    "alpha": {
+      "name": "Multi-Factor Alpha",
+      "description": "Stock-selection template with configurable factor ranking and rebalance cadence."
+    },
+    "pair": {
+      "name": "Pair Trading",
+      "description": "Statistical arbitrage template for co-integrated spread trading."
+    },
+    "grid": {
+      "name": "Grid Trading",
+      "description": "Range-bound market making template with configurable grid spacing."
+    }
+  },
+  "page": {
+    "title": "Strategy Research",
+    "subtitle": "Refactor, validate, and version trading strategies with real backend data.",
+    "tabs": {
+      "workspace": "Workspace",
+      "templates": "Templates"
+    },
+    "actions": {
+      "import": "Import Strategy",
+      "new": "New Strategy",
+      "edit": "Edit",
+      "backtest": "Backtest",
+      "duplicate": "Duplicate",
+      "delete": "Delete",
+      "format": "Format",
+      "validate": "Validate Syntax",
+      "save": "Save",
+      "view": "View",
+      "rollback": "Rollback",
+      "useTemplate": "Use Template",
+      "preview": "Preview",
+      "cancel": "Cancel",
+      "confirm": "Confirm",
+      "create": "Create",
+      "importSubmit": "Import",
+      "selectFile": "Select File"
+    },
+    "searchPlaceholder": "Search strategies by name, class, or description...",
+    "filters": {
+      "allType": "All Types",
+      "allStatus": "All Status"
+    },
+    "table": {
+      "loading": "Loading strategies...",
+      "builtin": "Built-in",
+      "custom": "Custom"
+    },
+    "status": {
+      "active": "Active",
+      "draft": "Draft"
+    },
+    "types": {
+      "cta": "CTA",
+      "alpha": "Alpha",
+      "statArb": "Stat Arb",
+      "grid": "Grid",
+      "ai": "AI",
+      "custom": "Custom"
+    },
+    "list": {
+      "title": "Strategies",
+      "subtitle": "Pick a strategy first, then refine code, parameters, and version history.",
+      "count": "{{count}} items",
+      "emptyTitle": "No matching strategies",
+      "emptyDescription": "Adjust the current filters or create a new strategy draft.",
+      "noDescription": "No description yet",
+      "version": "v{{version}}"
+    },
+    "detail": {
+      "loading": "Loading latest strategy data...",
+      "emptyTitle": "No strategy selected",
+      "emptyDescription": "Select an existing strategy or start from a built-in template to open the research workspace.",
+      "metaClass": "Class: {{className}}",
+      "metaVersion": "Version: v{{version}}",
+      "metaSource": "Source: {{source}}",
+      "metaUpdated": "Updated: {{value}}",
+      "tabs": {
+        "code": "Code Editor",
+        "parameters": "Parameters",
+        "history": "Version History"
+      },
+      "code": {
+        "validationPending": "Validation pending",
+        "lastModified": "Last modified: {{value}}"
+      },
+      "parameters": {
+        "title": "Strategy Parameters",
+        "subtitle": "Review fast-edit numeric fields and keep the full JSON payload in sync.",
+        "jsonLabel": "Parameter JSON",
+        "empty": "No parameters available yet. Add them in the JSON editor below."
+      }
+    },
+    "history": {
+      "title": "Version History",
+      "subtitle": "Inspect stored revisions, preview older code, and restore a previous version when needed.",
+      "empty": "No history available for this strategy yet.",
+      "defaultAuthor": "system",
+      "previewSubtitle": "Snapshot preview from strategy code history.",
+      "columns": {
+        "version": "Version",
+        "time": "Time",
+        "author": "Author",
+        "note": "Note",
+        "actions": "Actions"
+      },
+      "notes": {
+        "latest": "Latest revision with the newest parameter tuning.",
+        "mid": "Intermediate revision with structural updates.",
+        "initial": "Initial stored revision."
+      }
+    },
+    "templates": {
+      "title": "Template Library",
+      "subtitle": "Prototype-aligned starters layered on top of the real built-in strategy catalog.",
+      "availableOnServer": "Available from backend",
+      "localStarter": "Local starter",
+      "previewTitle": "Template Preview",
+      "previewDescription": "Select a template card to inspect the starter code and create a new draft.",
+      "fallbackDescription": "Starter template ready for customization."
+    },
+    "modals": {
+      "createTitle": "Create Strategy Draft",
+      "createSubtitle": "Start from scratch or use a built-in starter, then save it to the real strategies API.",
+      "name": "Strategy Name",
+      "namePlaceholder": "e.g. MomentumAlpha_v2",
+      "type": "Strategy Type",
+      "description": "Description",
+      "descriptionPlaceholder": "Brief summary of the strategy objective and edge...",
+      "template": "Starter Template",
+      "blankTemplate": "Blank Strategy",
+      "defaultName": "MyStrategy",
+      "blankDescription": "Custom strategy draft.",
+      "importTitle": "Import Python Strategy",
+      "importSubtitle": "Parse an existing .py strategy file and continue editing it in the workspace.",
+      "importHint": "Drop a .py file here or click to upload",
+      "importSupport": "Supports Python (.py), recommended under 500KB"
+    },
+    "toasts": {
+      "loadListFailed": "Failed to load strategy list",
+      "loadDetailFailed": "Failed to load strategy details",
+      "validationFailed": "Strategy validation failed. Please fix the code and try again.",
+      "validationPassed": "Strategy validation passed",
+      "parametersInvalid": "Parameters must be a valid JSON object",
+      "saveFailed": "Failed to save strategy",
+      "saved": "Strategy saved",
+      "draftCreated": "Draft created. Continue editing before saving.",
+      "duplicated": "Duplicated {{name}} into a new draft",
+      "imported": "Strategy file imported",
+      "importFailed": "Failed to import strategy file"
+    }
   }
-}

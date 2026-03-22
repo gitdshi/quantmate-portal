@@ -1,4 +1,82 @@
 {
+  "management": {
+    "tabs": {
+      "pending": "当日委托",
+      "filled": "成交明细",
+      "history": "历史委托",
+      "algo": "算法交易"
+    },
+    "status": {
+      "filled": "已成交",
+      "partial": "部分成交",
+      "pending": "待成交",
+      "cancelled": "已撤单",
+      "rejected": "已拒绝"
+    },
+    "title": "交易管理",
+    "subtitle": "委托下单、成交明细与算法交易",
+    "newOrder": "新委托",
+    "cancelSuccess": "撤单成功",
+    "cancelFailed": "撤单失败",
+    "submitSuccess": "委托已提交",
+    "submitFailed": "委托提交失败",
+    "stats": {
+      "total": "今日委托",
+      "filled": "已成交",
+      "pending": "待成交",
+      "cancelled": "已撤单"
+    },
+    "columns": {
+      "symbol": "代码",
+      "direction": "方向",
+      "type": "类型",
+      "orderPrice": "委托价",
+      "tradePrice": "成交价",
+      "quantity": "委托量",
+      "filledQty": "已成交",
+      "tradeQty": "成交量",
+      "status": "状态",
+      "strategy": "策略",
+      "time": "时间",
+      "tradeTime": "成交时间",
+      "actions": "操作"
+    },
+    "buy": "买入",
+    "sell": "卖出",
+    "cancel": "撤单",
+    "search": "搜索代码",
+    "all": "全部",
+    "empty": {
+      "pending": "暂无委托",
+      "filled": "暂无成交",
+      "history": "暂无历史委托",
+      "algo": "暂无算法委托"
+    },
+    "algo": {
+      "title": "算法订单",
+      "twap": "TWAP 配置",
+      "vwap": "VWAP 配置",
+      "interval": "拆单间隔 (秒)",
+      "ratio": "子单比例 (%)",
+      "participation": "参与率上限 (%)",
+      "deviation": "最大偏离 (bp)"
+    },
+    "modal": {
+      "title": "新委托",
+      "cancel": "取消",
+      "submit": "提交委托",
+      "symbol": "证券代码",
+      "direction": "方向",
+      "type": "类型",
+      "price": "委托价",
+      "quantity": "数量",
+      "strategy": "策略 (可选)",
+      "symbolPlaceholder": "例如: 600519.SH",
+      "strategyPlaceholder": "关联策略名称",
+      "limit": "限价",
+      "market": "市价"
+    }
+  },
   "live": {
     "title": "交易执行",
     "subtitle": "实盘交易",
@@ -19,20 +97,48 @@
       "positions": "持仓",
       "performance": "绩效"
     },
-    "deploy": {
-      "title": "部署策略",
-      "strategy": "策略",
-      "selectStrategy": "选择策略...",
-      "symbol": "交易标的",
-      "symbolPlaceholder": "如 rb2501.SHFE",
-      "parameters": "参数 (JSON)",
-      "deploy": "部署",
-      "deployFailed": "部署失败"
+    "newSimulation": "新建模拟",
+    "createSuccess": "模拟部署已创建",
+    "createFailed": "创建失败",
+    "stopSuccess": "已停止",
+    "deployments": {
+      "count": "模拟部署",
+      "running": "运行中",
+      "totalPnl": "总盈亏",
+      "avgReturn": "平均收益率"
     },
-    "manualOrder": {
-      "title": "手动下单",
-      "submit": "下单",
-      "orderFailed": "下单失败"
+    "columns": {
+      "strategy": "策略",
+      "status": "状态",
+      "capital": "初始资金",
+      "pnl": "盈亏",
+      "pnlPct": "收益率",
+      "positions": "持仓数",
+      "createdAt": "创建时间",
+      "actions": "操作",
+      "symbol": "代码",
+      "direction": "方向",
+      "price": "价格",
+      "quantity": "数量",
+      "time": "时间",
+      "avgCost": "成本价",
+      "currentPrice": "现价"
+    },
+    "empty": {
+      "deployments": "暂无模拟部署",
+      "orders": "暂无模拟委托",
+      "positions": "暂无模拟持仓",
+      "performance": "暂无绩效数据"
+    },
+    "search": "搜索代码",
+    "performanceTitle": "模拟净值曲线",
+    "modal": {
+      "title": "新建模拟部署",
+      "cancel": "取消",
+      "submit": "创建部署",
+      "strategy": "选择策略",
+      "strategyPlaceholder": "请选择策略...",
+      "capital": "初始资金"
     },
     "deployment": {
       "running": "运行中",
@@ -43,6 +149,12 @@
       "stop": "停止",
       "stopFailed": "停止失败",
       "noDeployments": "暂无策略部署"
+    },
+    "side": {
+      "buy": "买入",
+      "sell": "卖出",
+      "long": "多",
+      "short": "空"
     },
     "cancelFailed": "取消订单失败",
     "loadDeploymentsFailed": "加载部署失败",

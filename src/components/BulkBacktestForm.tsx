@@ -43,14 +43,25 @@ export default function BulkBacktestForm({ onClose, onSubmitSuccess }: BulkBackt
   const [selectedSymbols, setSelectedSymbols] = useState<Map<string, Stock>>(new Map())
 
   const benchmarkOptions = [
-    { value: '399300.SZ', label: 'HS300 (沪深300)' },
-    { value: '000016.SH', label: 'SSE50 (上证50)' },
-    { value: '000905.SH', label: 'CSI500 (中证500)' },
-    { value: '399006.SZ', label: 'ChiNext (创业板指)' },
-    { value: '000001.SH', label: 'SSE Composite (上证综指)' },
+    { value: '399300.SZ' },
+    { value: '000016.SH' },
+    { value: '000905.SH' },
+    { value: '399006.SZ' },
+    { value: '000001.SH' },
   ]
 
-  const [dynamicBenchmarkOptions, setDynamicBenchmarkOptions] = useState<{value:string,label:string}[]>(benchmarkOptions)
+  const [dynamicBenchmarkOptions, setDynamicBenchmarkOptions] = useState<{ value: string; label?: string }[]>(benchmarkOptions)
+
+  const getBenchmarkLabel = (option: { value: string; label?: string }) => {
+    const labelMap: Record<string, string> = {
+      '399300.SZ': t('form.benchmarkOptions.hs300'),
+      '000016.SH': t('form.benchmarkOptions.sse50'),
+      '000905.SH': t('form.benchmarkOptions.csi500'),
+      '399006.SZ': t('form.benchmarkOptions.chinext'),
+      '000001.SH': t('form.benchmarkOptions.sseComposite'),
+    }
+    return labelMap[option.value] || option.label || option.value
+  }
 
   useEffect(() => {
     let mounted = true
@@ -375,7 +386,7 @@ export default function BulkBacktestForm({ onClose, onSubmitSuccess }: BulkBackt
             <label className="block text-sm font-medium mb-2">{t('form.benchmark')} *</label>
               <select value={benchmark} onChange={(e) => setBenchmark(e.target.value)}
               className="w-full px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring" required>
-                {dynamicBenchmarkOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                {dynamicBenchmarkOptions.map((option) => <option key={option.value} value={option.value}>{getBenchmarkLabel(option)}</option>)}
             </select>
           </div>
             </div>
@@ -451,7 +462,7 @@ export default function BulkBacktestForm({ onClose, onSubmitSuccess }: BulkBackt
                           : 'bg-muted hover:bg-muted/80'
                       }`}
                     >
-                      {ex.code} ({ex.count})
+                        {t('bulk.exchangeLabel', { code: ex.code, count: ex.count })}
                     </button>
                   ))}
                 </div>
@@ -476,7 +487,7 @@ export default function BulkBacktestForm({ onClose, onSubmitSuccess }: BulkBackt
                   multi
                   selected={selectedSymbols}
                   onToggle={(stock) => toggleSymbol(stock as Stock)}
-                  placeholder="Search by code or name..."
+                  placeholder={t('bulk.searchPlaceholder')}
                 />
               </div>
             )}
@@ -574,7 +585,7 @@ function SymbolCheckboxList({
   return (
     <div className="border border-border rounded-md">
       <div className="flex items-center justify-between px-3 py-2 bg-muted/30 border-b border-border">
-        <span className="text-xs font-medium text-muted-foreground">{stocks.length} symbols</span>
+        <span className="text-xs font-medium text-muted-foreground">{t('bulk.symbols', { count: stocks.length })}</span>
         <button
           type="button"
           onClick={allSelected ? onDeselectAll : onSelectAll}

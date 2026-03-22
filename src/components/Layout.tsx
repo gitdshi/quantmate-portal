@@ -1,7 +1,7 @@
 import {
+    ArrowLeftRight,
     BarChart3,
     Bell,
-    Bot,
     Briefcase,
     Database,
     FileCode,
@@ -11,23 +11,28 @@ import {
     LayoutDashboard,
     LogOut,
     Menu,
-    PlayCircle,
+    Shield,
+    Share2,
     Settings,
-    ShieldCheck,
-    ShoppingBag,
-    ShoppingCart,
+    Sparkles,
+    Store,
     TrendingUp,
     Users,
-    Wallet,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, Outlet, useNavigate } from 'react-router-dom'
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/auth'
 
 type NavSection = { sectionKey: string }
-type NavItem = { nameKey: string; href: string; icon: LucideIcon }
+type NavItem = {
+  nameKey: string
+  href: string
+  icon: LucideIcon
+  badge?: string
+  match?: (pathname: string, search: string) => boolean
+}
 type NavEntry = NavSection | NavItem
 
 function isSection(entry: NavEntry): entry is NavSection {
@@ -37,10 +42,11 @@ function isSection(entry: NavEntry): entry is NavSection {
 export default function Layout() {
   const { user, logout } = useAuthStore()
   const navigate = useNavigate()
+  const location = useLocation()
   const { t, i18n } = useTranslation('nav')
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [sidebarPinned, setSidebarPinned] = useState(true)
-  const [showHeader, setShowHeader] = useState(false)
+  const [showHeader] = useState(false)
 
   const handleLogout = () => {
     logout()
@@ -48,36 +54,53 @@ export default function Layout() {
   }
 
   const toggleLanguage = () => {
-    const next = i18n.language === 'zh' ? 'en' : 'zh'
+    const currentLanguage = i18n.resolvedLanguage ?? i18n.language
+    const next = currentLanguage.startsWith('zh') ? 'en' : 'zh'
     i18n.changeLanguage(next)
   }
 
   const navigation: NavEntry[] = [
     { sectionKey: 'sections.overview' },
     { nameKey: 'items.dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { sectionKey: 'sections.strategyDev' },
-    { nameKey: 'items.strategies', href: '/strategies', icon: FileCode },
-    { nameKey: 'items.backtest', href: '/backtest', icon: TrendingUp },
-    { nameKey: 'items.paperTrading', href: '/paper-trading', icon: PlayCircle },
-    { sectionKey: 'sections.liveTrading' },
+    { sectionKey: 'sections.researchData' },
+    { nameKey: 'items.strategyResearch', href: '/strategies', icon: FileCode },
+    { nameKey: 'items.backtesting', href: '/backtest', icon: TrendingUp },
     { nameKey: 'items.marketData', href: '/market-data', icon: Database },
-    { nameKey: 'items.trading', href: '/trading', icon: ShoppingCart },
-    { nameKey: 'items.positions', href: '/positions', icon: Wallet },
-    { nameKey: 'items.portfolio', href: '/portfolio', icon: Briefcase },
-    { nameKey: 'items.analytics', href: '/analytics', icon: BarChart3 },
-    { nameKey: 'items.monitoring', href: '/monitoring', icon: Bell },
-    { nameKey: 'items.reports', href: '/reports', icon: FileText },
-    { sectionKey: 'sections.researchAI' },
     { nameKey: 'items.factorLab', href: '/factor-lab', icon: FlaskConical },
-    { nameKey: 'items.aiAssistant', href: '/ai-assistant', icon: Bot },
-    { nameKey: 'items.visualExplorer', href: '/visual-explorer', icon: BarChart3 },
-    { sectionKey: 'sections.community' },
-    { nameKey: 'items.marketplace', href: '/marketplace', icon: ShoppingBag },
-    { nameKey: 'items.teamSpace', href: '/team-space', icon: Users },
+    { sectionKey: 'sections.tradingPortfolio' },
+    { nameKey: 'items.portfolio', href: '/portfolio', icon: Briefcase },
+    { nameKey: 'items.trading', href: '/trading', icon: ArrowLeftRight },
+    { nameKey: 'items.analytics', href: '/analytics', icon: BarChart3 },
+    { sectionKey: 'sections.opsAlerts' },
+    { nameKey: 'items.alerts', href: '/monitoring', icon: Bell, badge: '3' },
+    { nameKey: 'items.reports', href: '/reports', icon: FileText },
+    { sectionKey: 'sections.aiCollaboration' },
+    { nameKey: 'items.aiAssistant', href: '/ai-assistant', icon: Sparkles },
+    { nameKey: 'items.marketplace', href: '/marketplace', icon: Store },
+    {
+      nameKey: 'items.sharing',
+      href: '/team-space?tab=sharing',
+      icon: Share2,
+      match: (pathname, search) => pathname === '/team-space' && search.includes('tab=sharing'),
+    },
+    {
+      nameKey: 'items.workspaces',
+      href: '/team-space?tab=workspaces',
+      icon: Users,
+      match: (pathname, search) =>
+        pathname === '/team-space' && (!search || search.includes('tab=workspaces')),
+    },
     { sectionKey: 'sections.system' },
-    { nameKey: 'items.accountSecurity', href: '/account-security', icon: ShieldCheck },
     { nameKey: 'items.settings', href: '/settings', icon: Settings },
+    { nameKey: 'items.accountSecurity', href: '/account-security', icon: Shield },
   ]
+
+  const isActive = (entry: NavItem) => {
+    if (entry.match) {
+      return entry.match(location.pathname, location.search)
+    }
+    return location.pathname === entry.href
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -129,10 +152,19 @@ export default function Layout() {
               <Link
                 key={entry.href}
                 to={entry.href}
-                className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors"
+                className={`flex items-center gap-3 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${
+                  isActive(entry)
+                    ? 'bg-accent text-accent-foreground'
+                    : 'hover:bg-accent hover:text-accent-foreground'
+                }`}
               >
                 <entry.icon className="h-5 w-5 shrink-0" />
-                {t(entry.nameKey)}
+                <span className="truncate">{t(entry.nameKey)}</span>
+                {entry.badge && (
+                  <span className="ml-auto rounded-full bg-destructive px-1.5 py-0.5 text-[0.65rem] font-semibold leading-none text-destructive-foreground">
+                    {entry.badge}
+                  </span>
+                )}
               </Link>
             )
           )}

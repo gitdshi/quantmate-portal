@@ -1,0 +1,20 @@
+{
+  "title": "Analytics Center",
+  "subtitle": "Technical analysis, fundamentals, and quantitative dashboards",
+  "exportReport": "Export Report",
+  "tabs": {
+    "tech": "Technical Analysis",
+    "fundamental": "Fundamentals",
+    "quant": "Quant Metrics",
+    "custom": "Custom Dashboards"
+  },
+  "empty": {
+    "tech": "No technical analysis data yet. Open a symbol in Market Data to start exploring.",
+    "fundamental": "No fundamental data available.",
+    "quant": "No quantitative indicator data available."
+  },
+  "custom": {
+    "inProgress": "Custom dashboard builder is in progress.",
+    "supports": "Supports charts, tables, KPIs, and custom indicators."
+  }
+}

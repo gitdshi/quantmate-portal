@@ -1,6 +1,58 @@
 {
   "title": "仪表盘",
   "subtitle": "交易系统状态总览",
+  "page": {
+    "stats": {
+      "totalAssets": "总资产",
+      "dailyPnl": "今日盈亏",
+      "activeStrategies": "活跃策略",
+      "unreadAlerts": "未处理告警"
+    },
+    "navTitle": "净值走势",
+    "navSeries": {
+      "portfolio": "净值",
+      "benchmark": "基准"
+    },
+    "allocationTitle": "持仓分布",
+    "positionsTitle": "当前持仓",
+    "ordersTitle": "最近委托",
+    "alertsTitle": "告警信息",
+    "strategyStatusTitle": "策略状态",
+    "table": {
+      "symbol": "代码",
+      "name": "名称",
+      "direction": "方向",
+      "quantity": "数量",
+      "avgCost": "成本价",
+      "marketPrice": "现价",
+      "marketValue": "市值",
+      "pnl": "盈亏",
+      "pnlPct": "盈亏%",
+      "price": "价格",
+      "status": "状态",
+      "level": "级别",
+      "message": "内容",
+      "time": "时间"
+    },
+    "badges": {
+      "long": "多",
+      "short": "空",
+      "buy": "买入",
+      "sell": "卖出",
+      "running": "运行中",
+      "error": "异常",
+      "stopped": "已停止"
+    },
+    "metrics": {
+      "dailyReturn": "今日收益",
+      "totalReturn": "累计收益"
+    },
+    "empty": {
+      "positions": "暂无持仓",
+      "orders": "暂无委托",
+      "alerts": "暂无告警"
+    }
+  },
   "activeJobs": "活跃任务",
   "queuedJobs": "排队任务",
   "completed": "已完成",

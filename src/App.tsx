@@ -28,9 +28,10 @@ const TeamSpace = lazy(() => import('./pages/TeamSpace'))
 const VisualExplorer = lazy(() => import('./pages/VisualExplorer'))
 
 function RouteFallback() {
+  const { t } = useTranslation('common')
   return (
     <div className="min-h-screen flex items-center justify-center text-muted-foreground">
-      Loading...
+      {t('loading')}
     </div>
   )
 }

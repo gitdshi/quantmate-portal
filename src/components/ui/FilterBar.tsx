@@ -1,4 +1,5 @@
 import { Search } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 interface FilterOption {
   value: string
@@ -19,7 +20,10 @@ interface FilterBarProps {
   children?: React.ReactNode
 }
 
-export default function FilterBar({ searchValue, onSearchChange, searchPlaceholder = '搜索...', filters, children }: FilterBarProps) {
+export default function FilterBar({ searchValue, onSearchChange, searchPlaceholder, filters, children }: FilterBarProps) {
+  const { t } = useTranslation('common')
+  const resolvedSearchPlaceholder = searchPlaceholder ?? `${t('search')}...`
+
   return (
     <div className="flex flex-wrap items-center gap-3 mb-4">
       {onSearchChange && (
@@ -29,7 +33,7 @@ export default function FilterBar({ searchValue, onSearchChange, searchPlacehold
             type="text"
             value={searchValue || ''}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder={searchPlaceholder}
+            placeholder={resolvedSearchPlaceholder}
             className="w-full pl-9 pr-3 py-2 text-sm rounded-md border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           />
         </div>

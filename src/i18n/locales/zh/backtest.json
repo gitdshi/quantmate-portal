@@ -1,6 +1,28 @@
 {
   "title": "回测评估",
   "subtitle": "运行和分析策略回测",
+  "page": {
+    "title": "回测评估",
+    "subtitle": "策略回测引擎与多维度绩效分析",
+    "tabs": {
+      "runs": "回测列表",
+      "result": "回测结果",
+      "compare": "策略对比",
+      "optimize": "参数优化"
+    },
+    "newBacktest": "新建回测",
+    "searchPlaceholder": "搜索策略或标的...",
+    "allStatuses": "全部状态",
+    "emptyRuns": "暂无回测记录",
+    "selectRun": "请先从回测列表选择一条记录查看",
+    "generateCompare": "生成对比",
+    "compareTitle": "选择策略对比",
+    "optimizationConfig": "参数配置",
+    "optimizationHeatmap": "优化结果热力图",
+    "optimizationPending": "请先配置参数范围并开始优化。",
+    "submitSuccess": "回测任务已提交",
+    "optimizeSuccess": "优化任务已提交"
+  },
   "runBacktest": "运行回测",
   "running": "运行中...",
   "configuration": "回测配置",
@@ -25,6 +47,13 @@
     "errorLoadingStrategies": "加载策略失败",
     "noStrategies": "暂无可用策略",
     "benchmark": "基准",
+    "benchmarkOptions": {
+      "hs300": "沪深300",
+      "sse50": "上证50",
+      "csi500": "中证500",
+      "chinext": "创业板指",
+      "sseComposite": "上证综指"
+    },
     "selected": "已选择",
     "selectStrategyError": "请选择策略",
     "selectSymbolError": "请选择标的",
@@ -44,16 +73,27 @@
     "configuration": "配置信息",
     "tradeSummary": "交易摘要",
     "priceChart": "价格走势与交易信号",
+    "equityPending": "详细净值曲线数据待接入。",
     "noPriceData": "价格数据不可用。请运行新的回测以查看图表。",
     "tradeHistory": "交易记录 ({{count}} 笔)",
+    "strategyDateSummary": "策略: {{strategy}} | {{start}} 至 {{end}}",
     "offset": "开平",
+    "dateRange": "{{start}} 至 {{end}}",
     "noTrades": "暂无交易记录",
     "noEquityData": "暂无权益曲线数据",
     "strategyEquity": "策略权益",
     "buyAndHold": "买入持有 {{symbol}}",
     "priceNormalized": "{{symbol}} 价格 (归一化)",
     "annualTrend": "年化趋势",
-    "initial": "初始"
+    "initial": "初始",
+    "directionLabels": {
+      "long": "多",
+      "short": "空"
+    },
+    "offsetLabels": {
+      "open": "开",
+      "close": "平"
+    }
   },
   "metrics": {
     "totalReturn": "总收益",
@@ -111,7 +151,10 @@
     "selected": "已选择",
     "metric": "指标",
     "returnComparison": "收益对比",
-    "riskAdjustedReturn": "风险调整收益"
+    "riskAdjustedReturn": "风险调整收益",
+    "generate": "生成对比",
+    "sharpe": "Sharpe",
+    "calmarRatio": "卡尔玛比率"
   },
   "optimization": {
     "title": "参数优化",
@@ -122,7 +165,11 @@
     "runOptimization": "运行优化",
     "results": "优化结果",
     "bestParams": "最优参数",
-    "heatmap": "热力图"
+    "heatmap": "热力图",
+    "objective": "优化目标",
+    "parameterLabel": "参数 {{name}}",
+    "combinations": "开始优化 (共 {{count}} 组合)",
+    "pending": "请先配置参数范围并开始优化。"
   },
   "bulk": {
     "title": "批量回测",
@@ -135,6 +182,7 @@
     "selectIndustry": "选择行业...",
     "selected": "已选择 {{count}} 个标的",
     "symbols": "{{count}} 个标的",
+    "exchangeLabel": "{{code}} ({{count}})",
     "submitFailed": "提交批量回测失败",
     "loadingSymbols": "加载标的中...",
     "noSymbols": "未找到标的",

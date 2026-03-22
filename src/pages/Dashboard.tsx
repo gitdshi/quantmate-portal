@@ -6,7 +6,7 @@ import {
   DollarSign,
   TrendingUp,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import LineChart from '../components/charts/LineChart'
@@ -72,31 +72,31 @@ export default function Dashboard() {
   }))
 
   // ── Columns ────────────────────────────────────────────────────────
-  const posColumns: Column<Position>[] = [
-    { key: 'symbol', label: '代码', sortable: true, className: 'font-mono' },
-    { key: 'name', label: '名称' },
-    { key: 'direction', label: '方向', render: (r) => <Badge variant={r.direction === 'short' ? 'destructive' : 'success'}>{r.direction === 'short' ? '空' : '多'}</Badge> },
-    { key: 'quantity', label: '数量', sortable: true },
-    { key: 'avg_cost', label: '成本价', render: (r) => `¥${r.avg_cost.toFixed(2)}` },
-    { key: 'market_price', label: '现价', render: (r) => `¥${r.market_price.toFixed(2)}` },
-    { key: 'market_value', label: '市值', sortable: true, render: (r) => `¥${r.market_value.toLocaleString()}` },
-    { key: 'pnl', label: '盈亏', sortable: true, render: (r) => <span className={r.pnl >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>{r.pnl >= 0 ? '+' : ''}¥{r.pnl.toLocaleString()}</span> },
-    { key: 'pnl_pct', label: '盈亏%', sortable: true, render: (r) => <span className={r.pnl_pct >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>{r.pnl_pct >= 0 ? '+' : ''}{r.pnl_pct.toFixed(2)}%</span> },
-  ]
+  const posColumns: Column<Position>[] = useMemo(() => [
+    { key: 'symbol', label: t('page.table.symbol'), sortable: true, className: 'font-mono' },
+    { key: 'name', label: t('page.table.name') },
+    { key: 'direction', label: t('page.table.direction'), render: (r) => <Badge variant={r.direction === 'short' ? 'destructive' : 'success'}>{r.direction === 'short' ? t('page.badges.short') : t('page.badges.long')}</Badge> },
+    { key: 'quantity', label: t('page.table.quantity'), sortable: true },
+    { key: 'avg_cost', label: t('page.table.avgCost'), render: (r) => `¥${r.avg_cost.toFixed(2)}` },
+    { key: 'market_price', label: t('page.table.marketPrice'), render: (r) => `¥${r.market_price.toFixed(2)}` },
+    { key: 'market_value', label: t('page.table.marketValue'), sortable: true, render: (r) => `¥${r.market_value.toLocaleString()}` },
+    { key: 'pnl', label: t('page.table.pnl'), sortable: true, render: (r) => <span className={r.pnl >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>{r.pnl >= 0 ? '+' : ''}¥{r.pnl.toLocaleString()}</span> },
+    { key: 'pnl_pct', label: t('page.table.pnlPct'), sortable: true, render: (r) => <span className={r.pnl_pct >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>{r.pnl_pct >= 0 ? '+' : ''}{r.pnl_pct.toFixed(2)}%</span> },
+  ], [t])
 
-  const orderColumns: Column<Order>[] = [
-    { key: 'symbol', label: '代码', className: 'font-mono' },
-    { key: 'direction', label: '方向', render: (r) => <Badge variant={r.direction === 'sell' ? 'destructive' : 'success'}>{r.direction === 'sell' ? '卖出' : '买入'}</Badge> },
-    { key: 'quantity', label: '数量' },
-    { key: 'price', label: '价格', render: (r) => r.price ? `¥${r.price.toFixed(2)}` : '-' },
-    { key: 'status', label: '状态', render: (r) => <Badge variant={r.status === 'filled' ? 'success' : r.status === 'cancelled' ? 'muted' : 'warning'}>{r.status}</Badge> },
-  ]
+  const orderColumns: Column<Order>[] = useMemo(() => [
+    { key: 'symbol', label: t('page.table.symbol'), className: 'font-mono' },
+    { key: 'direction', label: t('page.table.direction'), render: (r) => <Badge variant={r.direction === 'sell' ? 'destructive' : 'success'}>{r.direction === 'sell' ? t('page.badges.sell') : t('page.badges.buy')}</Badge> },
+    { key: 'quantity', label: t('page.table.quantity') },
+    { key: 'price', label: t('page.table.price'), render: (r) => r.price ? `¥${r.price.toFixed(2)}` : '-' },
+    { key: 'status', label: t('page.table.status'), render: (r) => <Badge variant={r.status === 'filled' ? 'success' : r.status === 'cancelled' ? 'muted' : 'warning'}>{r.status}</Badge> },
+  ], [t])
 
-  const alertColumns: Column<AlertHistory>[] = [
-    { key: 'level', label: '级别', render: (r) => <Badge variant={r.level === 'severe' ? 'destructive' : r.level === 'warning' ? 'warning' : 'primary'}>{r.level}</Badge> },
-    { key: 'message', label: '内容' },
-    { key: 'triggered_at', label: '时间', render: (r) => new Date(r.triggered_at).toLocaleString() },
-  ]
+  const alertColumns: Column<AlertHistory>[] = useMemo(() => [
+    { key: 'level', label: t('page.table.level'), render: (r) => <Badge variant={r.level === 'severe' ? 'destructive' : r.level === 'warning' ? 'warning' : 'primary'}>{r.level}</Badge> },
+    { key: 'message', label: t('page.table.message') },
+    { key: 'triggered_at', label: t('page.table.time'), render: (r) => new Date(r.triggered_at).toLocaleString() },
+  ], [t])
 
   const loading = dashLoading || posLoading
 
@@ -112,13 +112,13 @@ export default function Dashboard() {
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          label="总资产"
+          label={t('page.stats.totalAssets')}
           value={`¥${totalValue.toLocaleString()}`}
           icon={DollarSign}
           iconColor="text-blue-500"
         />
         <StatCard
-          label="今日盈亏"
+          label={t('page.stats.dailyPnl')}
           value={`${dailyPnl >= 0 ? '+' : ''}¥${dailyPnl.toLocaleString()}`}
           change={`${dailyPnlPct >= 0 ? '+' : ''}${dailyPnlPct.toFixed(2)}%`}
           changeType={dailyPnl >= 0 ? 'positive' : 'negative'}
@@ -126,13 +126,13 @@ export default function Dashboard() {
           iconColor={dailyPnl >= 0 ? 'text-green-500' : 'text-red-500'}
         />
         <StatCard
-          label="活跃策略"
+          label={t('page.stats.activeStrategies')}
           value={activeStrategies}
           icon={Activity}
           iconColor="text-purple-500"
         />
         <StatCard
-          label="未处理告警"
+          label={t('page.stats.unreadAlerts')}
           value={unreadAlerts}
           icon={Bell}
           iconColor={unreadAlerts > 0 ? 'text-yellow-500' : 'text-muted-foreground'}
@@ -144,7 +144,7 @@ export default function Dashboard() {
         {/* NAV Chart */}
         <div className="rounded-lg border border-border bg-card p-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-card-foreground">净值走势</h3>
+            <h3 className="font-semibold text-card-foreground">{t('page.navTitle')}</h3>
             <div className="flex gap-1">
               {NAV_PERIODS.map((p) => (
                 <button
@@ -160,8 +160,8 @@ export default function Dashboard() {
           <LineChart
             xData={navDates}
             series={[
-              { name: '净值', data: navValues, areaStyle: true, color: themeColors.primary },
-              ...(benchValues.length > 0 ? [{ name: '基准', data: benchValues, color: '#9ca3af' }] : []),
+              { name: t('page.navSeries.portfolio'), data: navValues, areaStyle: true, color: themeColors.primary },
+              ...(benchValues.length > 0 ? [{ name: t('page.navSeries.benchmark'), data: benchValues, color: '#9ca3af' }] : []),
             ]}
             height={260}
             loading={loading}
@@ -170,33 +170,33 @@ export default function Dashboard() {
 
         {/* Allocation Pie */}
         <div className="rounded-lg border border-border bg-card p-5">
-          <h3 className="font-semibold text-card-foreground mb-4">持仓分布</h3>
+          <h3 className="font-semibold text-card-foreground mb-4">{t('page.allocationTitle')}</h3>
           <PieChart data={pieData} height={260} loading={loading} donut />
         </div>
       </div>
 
       {/* Positions Table */}
       <div className="rounded-lg border border-border bg-card p-5">
-        <h3 className="font-semibold text-card-foreground mb-4">当前持仓</h3>
-        <DataTable columns={posColumns} data={positions} keyField="symbol" emptyText="暂无持仓" />
+        <h3 className="font-semibold text-card-foreground mb-4">{t('page.positionsTitle')}</h3>
+        <DataTable columns={posColumns} data={positions} keyField="symbol" emptyText={t('page.empty.positions')} />
       </div>
 
       {/* Orders + Alerts side by side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="rounded-lg border border-border bg-card p-5">
-          <h3 className="font-semibold text-card-foreground mb-4">最近委托</h3>
-          <DataTable columns={orderColumns} data={recentOrders} emptyText="暂无委托" />
+          <h3 className="font-semibold text-card-foreground mb-4">{t('page.ordersTitle')}</h3>
+          <DataTable columns={orderColumns} data={recentOrders} emptyText={t('page.empty.orders')} />
         </div>
         <div className="rounded-lg border border-border bg-card p-5">
-          <h3 className="font-semibold text-card-foreground mb-4">告警信息</h3>
-          <DataTable columns={alertColumns} data={alerts} emptyText="暂无告警" />
+          <h3 className="font-semibold text-card-foreground mb-4">{t('page.alertsTitle')}</h3>
+          <DataTable columns={alertColumns} data={alerts} emptyText={t('page.empty.alerts')} />
         </div>
       </div>
 
       {/* Strategy Status Cards */}
       {dashData?.strategy_performance && dashData.strategy_performance.length > 0 && (
         <div>
-          <h3 className="font-semibold text-foreground mb-4">策略状态</h3>
+          <h3 className="font-semibold text-foreground mb-4">{t('page.strategyStatusTitle')}</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {dashData.strategy_performance.map((sp) => {
               const borderColor =
@@ -211,17 +211,17 @@ export default function Dashboard() {
                   <div className="flex items-center justify-between mb-2">
                     <span className="font-medium text-sm text-card-foreground">{sp.name}</span>
                     <Badge variant={sp.status === 'running' ? 'success' : sp.status === 'error' ? 'destructive' : 'muted'}>
-                      {sp.status === 'running' ? '运行中' : sp.status === 'error' ? '异常' : '已停止'}
+                      {sp.status === 'running' ? t('page.badges.running') : sp.status === 'error' ? t('page.badges.error') : t('page.badges.stopped')}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">今日收益</span>
+                    <span className="text-muted-foreground">{t('page.metrics.dailyReturn')}</span>
                     <span className={sp.daily_return >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
                       {sp.daily_return >= 0 ? '+' : ''}{sp.daily_return.toFixed(2)}%
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-sm mt-1">
-                    <span className="text-muted-foreground">累计收益</span>
+                    <span className="text-muted-foreground">{t('page.metrics.totalReturn')}</span>
                     <span className={sp.total_return >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
                       {sp.total_return >= 0 ? '+' : ''}{sp.total_return.toFixed(2)}%
                     </span>

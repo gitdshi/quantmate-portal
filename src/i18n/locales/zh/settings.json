@@ -1,6 +1,162 @@
 {
   "title": "系统设置",
   "subtitle": "管理数据源和系统配置",
+  "page": {
+    "title": "系统设置",
+    "subtitle": "常规、数据源、交易参数、通知、界面和系统信息",
+    "save": "保存设置",
+    "saved": "设置已保存",
+    "tabs": {
+      "general": "常规设置",
+      "datasource": "数据源",
+      "trading": "交易参数",
+      "notification": "通知设置",
+      "ui": "界面设置",
+      "system": "系统信息"
+    },
+    "general": {
+      "language": "语言",
+      "timezone": "时区",
+      "dateFormat": "日期格式",
+      "currency": "默认货币",
+      "autoSave": "自动保存",
+      "zh": "简体中文",
+      "en": "English",
+      "cny": "人民币 (CNY)",
+      "usd": "美元 (USD)",
+      "timezones": {
+        "shanghai": "Asia/Shanghai (UTC+8)",
+        "newYork": "America/New_York (UTC-5)"
+      }
+    },
+    "datasource": {
+      "tushareTitle": "Tushare Pro",
+      "tushareDesc": "A 股日线、财务、资金流等数据",
+      "token": "API Token",
+      "tokenPlaceholder": "请输入 Tushare Pro Token",
+      "daily": "日线",
+      "adj": "复权因子",
+      "income": "利润表",
+      "balance": "资产负债表",
+      "cashflow": "现金流",
+      "fina": "财务指标",
+      "margin": "融资融券",
+      "moneyflow": "资金流向",
+      "akshareTitle": "AkShare",
+      "akshareDesc": "指数与宏观经济数据",
+      "index": "指数数据",
+      "macro": "宏观数据"
+    },
+    "trading": {
+      "title": "交易参数",
+      "riskTitle": "风控参数",
+      "defaultCapital": "默认资金 (元)",
+      "commissionRate": "手续费率",
+      "slippage": "滑点估计",
+      "minOrderAmount": "最小下单量",
+      "maxDrawdown": "最大回撤限制",
+      "maxPositionPct": "单票最大仓位",
+      "stopLossPct": "止损比例",
+      "dailyLossLimit": "日亏损限额"
+    },
+    "notification": {
+      "strategyAlert": ["策略状态变更通知", "策略启停、异常等状态变化时发送通知"],
+      "tradeExec": ["交易执行通知", "委托成交、撤单等交易事件通知"],
+      "riskAlert": ["风控告警通知", "风控指标超限等告警通知"],
+      "systemAlert": ["系统告警通知", "系统异常、服务状态变化通知"],
+      "dailyReport": ["每日报告推送", "每日收盘后推送策略绩效报告"]
+    },
+    "ui": {
+      "theme": "主题模式",
+      "light": "浅色",
+      "dark": "深色",
+      "system": "跟随系统",
+      "colorScheme": "主题色",
+      "blue": "蓝色",
+      "green": "绿色",
+      "purple": "紫色",
+      "orange": "橙色",
+      "chartLib": "图表库",
+      "pageSize": "每页行数",
+      "sidebarCollapsed": "默认折叠侧边栏"
+    },
+    "system": {
+      "title": "系统状态",
+      "empty": "暂无系统信息"
+    }
+  },
+  "accountPage": {
+    "tabs": {
+      "profile": "个人资料",
+      "security": "安全设置",
+      "apikeys": "API 密钥",
+      "sessions": "登录会话",
+      "billing": "订阅计费"
+    },
+    "title": "账户安全",
+    "subtitle": "个人资料、安全设置、API 密钥和订阅计费",
+    "keyCreated": "密钥已创建",
+    "keyDeleted": "密钥已删除",
+    "createFailed": "创建失败",
+    "current": "当前",
+    "revokeSession": "注销",
+    "deleteKey": "删除",
+    "emptyKeys": "暂无 API 密钥",
+    "emptySessions": "暂无登录会话",
+    "emptyBilling": "暂无使用量统计数据",
+    "saveProfile": "保存资料",
+    "updatePassword": "更新密码",
+    "createKey": "创建密钥",
+    "proPlan": "专业版",
+    "fields": {
+      "displayName": "显示名称",
+      "email": "邮箱",
+      "phone": "手机号",
+      "company": "公司/组织",
+      "bio": "个人简介",
+      "currentPassword": "当前密码",
+      "newPassword": "新密码",
+      "confirmPassword": "确认新密码",
+      "name": "名称",
+      "key": "密钥",
+      "permissions": "权限",
+      "createdAt": "创建时间",
+      "lastUsed": "最近使用",
+      "status": "状态",
+      "actions": "操作",
+      "twoFactor": "两步验证 (2FA)",
+      "twoFactorDesc": "增强账户安全性"
+    },
+    "methods": {
+      "totp": ["TOTP 验证器", "Google Authenticator / Authy"],
+      "sms": ["短信验证", "发送验证码到手机"],
+      "email": ["邮件验证", "发送验证码到邮箱"]
+    },
+    "status": {
+      "active": "活跃",
+      "revoked": "已吊销"
+    },
+    "modal": {
+      "title": "创建 API 密钥",
+      "cancel": "取消",
+      "submit": "创建密钥",
+      "name": "密钥名称",
+      "permissions": "权限范围",
+      "placeholder": "例如：回测脚本",
+      "defaultName": "新密钥",
+      "permissionLabels": [
+        "数据读取 (data:read)",
+        "数据写入 (data:write)",
+        "回测 (backtest)",
+        "交易 (trade)",
+        "管理 (admin)"
+      ]
+    },
+    "profileDefaults": {
+      "displayName": "张涛",
+      "bio": "量化交易研究员"
+    }
+  },
   "accountSecurity": {
     "title": "账户安全",
     "subtitle": "管理账户安全设置",
