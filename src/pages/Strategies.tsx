@@ -1,3 +1,4 @@
+import Editor from '@monaco-editor/react'
 import {
   AlertCircle,
   CheckCircle2,
@@ -5,6 +6,8 @@ import {
   Eye,
   FileCode2,
   Info,
+  Maximize2,
+  Minimize2,
   Plus,
   RotateCcw,
   Save,
@@ -13,17 +16,17 @@ import {
   Upload,
   X,
 } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
+import { useBeforeUnload, useNavigate } from 'react-router-dom'
 
 import Badge, { type BadgeVariant } from '../components/ui/Badge'
 import TabPanel from '../components/ui/TabPanel'
-import { strategiesAPI, strategyCodeAPI } from '../lib/api'
+import { strategiesAPI, strategyCodeAPI, templateAPI } from '../lib/api'
 import type { Strategy } from '../types'
 
 type MainTabKey = 'workspace' | 'templates'
-type DetailTabKey = 'code' | 'parameters' | 'history'
+type DetailTabKey = 'code' | 'profile' | 'parameters' | 'history'
 type StrategyCategoryKey = 'cta' | 'alpha' | 'statArb' | 'grid' | 'ai' | 'custom'
 
 type StrategyListItem = Pick<
@@ -54,19 +57,36 @@ type BuiltinStrategyApiItem = {
   description?: string | null
 }
 
-type StrategyTemplate = {
-  key: string
-  backendName: string
-  category: StrategyCategoryKey
-  nameKey: string
-  descriptionKey: string
-  code: string
-  defaultParameters: Record<string, unknown>
+type TemplateScope = 'marketplace' | 'mine'
+
+type TemplateApiItem = {
+  id: number
+  author_id?: number
+  name: string
+  category?: string | null
+  description?: string | null
+  code?: string | null
+  params_schema?: unknown
+  default_params?: unknown
+  version?: string | null
+  visibility?: string | null
+  downloads?: number | null
+  created_at?: string | null
+  updated_at?: string | null
 }
 
-type TemplateCard = StrategyTemplate & {
-  availableOnServer: boolean
-  serverDescription?: string | null
+type TemplateCard = {
+  id: number
+  key: string
+  source: TemplateScope
+  name: string
+  category: StrategyCategoryKey
+  description: string
+  code: string | null
+  defaultParameters: Record<string, unknown>
+  visibility: string
+  downloads: number
+  updatedAt?: string | null
 }
 
 type ToastState = {
@@ -79,6 +99,7 @@ type ConfirmState = {
   message: string
   confirmLabel: string
   onConfirm: () => void
+  onCancel?: () => void
 } | null
 
 type HistoryPreviewState = {
@@ -137,68 +158,17 @@ class ${className}:
 `
 }
 
-const TEMPLATE_CATALOG: StrategyTemplate[] = [
-  {
-    key: 'dual-ma',
-    backendName: 'DualMAStrategy',
-    category: 'cta',
-    nameKey: 'templates.dualMa.name',
-    descriptionKey: 'templates.dualMa.description',
-    code: buildSkeletonCode('DualMAStrategy', 'Dual MA Crossover', 'Dual moving average crossover strategy.'),
-    defaultParameters: { short_window: 5, long_window: 20, initial_capital: 1000000, fee_rate: 0.0003 },
-  },
-  {
-    key: 'rsi-reversal',
-    backendName: 'RSIReversalStrategy',
-    category: 'cta',
-    nameKey: 'templates.rsi.name',
-    descriptionKey: 'templates.rsi.description',
-    code: buildSkeletonCode('RSIReversalStrategy', 'RSI Reversal', 'RSI mean-reversion strategy for oversold and overbought zones.'),
-    defaultParameters: { rsi_window: 14, oversold: 30, overbought: 70, initial_capital: 1000000 },
-  },
-  {
-    key: 'boll-breakout',
-    backendName: 'BollingerBandStrategy',
-    category: 'cta',
-    nameKey: 'templates.bollinger.name',
-    descriptionKey: 'templates.bollinger.description',
-    code: buildSkeletonCode('BollingerBandStrategy', 'Bollinger Breakout', 'Volatility breakout strategy based on Bollinger Bands.'),
-    defaultParameters: { window: 20, deviation: 2, initial_capital: 1000000 },
-  },
-  {
-    key: 'alpha-multi-factor',
-    backendName: 'MultiFactorAlphaStrategy',
-    category: 'alpha',
-    nameKey: 'templates.alpha.name',
-    descriptionKey: 'templates.alpha.description',
-    code: buildSkeletonCode('MultiFactorAlphaStrategy', 'Multi-Factor Alpha', 'Multi-factor stock selection strategy with configurable factor weights.'),
-    defaultParameters: { rebalance_days: 5, top_n: 20, initial_capital: 1000000 },
-  },
-  {
-    key: 'pair-trading',
-    backendName: 'PairTradingStrategy',
-    category: 'statArb',
-    nameKey: 'templates.pair.name',
-    descriptionKey: 'templates.pair.description',
-    code: buildSkeletonCode('PairTradingStrategy', 'Pair Trading', 'Statistical arbitrage strategy for co-integrated pairs.'),
-    defaultParameters: { lookback: 60, entry_zscore: 2, exit_zscore: 0.5, initial_capital: 1000000 },
-  },
-  {
-    key: 'grid-trading',
-    backendName: 'GridTradingStrategy',
-    category: 'grid',
-    nameKey: 'templates.grid.name',
-    descriptionKey: 'templates.grid.description',
-    code: buildSkeletonCode('GridTradingStrategy', 'Grid Trading', 'Range-bound grid trading strategy for oscillating markets.'),
-    defaultParameters: { grid_levels: 10, grid_spacing: 0.02, order_size: 100, initial_capital: 1000000 },
-  },
-]
-
 const DEFAULT_CREATE_FORM: CreateFormState = {
   name: '',
   description: '',
   category: 'cta',
   templateKey: 'blank',
+}
+
+const UNSAVED_DRAFT_ID = -1
+
+function templateKey(scope: TemplateScope, id: number) {
+  return `${scope}-${id}`
 }
 
 function sanitizeIdentifier(value: string) {
@@ -284,6 +254,74 @@ function draftFromStrategy(strategy: Strategy): DraftStrategy {
   }
 }
 
+function safeParseTemplateObject(value: unknown): Record<string, unknown> {
+  if (!value) return { ...DEFAULT_PARAMETERS }
+  if (typeof value === 'object' && !Array.isArray(value)) {
+    return value as Record<string, unknown>
+  }
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value)
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return parsed as Record<string, unknown>
+      }
+    } catch {
+      return { ...DEFAULT_PARAMETERS }
+    }
+  }
+  return { ...DEFAULT_PARAMETERS }
+}
+
+function mapTemplateCategory(category: string | null | undefined): StrategyCategoryKey {
+  const normalized = String(category || '').trim().toLowerCase()
+  if (!normalized) return 'cta'
+  if (['alpha', 'multi_factor', 'factor', 'multifactor'].includes(normalized)) return 'alpha'
+  if (['statarb', 'stat_arb', 'arbitrage', 'pair', 'mean_revert', 'meanreversion'].includes(normalized)) return 'statArb'
+  if (['grid'].includes(normalized)) return 'grid'
+  if (['ai', 'ml', 'machine_learning'].includes(normalized)) return 'ai'
+  if (['custom'].includes(normalized)) return 'custom'
+  return 'cta'
+}
+
+function mapTemplateCard(item: TemplateApiItem, source: TemplateScope): TemplateCard {
+  return {
+    id: item.id,
+    key: templateKey(source, item.id),
+    source,
+    name: item.name,
+    category: mapTemplateCategory(item.category),
+    description: item.description || '',
+    code: item.code || null,
+    defaultParameters: safeParseTemplateObject(item.default_params),
+    visibility: item.visibility || (source === 'marketplace' ? 'public' : 'private'),
+    downloads: Number(item.downloads || 0),
+    updatedAt: item.updated_at,
+  }
+}
+
+function replacePrimaryClassName(code: string, className: string) {
+  return code.replace(/class\s+([A-Za-z_]\w*)\s*([(:])/m, `class ${className}$2`)
+}
+
+function normalizeParametersForCompare(text: string) {
+  const parsed = safeParseObject(text)
+  return parsed ? JSON.stringify(parsed) : text.trim()
+}
+
+function hasDraftChanges(current: DraftStrategy, baseline: DraftStrategy) {
+  return (
+    current.name.trim() !== baseline.name.trim() ||
+    current.class_name.trim() !== baseline.class_name.trim() ||
+    current.description.trim() !== baseline.description.trim() ||
+    normalizeCode(current.code) !== normalizeCode(baseline.code) ||
+    normalizeParametersForCompare(current.parametersText) !== normalizeParametersForCompare(baseline.parametersText)
+  )
+}
+
+function hasCodeChanges(current: DraftStrategy, baseline: DraftStrategy) {
+  return normalizeCode(current.code) !== normalizeCode(baseline.code)
+}
+
 function formatDateTime(value: string | undefined | null, language: string) {
   if (!value) return '-'
   const date = new Date(value)
@@ -320,8 +358,15 @@ export default function Strategies() {
   const [strategies, setStrategies] = useState<StrategyListItem[]>([])
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [draft, setDraft] = useState<DraftStrategy | null>(null)
+  const [draftBaseline, setDraftBaseline] = useState<DraftStrategy | null>(null)
   const [history, setHistory] = useState<HistoryEntry[]>([])
-  const [templates, setTemplates] = useState<TemplateCard[]>([])
+  const [templateScope, setTemplateScope] = useState<TemplateScope>('marketplace')
+  const [templateCatalog, setTemplateCatalog] = useState<Record<TemplateScope, TemplateCard[]>>({
+    marketplace: [],
+    mine: [],
+  })
+  const [loadingTemplates, setLoadingTemplates] = useState(false)
+  const [selectedTemplateLoading, setSelectedTemplateLoading] = useState(false)
   const [availableBuiltinNames, setAvailableBuiltinNames] = useState<Set<string>>(new Set())
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
@@ -340,18 +385,67 @@ export default function Strategies() {
   const [historyPreview, setHistoryPreview] = useState<HistoryPreviewState>(null)
   const [confirmState, setConfirmState] = useState<ConfirmState>(null)
   const [createForm, setCreateForm] = useState<CreateFormState>(DEFAULT_CREATE_FORM)
+  const [codeFullscreen, setCodeFullscreen] = useState(false)
 
   const importInputRef = useRef<HTMLInputElement | null>(null)
-  const templateCatalogMap = useMemo(
-    () => new Map(TEMPLATE_CATALOG.map((item) => [item.backendName.toLowerCase(), item])),
-    []
-  )
+  const templates = templateCatalog[templateScope]
+  const allTemplates = useMemo(() => {
+    const byId = new Map<number, TemplateCard>()
+    for (const item of templateCatalog.marketplace) {
+      byId.set(item.id, item)
+    }
+    for (const item of templateCatalog.mine) {
+      byId.set(item.id, item)
+    }
+    return Array.from(byId.values())
+  }, [templateCatalog.marketplace, templateCatalog.mine])
+
+  const unsavedDraftItem = useMemo<StrategyListItem | null>(() => {
+    if (!draft || draft.id) return null
+    const now = new Date().toISOString()
+    return {
+      id: UNSAVED_DRAFT_ID,
+      name: draft.name.trim() || t('page.list.unsavedDraftName'),
+      class_name: draft.class_name || sanitizeIdentifier(draft.name || 'MyStrategy'),
+      description: draft.description || '',
+      version: 0,
+      is_active: false,
+      created_at: now,
+      updated_at: now,
+    }
+  }, [draft, t])
 
   useEffect(() => {
     if (!toast) return
     const timer = window.setTimeout(() => setToast(null), 3500)
     return () => window.clearTimeout(timer)
   }, [toast])
+
+  useEffect(() => {
+    if (!codeFullscreen) return
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setCodeFullscreen(false)
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', onKeyDown)
+    }
+  }, [codeFullscreen])
+
+  useEffect(() => {
+    if (detailTab === 'code' || !codeFullscreen) return
+    setCodeFullscreen(false)
+  }, [detailTab, codeFullscreen])
+
+  useEffect(() => {
+    if (draft || !codeFullscreen) return
+    setCodeFullscreen(false)
+  }, [draft, codeFullscreen])
 
   useEffect(() => {
     setValidation((current) => {
@@ -377,15 +471,21 @@ export default function Strategies() {
   const detailTabs = useMemo(
     () => [
       { key: 'code', label: t('page.detail.tabs.code') },
+      { key: 'profile', label: t('page.detail.tabs.profile') },
       { key: 'parameters', label: t('page.detail.tabs.parameters') },
       { key: 'history', label: t('page.detail.tabs.history') },
     ],
     [t]
   )
 
+  const strategyItems = useMemo(
+    () => (unsavedDraftItem ? [unsavedDraftItem, ...strategies] : strategies),
+    [strategies, unsavedDraftItem]
+  )
+
   const filteredStrategies = useMemo(() => {
     const query = search.trim().toLowerCase()
-    return strategies.filter((strategy) => {
+    return strategyItems.filter((strategy) => {
       const category = inferCategory(strategy)
       const status = strategy.is_active ? 'active' : 'draft'
       const matchesQuery =
@@ -397,11 +497,11 @@ export default function Strategies() {
       const matchesStatus = statusFilter === 'all' || status === statusFilter
       return matchesQuery && matchesType && matchesStatus
     })
-  }, [search, statusFilter, strategies, typeFilter])
+  }, [search, statusFilter, strategyItems, typeFilter])
 
   const selectedSummary = useMemo(
-    () => strategies.find((item) => item.id === selectedId) || null,
-    [selectedId, strategies]
+    () => strategyItems.find((item) => item.id === selectedId) || null,
+    [selectedId, strategyItems]
   )
 
   const selectedTemplate = useMemo(
@@ -418,6 +518,96 @@ export default function Strategies() {
     () => (parsedParameters ? Object.entries(parsedParameters) : []),
     [parsedParameters]
   )
+
+  const hasUnsavedChanges = useMemo(() => {
+    if (!draft) return false
+    if (!draft.id) return true
+    if (!draftBaseline) return true
+    return hasDraftChanges(draft, draftBaseline)
+  }, [draft, draftBaseline])
+
+  const hasCodeUnsavedChanges = useMemo(() => {
+    if (!draft) return false
+    if (!draft.id) return true
+    if (!draftBaseline) return true
+    return hasCodeChanges(draft, draftBaseline)
+  }, [draft, draftBaseline])
+
+  const confirmUnsavedThen = useCallback(
+    (action: () => void) => {
+      if (!hasUnsavedChanges || saving) {
+        action()
+        return
+      }
+      setConfirmState({
+        title: t('page.unsaved.title'),
+        message: t('page.unsaved.message'),
+        confirmLabel: t('page.unsaved.discard'),
+        onConfirm: () => {
+          setConfirmState(null)
+          setCodeFullscreen(false)
+          action()
+        },
+      })
+    },
+    [hasUnsavedChanges, saving, t]
+  )
+
+  useBeforeUnload(
+    useCallback(
+      (event) => {
+        if (!hasUnsavedChanges || saving) return
+        event.preventDefault()
+        event.returnValue = ''
+      },
+      [hasUnsavedChanges, saving]
+    )
+  )
+
+  useEffect(() => {
+    const onDocumentClick = (event: MouseEvent) => {
+      if (!hasUnsavedChanges || saving || confirmState) return
+      if (event.defaultPrevented || event.button !== 0) return
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+
+      const target = event.target
+      if (!(target instanceof Element)) return
+      const anchor = target.closest('a[href]')
+      if (!(anchor instanceof HTMLAnchorElement)) return
+      if (anchor.target && anchor.target !== '_self') return
+      if (anchor.hasAttribute('download')) return
+
+      const rawHref = anchor.getAttribute('href')
+      if (!rawHref || rawHref.startsWith('#') || rawHref.startsWith('javascript:')) return
+
+      let url: URL
+      try {
+        url = new URL(anchor.href, window.location.href)
+      } catch {
+        return
+      }
+      if (url.origin !== window.location.origin) return
+
+      const nextPath = `${url.pathname}${url.search}${url.hash}`
+      const currentPath = `${window.location.pathname}${window.location.search}${window.location.hash}`
+      if (nextPath === currentPath) return
+
+      event.preventDefault()
+      setConfirmState({
+        title: t('page.unsaved.title'),
+        message: t('page.unsaved.message'),
+        confirmLabel: t('page.unsaved.discard'),
+        onConfirm: () => {
+          setConfirmState(null)
+          setCodeFullscreen(false)
+          navigate(nextPath)
+        },
+      })
+    }
+
+    document.addEventListener('click', onDocumentClick, true)
+    return () => document.removeEventListener('click', onDocumentClick, true)
+  }, [confirmState, hasUnsavedChanges, navigate, saving, t])
 
   const updateDraft = (updater: (current: DraftStrategy) => DraftStrategy) => {
     setDraft((current) => (current ? updater(current) : current))
@@ -437,8 +627,10 @@ export default function Strategies() {
     try {
       const response = await strategiesAPI.get(strategyId)
       const detail = response.data as Strategy
+      const nextDraft = draftFromStrategy(detail)
       setSelectedId(strategyId)
-      setDraft(draftFromStrategy(detail))
+      setDraft(nextDraft)
+      setDraftBaseline(nextDraft)
       await loadHistory(strategyId)
       setValidation({ ok: null, message: t('page.detail.code.validationPending') })
     } catch (error: unknown) {
@@ -469,6 +661,7 @@ export default function Strategies() {
       } else {
         setSelectedId(null)
         setDraft(null)
+        setDraftBaseline(null)
         setHistory([])
       }
     } catch (error: unknown) {
@@ -573,6 +766,7 @@ export default function Strategies() {
 
   const saveDraft = async () => {
     if (!draft) return
+    if (!hasUnsavedChanges) return
 
     const parameters = safeParseObject(draft.parametersText)
     if (!parameters) {
@@ -629,7 +823,8 @@ export default function Strategies() {
       ? template.code.replace(new RegExp(template.backendName, 'g'), className)
       : buildSkeletonCode(className, name, description)
 
-    setSelectedId(null)
+    setSelectedId(UNSAVED_DRAFT_ID)
+    setDraftBaseline(null)
     setDraft({
       id: undefined,
       name,
@@ -656,7 +851,8 @@ export default function Strategies() {
   const handleDuplicate = () => {
     if (!draft) return
     const nextName = `${draft.name}_copy`
-    setSelectedId(null)
+    setSelectedId(UNSAVED_DRAFT_ID)
+    setDraftBaseline(null)
     setDraft({
       ...draft,
       id: undefined,
@@ -740,7 +936,8 @@ export default function Strategies() {
       const firstClass = parsed.classes?.[0]
       const name = file.name.replace(/\.py$/i, '')
 
-      setSelectedId(null)
+      setSelectedId(UNSAVED_DRAFT_ID)
+      setDraftBaseline(null)
       setDraft({
         id: undefined,
         name,
@@ -761,6 +958,24 @@ export default function Strategies() {
         importInputRef.current.value = ''
       }
     }
+  }
+
+  const handleMainTabChange = (key: string) => {
+    const nextTab = key as MainTabKey
+    if (nextTab === mainTab) return
+    confirmUnsavedThen(() => setMainTab(nextTab))
+  }
+
+  const handleStrategyCardClick = (strategy: StrategyListItem) => {
+    if (strategy.id === selectedId) return
+    confirmUnsavedThen(() => {
+      if (strategy.id === UNSAVED_DRAFT_ID) {
+        setSelectedId(UNSAVED_DRAFT_ID)
+        setDetailTab('code')
+        return
+      }
+      void selectStrategy(strategy.id)
+    })
   }
 
   const listCountLabel = t('page.list.count', { count: filteredStrategies.length })
@@ -789,7 +1004,7 @@ export default function Strategies() {
         </div>
       </div>
 
-      <TabPanel tabs={mainTabs} activeTab={mainTab} onChange={(key) => setMainTab(key as MainTabKey)}>
+      <TabPanel tabs={mainTabs} activeTab={mainTab} onChange={handleMainTabChange}>
         {mainTab === 'workspace' && (
           <div className="space-y-4">
             <div className="flex flex-col gap-3 md:flex-row md:items-center">
@@ -835,11 +1050,15 @@ export default function Strategies() {
                     filteredStrategies.map((strategy) => {
                       const category = inferCategory(strategy)
                       const isSelected = strategy.id === selectedId
+                      const isUnsavedDraft = strategy.id === UNSAVED_DRAFT_ID
                       return (
-                        <button key={strategy.id} type="button" data-testid={`strategy-card-${strategy.id}`} onClick={() => void selectStrategy(strategy.id)} className={`w-full rounded-xl border px-4 py-4 text-left transition-colors ${isSelected ? 'border-primary bg-primary/5 shadow-sm' : 'border-border bg-background hover:border-primary/40 hover:bg-muted/40'}`}>
+                        <button key={strategy.id} type="button" data-testid={`strategy-card-${strategy.id}`} onClick={() => handleStrategyCardClick(strategy)} className={`w-full rounded-xl border px-4 py-4 text-left transition-colors ${isSelected ? 'border-primary bg-primary/5 shadow-sm' : 'border-border bg-background hover:border-primary/40 hover:bg-muted/40'}`}>
                           <div className="flex items-start justify-between gap-3">
                             <div>
-                              <div className="font-semibold text-foreground">{strategy.name}</div>
+                              <div className="flex items-center gap-2">
+                                <div className="font-semibold text-foreground">{strategy.name}</div>
+                                {isUnsavedDraft && <Badge variant="warning">{t('page.list.unsavedBadge')}</Badge>}
+                              </div>
                               <div className="mt-1 text-sm text-muted-foreground">{strategy.description || t('page.list.noDescription')}</div>
                             </div>
                             <Badge variant={strategy.is_active ? 'success' : 'muted'}>{strategy.is_active ? t('page.status.active') : t('page.status.draft')}</Badge>
@@ -882,12 +1101,19 @@ export default function Strategies() {
                       </div>
 
                       <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          className={buttonPrimaryClass}
+                          onClick={() => void saveDraft()}
+                          disabled={saving || !hasUnsavedChanges}
+                          data-testid="save-strategy-button"
+                        >
+                          <Save size={14} />
+                          {saving ? t('form.saving') : t('page.actions.save')}
+                        </button>
                         <button type="button" className={buttonGhostClass} onClick={handleDuplicate}>
                           <Copy size={14} />
                           {t('page.actions.duplicate')}
-                        </button>
-                        <button type="button" className={buttonGhostClass} onClick={() => navigate('/backtest')}>
-                          {t('page.actions.backtest')}
                         </button>
                         {draft.id && (
                           <button type="button" className={buttonGhostClass} onClick={handleDelete}>
@@ -901,6 +1127,86 @@ export default function Strategies() {
                     <TabPanel tabs={detailTabs} activeTab={detailTab} onChange={(key) => setDetailTab(key as DetailTabKey)}>
                       {detailTab === 'code' && (
                         <div className="space-y-4" data-testid="strategy-code-panel">
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div className="flex flex-wrap items-center gap-2">
+                              {validation.ok === true ? <Badge variant="success">{validation.message}</Badge> : validation.ok === false ? <Badge variant="destructive">{validation.message}</Badge> : <Badge variant="muted">{validation.message}</Badge>}
+                              {hasCodeUnsavedChanges && <Badge variant="warning">{t('page.detail.code.unsavedChanges')}</Badge>}
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              <button type="button" className={buttonGhostClass} onClick={() => updateDraft((current) => ({ ...current, code: normalizeCode(current.code) }))}>{t('page.actions.format')}</button>
+                              <button type="button" className={buttonGhostClass} onClick={() => void validateCode(draft.code)}>{t('page.actions.validate')}</button>
+                              <button type="button" className={buttonGhostClass} onClick={() => setCodeFullscreen((current) => !current)}>
+                                {codeFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                                {codeFullscreen ? t('editor.exitFullscreen') : t('editor.fullscreen')}
+                              </button>
+                            </div>
+                          </div>
+
+                          <div
+                            className={
+                              codeFullscreen
+                                ? 'fixed inset-0 z-[80] bg-black/70 p-4 md:p-6'
+                                : ''
+                            }
+                          >
+                            <div
+                              className={
+                                codeFullscreen
+                                  ? 'mx-auto flex h-full w-full max-w-[1600px] flex-col rounded-2xl border border-border bg-card shadow-2xl'
+                                  : ''
+                              }
+                            >
+                              {codeFullscreen && (
+                                <div className="flex items-center justify-between border-b border-border px-4 py-3">
+                                  <div className="text-sm font-medium text-foreground">{t('form.code')}</div>
+                                  <div className="flex flex-wrap gap-2">
+                                    <button type="button" className={buttonGhostClass} onClick={() => updateDraft((current) => ({ ...current, code: normalizeCode(current.code) }))}>
+                                      {t('page.actions.format')}
+                                    </button>
+                                    <button type="button" className={buttonGhostClass} onClick={() => void validateCode(draft.code)}>
+                                      {t('page.actions.validate')}
+                                    </button>
+                                    <button type="button" className={buttonGhostClass} onClick={() => setCodeFullscreen(false)}>
+                                      <Minimize2 size={14} />
+                                      {t('editor.exitFullscreen')}
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+
+                              <div className={codeFullscreen ? 'flex-1 p-4' : ''}>
+                                <label className="mb-1 block text-sm font-medium">{t('form.code')}</label>
+                                <div
+                                  className={`overflow-hidden rounded-lg border border-border ${codeFullscreen ? 'h-[calc(100vh-170px)]' : 'h-[420px]'}`}
+                                  data-testid="strategy-code-editor"
+                                >
+                                  <Editor
+                                    language="python"
+                                    theme="vs-dark"
+                                    value={draft.code}
+                                    onChange={(value) => updateDraft((current) => ({ ...current, code: value || '' }))}
+                                    height="100%"
+                                    options={{
+                                      automaticLayout: true,
+                                      minimap: { enabled: !codeFullscreen },
+                                      fontSize: 13,
+                                      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                                      scrollBeyondLastLine: false,
+                                      tabSize: 4,
+                                      insertSpaces: true,
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="text-xs text-muted-foreground">{loadingDetail ? t('page.detail.loading') : t('page.detail.code.lastModified', { value: formatDateTime(selectedSummary?.updated_at, currentLanguage) })}</div>
+                        </div>
+                      )}
+
+                      {detailTab === 'profile' && (
+                        <div className="space-y-4" data-testid="strategy-profile-panel">
                           <div className="grid gap-4 md:grid-cols-2">
                             <div>
                               <label className="mb-1 block text-sm font-medium">{t('form.name')}</label>
@@ -916,27 +1222,6 @@ export default function Strategies() {
                             <label className="mb-1 block text-sm font-medium">{t('form.description')}</label>
                             <textarea className={`${inputClass} min-h-[88px] resize-y`} value={draft.description} onChange={(event) => updateDraft((current) => ({ ...current, description: event.target.value }))} data-testid="strategy-description-input" />
                           </div>
-
-                          <div className="flex flex-wrap items-center justify-between gap-3">
-                            <div>
-                              {validation.ok === true ? <Badge variant="success">{validation.message}</Badge> : validation.ok === false ? <Badge variant="destructive">{validation.message}</Badge> : <Badge variant="muted">{validation.message}</Badge>}
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                              <button type="button" className={buttonGhostClass} onClick={() => updateDraft((current) => ({ ...current, code: normalizeCode(current.code) }))}>{t('page.actions.format')}</button>
-                              <button type="button" className={buttonGhostClass} onClick={() => void validateCode(draft.code)}>{t('page.actions.validate')}</button>
-                              <button type="button" className={buttonPrimaryClass} onClick={() => void saveDraft()} disabled={saving} data-testid="save-strategy-button">
-                                <Save size={14} />
-                                {saving ? t('form.saving') : t('page.actions.save')}
-                              </button>
-                            </div>
-                          </div>
-
-                          <div>
-                            <label className="mb-1 block text-sm font-medium">{t('form.code')}</label>
-                            <textarea className={`${inputClass} min-h-[360px] resize-y font-mono text-xs leading-6`} value={draft.code} onChange={(event) => updateDraft((current) => ({ ...current, code: event.target.value }))} data-testid="strategy-code-editor" />
-                          </div>
-
-                          <div className="text-xs text-muted-foreground">{loadingDetail ? t('page.detail.loading') : t('page.detail.code.lastModified', { value: formatDateTime(selectedSummary?.updated_at, currentLanguage) })}</div>
                         </div>
                       )}
 
@@ -1203,7 +1488,17 @@ export default function Strategies() {
             <h3 className="text-lg font-semibold text-card-foreground">{confirmState.title}</h3>
             <p className="mt-2 text-sm text-muted-foreground">{confirmState.message}</p>
             <div className="mt-6 flex justify-end gap-2">
-              <button type="button" className={buttonSecondaryClass} onClick={() => setConfirmState(null)}>{t('page.actions.cancel')}</button>
+              <button
+                type="button"
+                className={buttonSecondaryClass}
+                onClick={() => {
+                  const onCancel = confirmState.onCancel
+                  setConfirmState(null)
+                  onCancel?.()
+                }}
+              >
+                {t('page.actions.cancel')}
+              </button>
               <button type="button" className={buttonPrimaryClass} onClick={confirmState.onConfirm}>{confirmState.confirmLabel}</button>
             </div>
           </div>

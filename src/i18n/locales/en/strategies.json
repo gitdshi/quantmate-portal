@@ -258,7 +258,9 @@
       "emptyTitle": "No matching strategies",
       "emptyDescription": "Adjust the current filters or create a new strategy draft.",
       "noDescription": "No description yet",
-      "version": "v{{version}}"
+      "version": "v{{version}}",
+      "unsavedDraftName": "Untitled Strategy (Unsaved)",
+      "unsavedBadge": "Unsaved"
     },
     "detail": {
       "loading": "Loading latest strategy data...",
@@ -270,12 +272,14 @@
       "metaUpdated": "Updated: {{value}}",
       "tabs": {
         "code": "Code Editor",
+        "profile": "Basic Info",
         "parameters": "Parameters",
         "history": "Version History"
       },
       "code": {
         "validationPending": "Validation pending",
-        "lastModified": "Last modified: {{value}}"
+        "lastModified": "Last modified: {{value}}",
+        "unsavedChanges": "Code changes not saved"
       },
       "parameters": {
         "title": "Strategy Parameters",
@@ -341,5 +345,11 @@
       "duplicated": "Duplicated {{name}} into a new draft",
       "imported": "Strategy file imported",
       "importFailed": "Failed to import strategy file"
+    },
+    "unsaved": {
+      "title": "Unsaved changes",
+      "message": "You have unsaved changes. Continue and discard them?",
+      "discard": "Discard & Continue"
     }
   }
+}
