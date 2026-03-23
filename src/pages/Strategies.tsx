@@ -5,13 +5,17 @@ import {
   Copy,
   Eye,
   FileCode2,
+  Globe,
   Info,
   Maximize2,
+  MessageSquare,
   Minimize2,
+  PencilLine,
   Plus,
   RotateCcw,
   Save,
   Search,
+  Star,
   Trash2,
   Upload,
   X,
@@ -115,6 +119,40 @@ type CreateFormState = {
   templateKey: string
 }
 
+type TemplateComment = {
+  id: number
+  user_id?: number | null
+  content: string
+  created_at?: string | null
+}
+
+type TemplateReview = {
+  id: number
+  user_id?: number | null
+  rating: number
+  review?: string | null
+  created_at?: string | null
+}
+
+type TemplateRatingsPayload = {
+  summary?: {
+    avg_rating?: number
+    count?: number
+  }
+  reviews?: TemplateReview[]
+}
+
+type TemplateEditorState = {
+  mode: 'create' | 'edit'
+  templateId?: number
+  name: string
+  description: string
+  category: StrategyCategoryKey
+  visibility: 'private' | 'team' | 'public'
+  code: string
+  defaultParamsText: string
+}
+
 const DEFAULT_PARAMETERS: Record<string, unknown> = {
   short_window: 5,
   long_window: 20,
@@ -169,6 +207,15 @@ const UNSAVED_DRAFT_ID = -1
 
 function templateKey(scope: TemplateScope, id: number) {
   return `${scope}-${id}`
+}
+
+function toBackendTemplateCategory(category: StrategyCategoryKey): string {
+  if (category === 'alpha') return 'multi_factor'
+  if (category === 'statArb') return 'arbitrage'
+  if (category === 'ai') return 'ml'
+  if (category === 'grid') return 'grid'
+  if (category === 'custom') return 'custom'
+  return 'trend'
 }
 
 function sanitizeIdentifier(value: string) {
@@ -367,6 +414,17 @@ export default function Strategies() {
   })
   const [loadingTemplates, setLoadingTemplates] = useState(false)
   const [selectedTemplateLoading, setSelectedTemplateLoading] = useState(false)
+  const [templateEditor, setTemplateEditor] = useState<TemplateEditorState | null>(null)
+  const [templateActionLoading, setTemplateActionLoading] = useState(false)
+  const [templateComments, setTemplateComments] = useState<TemplateComment[]>([])
+  const [templateRatings, setTemplateRatings] = useState<{ avgRating: number; count: number }>({
+    avgRating: 0,
+    count: 0,
+  })
+  const [templateReviews, setTemplateReviews] = useState<TemplateReview[]>([])
+  const [loadingTemplateFeedback, setLoadingTemplateFeedback] = useState(false)
+  const [commentDraft, setCommentDraft] = useState('')
+  const [ratingValue, setRatingValue] = useState<number | null>(null)
   const [availableBuiltinNames, setAvailableBuiltinNames] = useState<Set<string>>(new Set())
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
@@ -509,6 +567,14 @@ export default function Strategies() {
     [selectedTemplateKey, templates]
   )
 
+  const selectedTemplateInMine = useMemo(
+    () =>
+      selectedTemplate
+        ? templateCatalog.mine.find((item) => item.id === selectedTemplate.id) || null
+        : null,
+    [selectedTemplate, templateCatalog.mine]
+  )
+
   const parsedParameters = useMemo(
     () => safeParseObject(draft?.parametersText || JSON.stringify(DEFAULT_PARAMETERS, null, 2)),
     [draft?.parametersText]
@@ -533,8 +599,24 @@ export default function Strategies() {
     return hasCodeChanges(draft, draftBaseline)
   }, [draft, draftBaseline])
 
+  const discardWorkspaceChanges = useCallback(() => {
+    if (!draft) return
+    if (!draft.id) {
+      setSelectedId(null)
+      setDraft(null)
+      setDraftBaseline(null)
+      setHistory([])
+      return
+    }
+    if (draftBaseline) {
+      setDraft({ ...draftBaseline })
+    } else {
+      setDraft(null)
+    }
+  }, [draft, draftBaseline])
+
   const confirmUnsavedThen = useCallback(
-    (action: () => void) => {
+    (action: () => void, options?: { discardWorkspaceChanges?: boolean }) => {
       if (!hasUnsavedChanges || saving) {
         action()
         return
@@ -546,11 +628,14 @@ export default function Strategies() {
         onConfirm: () => {
           setConfirmState(null)
           setCodeFullscreen(false)
+          if (options?.discardWorkspaceChanges) {
+            discardWorkspaceChanges()
+          }
           action()
         },
       })
     },
-    [hasUnsavedChanges, saving, t]
+    [discardWorkspaceChanges, hasUnsavedChanges, saving, t]
   )
 
   useBeforeUnload(
@@ -725,6 +810,44 @@ export default function Strategies() {
     })
   }, [templates])
 
+  const loadTemplateFeedback = async (templateId: number) => {
+    setLoadingTemplateFeedback(true)
+    try {
+      const [ratingsResponse, commentsResponse] = await Promise.all([
+        templateAPI.getRatings(templateId),
+        templateAPI.listComments(templateId),
+      ])
+      const ratingsPayload = ratingsResponse.data as TemplateRatingsPayload
+      const summary = ratingsPayload.summary || {}
+      setTemplateRatings({
+        avgRating: Number(summary.avg_rating || 0),
+        count: Number(summary.count || 0),
+      })
+      setTemplateReviews(Array.isArray(ratingsPayload.reviews) ? ratingsPayload.reviews : [])
+      setTemplateComments(unwrapArray<TemplateComment>(commentsResponse.data))
+    } catch {
+      setTemplateRatings({ avgRating: 0, count: 0 })
+      setTemplateReviews([])
+      setTemplateComments([])
+    } finally {
+      setLoadingTemplateFeedback(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!selectedTemplate) {
+      setTemplateRatings({ avgRating: 0, count: 0 })
+      setTemplateReviews([])
+      setTemplateComments([])
+      setCommentDraft('')
+      setRatingValue(null)
+      return
+    }
+    setCommentDraft('')
+    setRatingValue(null)
+    void loadTemplateFeedback(selectedTemplate.id)
+  }, [selectedTemplate?.id])
+
   const validateCode = async (content: string) => {
     try {
       try {
@@ -856,6 +979,187 @@ export default function Strategies() {
     showToast(t('page.toasts.draftCreated'), 'success')
   }
 
+  const openTemplateEditorForCreate = () => {
+    const initialParams = safeParseObject(draft?.parametersText || '')
+    setTemplateEditor({
+      mode: 'create',
+      name: draft?.name || t('page.modals.defaultName'),
+      description: draft?.description || '',
+      category: inferCategory(
+        draft || { name: draft?.name || 'Strategy', class_name: draft?.class_name || '', description: draft?.description || '' }
+      ),
+      visibility: 'private',
+      code: draft?.code || buildSkeletonCode('MyStrategy', 'MyStrategy', t('page.modals.blankDescription')),
+      defaultParamsText: JSON.stringify(initialParams || DEFAULT_PARAMETERS, null, 2),
+    })
+  }
+
+  const openTemplateEditorForEdit = async (template: TemplateCard) => {
+    try {
+      setTemplateActionLoading(true)
+      const readyTemplate = await ensureTemplateReady(template)
+      setTemplateEditor({
+        mode: 'edit',
+        templateId: readyTemplate.id,
+        name: readyTemplate.name,
+        description: readyTemplate.description,
+        category: readyTemplate.category,
+        visibility: (readyTemplate.visibility as 'private' | 'team' | 'public') || 'private',
+        code: readyTemplate.code || '',
+        defaultParamsText: JSON.stringify(readyTemplate.defaultParameters || DEFAULT_PARAMETERS, null, 2),
+      })
+    } catch (error: unknown) {
+      const requestError = error as { response?: { data?: { detail?: string } } }
+      showToast(requestError.response?.data?.detail || t('page.toasts.loadTemplateDetailFailed'), 'error')
+    } finally {
+      setTemplateActionLoading(false)
+    }
+  }
+
+  const submitTemplateEditor = async () => {
+    if (!templateEditor) return
+    const params = safeParseObject(templateEditor.defaultParamsText)
+    if (!params) {
+      showToast(t('page.toasts.parametersInvalid'), 'error')
+      return
+    }
+    if (!templateEditor.name.trim()) {
+      showToast(t('nameRequired'), 'error')
+      return
+    }
+    if (!templateEditor.code.trim()) {
+      showToast(t('page.toasts.codeRequiredForTemplate'), 'error')
+      return
+    }
+    try {
+      setTemplateActionLoading(true)
+      const payload = {
+        name: templateEditor.name.trim(),
+        description: templateEditor.description.trim(),
+        category: toBackendTemplateCategory(templateEditor.category),
+        code: normalizeCode(templateEditor.code),
+        default_params: params,
+        visibility: templateEditor.visibility,
+      }
+      if (templateEditor.mode === 'create') {
+        const response = await templateAPI.create(payload)
+        const created = mapTemplateCard(response.data as TemplateApiItem, 'mine')
+        setTemplateScope('mine')
+        await refreshTemplates('mine')
+        if (created.visibility === 'public') {
+          await refreshTemplates('marketplace')
+        }
+        setSelectedTemplateKey(templateKey('mine', created.id))
+        showToast(t('page.toasts.templateCreated'), 'success')
+      } else if (templateEditor.templateId) {
+        await templateAPI.update(templateEditor.templateId, payload)
+        await refreshTemplates('mine')
+        await refreshTemplates('marketplace')
+        setTemplateScope('mine')
+        setSelectedTemplateKey(templateKey('mine', templateEditor.templateId))
+        showToast(t('page.toasts.templateUpdated'), 'success')
+      }
+      setTemplateEditor(null)
+    } catch (error: unknown) {
+      const requestError = error as { response?: { data?: { detail?: string } } }
+      showToast(requestError.response?.data?.detail || t('page.toasts.templateSaveFailed'), 'error')
+    } finally {
+      setTemplateActionLoading(false)
+    }
+  }
+
+  const toggleTemplateVisibility = async (template: TemplateCard) => {
+    const nextVisibility = template.visibility === 'public' ? 'private' : 'public'
+    try {
+      setTemplateActionLoading(true)
+      await templateAPI.update(template.id, { visibility: nextVisibility })
+      await refreshTemplates('mine')
+      await refreshTemplates('marketplace')
+      showToast(
+        nextVisibility === 'public' ? t('page.toasts.templatePublished') : t('page.toasts.templateUnpublished'),
+        'success'
+      )
+    } catch (error: unknown) {
+      const requestError = error as { response?: { data?: { detail?: string } } }
+      showToast(requestError.response?.data?.detail || t('page.toasts.templateSaveFailed'), 'error')
+    } finally {
+      setTemplateActionLoading(false)
+    }
+  }
+
+  const cloneTemplateToMine = async (template: TemplateCard) => {
+    try {
+      setTemplateActionLoading(true)
+      const response = await templateAPI.clone(template.id)
+      const cloned = mapTemplateCard(response.data as TemplateApiItem, 'mine')
+      await refreshTemplates('mine')
+      await refreshTemplates('marketplace')
+      setTemplateScope('mine')
+      setSelectedTemplateKey(templateKey('mine', cloned.id))
+      showToast(t('page.toasts.templateCloned'), 'success')
+    } catch (error: unknown) {
+      const requestError = error as { response?: { data?: { detail?: string } } }
+      showToast(requestError.response?.data?.detail || t('page.toasts.templateSaveFailed'), 'error')
+    } finally {
+      setTemplateActionLoading(false)
+    }
+  }
+
+  const requestDeleteTemplate = (template: TemplateCard) => {
+    setConfirmState({
+      title: t('page.templates.deleteTitle'),
+      message: t('page.templates.deleteMessage', { name: template.name }),
+      confirmLabel: t('page.actions.delete'),
+      onConfirm: () => {
+        void (async () => {
+          try {
+            setTemplateActionLoading(true)
+            await templateAPI.delete(template.id)
+            setConfirmState(null)
+            await refreshTemplates('mine')
+            await refreshTemplates('marketplace')
+            setSelectedTemplateKey(null)
+            showToast(t('page.toasts.templateDeleted'), 'success')
+          } catch (error: unknown) {
+            const requestError = error as { response?: { data?: { detail?: string } } }
+            showToast(requestError.response?.data?.detail || t('page.toasts.templateSaveFailed'), 'error')
+          } finally {
+            setTemplateActionLoading(false)
+          }
+        })()
+      },
+    })
+  }
+
+  const submitTemplateFeedback = async () => {
+    if (!selectedTemplate) return
+    const comment = commentDraft.trim()
+    const canRate = selectedTemplate.source === 'marketplace'
+    const hasRating = canRate && ratingValue !== null
+    if (!comment && !hasRating) {
+      showToast(t('page.templates.feedbackRequired'), 'error')
+      return
+    }
+    try {
+      setTemplateActionLoading(true)
+      if (hasRating) {
+        await templateAPI.rate(selectedTemplate.id, { rating: ratingValue as number })
+      }
+      if (comment) {
+        await templateAPI.addComment(selectedTemplate.id, { content: comment })
+      }
+      setCommentDraft('')
+      setRatingValue(null)
+      await loadTemplateFeedback(selectedTemplate.id)
+      showToast(comment ? t('page.toasts.templateCommentAdded') : t('page.toasts.templateRated'), 'success')
+    } catch (error: unknown) {
+      const requestError = error as { response?: { data?: { detail?: string } } }
+      showToast(requestError.response?.data?.detail || t('page.toasts.templateSaveFailed'), 'error')
+    } finally {
+      setTemplateActionLoading(false)
+    }
+  }
+
   const handleCreateDraft = () => {
     const template =
       createForm.templateKey === 'blank'
@@ -979,7 +1283,10 @@ export default function Strategies() {
   const handleMainTabChange = (key: string) => {
     const nextTab = key as MainTabKey
     if (nextTab === mainTab) return
-    confirmUnsavedThen(() => setMainTab(nextTab))
+    confirmUnsavedThen(
+      () => setMainTab(nextTab),
+      { discardWorkspaceChanges: nextTab === 'templates' }
+    )
   }
 
   const handleStrategyCardClick = (strategy: StrategyListItem) => {
@@ -1129,13 +1436,6 @@ export default function Strategies() {
                           <Badge variant={getCategoryVariant(inferCategory(draft))}>{translateCategory(inferCategory(draft))}</Badge>
                           <Badge variant={selectedSummary?.is_active ? 'success' : 'muted'}>{selectedSummary?.is_active ? t('page.status.active') : t('page.status.draft')}</Badge>
                         </div>
-                        <p className="mt-2 text-sm text-muted-foreground">{draft.description || t('page.list.noDescription')}</p>
-                        <div className="mt-3 flex flex-wrap gap-4 text-xs text-muted-foreground">
-                          <span>{t('page.detail.metaClass', { className: draft.class_name })}</span>
-                          <span>{t('page.detail.metaVersion', { version: selectedSummary?.version || 1 })}</span>
-                          <span>{t('page.detail.metaSource', { source: availableBuiltinNames.has((selectedSummary?.class_name || draft.class_name).toLowerCase()) ? t('page.table.builtin') : t('page.table.custom') })}</span>
-                          <span>{t('page.detail.metaUpdated', { value: formatDateTime(selectedSummary?.updated_at, currentLanguage) })}</span>
-                        </div>
                       </div>
 
                       <div className="flex flex-wrap gap-2">
@@ -1148,6 +1448,16 @@ export default function Strategies() {
                         >
                           <Save size={14} />
                           {saving ? t('form.saving') : t('page.actions.save')}
+                        </button>
+                        <button
+                          type="button"
+                          className={buttonSecondaryClass}
+                          onClick={openTemplateEditorForCreate}
+                          disabled={templateActionLoading}
+                          data-testid="save-as-template-button"
+                        >
+                          <Plus size={14} />
+                          {t('page.templates.saveCurrent')}
                         </button>
                         <button type="button" className={buttonGhostClass} onClick={handleDuplicate}>
                           <Copy size={14} />
@@ -1357,7 +1667,7 @@ export default function Strategies() {
         )}
 
         {mainTab === 'templates' && (
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="grid gap-4 xl:grid-cols-2">
             <section className={`${shellCardClass} p-5`}>
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <div>
@@ -1391,13 +1701,13 @@ export default function Strategies() {
                   {t('page.templates.empty')}
                 </div>
               ) : (
-                <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3" data-testid="strategy-templates-grid">
+                <div className="grid gap-4 md:grid-cols-2" data-testid="strategy-templates-grid">
                   {templates.map((template) => (
-                    <article key={template.key} className="rounded-2xl border border-border bg-background p-4" data-testid={`template-card-${template.key}`}>
+                    <article key={template.key} className="min-w-0 rounded-2xl border border-border bg-background p-4" data-testid={`template-card-${template.key}`}>
                       <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <div className="text-base font-semibold text-foreground">{template.name}</div>
-                          <div className="mt-1 text-sm text-muted-foreground">{template.description || t('page.templates.fallbackDescription')}</div>
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-base font-semibold text-foreground">{template.name}</div>
+                          <div className="mt-1 line-clamp-2 break-words text-sm text-muted-foreground">{template.description || t('page.templates.fallbackDescription')}</div>
                         </div>
                         <Badge variant={getCategoryVariant(template.category)}>{translateCategory(template.category)}</Badge>
                       </div>
@@ -1407,8 +1717,10 @@ export default function Strategies() {
                         </Badge>
                         <Badge variant="muted">{template.visibility}</Badge>
                       </div>
-                      <div className="mt-3 text-xs text-muted-foreground">
-                        {t('page.templates.downloads', { count: template.downloads })} · {formatDateTime(template.updatedAt, currentLanguage)}
+                      <div className="mt-3 flex flex-wrap gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                        <span>{t('page.templates.downloads', { count: template.downloads })}</span>
+                        <span>|</span>
+                        <span>{formatDateTime(template.updatedAt, currentLanguage)}</span>
                       </div>
                       <div className="mt-4 flex flex-wrap gap-2">
                         <button type="button" className={buttonGhostClass} onClick={() => void handleTemplatePreview(template)}>
@@ -1436,6 +1748,12 @@ export default function Strategies() {
                   <div>
                     <h3 className="text-lg font-semibold text-card-foreground">{selectedTemplate.name}</h3>
                     <p className="mt-1 text-sm text-muted-foreground">{selectedTemplate.description || t('page.templates.fallbackDescription')}</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Badge variant={selectedTemplate.source === 'marketplace' ? 'success' : 'muted'}>
+                        {selectedTemplate.source === 'marketplace' ? t('page.templates.sourceMarketplace') : t('page.templates.sourceMine')}
+                      </Badge>
+                      <Badge variant="muted">{selectedTemplate.visibility}</Badge>
+                    </div>
                   </div>
                   {selectedTemplateLoading ? (
                     <div className="rounded-xl border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
@@ -1456,6 +1774,104 @@ export default function Strategies() {
                     )}
                     <button type="button" className={`${buttonPrimaryClass} flex-1`} onClick={() => void createDraftFromTemplate(selectedTemplate)} disabled={selectedTemplateLoading}>
                       {t('page.actions.useTemplate')}
+                    </button>
+                    {selectedTemplate.source === 'marketplace' && (
+                      <button type="button" className={buttonSecondaryClass} onClick={() => void cloneTemplateToMine(selectedTemplate)} disabled={templateActionLoading}>
+                        <Copy size={14} />
+                        {t('page.templates.cloneToMine')}
+                      </button>
+                    )}
+                    {selectedTemplateInMine && (
+                      <>
+                        <button type="button" className={buttonSecondaryClass} onClick={() => void openTemplateEditorForEdit(selectedTemplateInMine)} disabled={templateActionLoading}>
+                          <PencilLine size={14} />
+                          {t('page.actions.edit')}
+                        </button>
+                        <button type="button" className={buttonSecondaryClass} onClick={() => void toggleTemplateVisibility(selectedTemplateInMine)} disabled={templateActionLoading}>
+                          <Globe size={14} />
+                          {selectedTemplateInMine.visibility === 'public' ? t('page.templates.unpublish') : t('page.templates.publish')}
+                        </button>
+                        <button type="button" className={buttonSecondaryClass} onClick={() => requestDeleteTemplate(selectedTemplateInMine)} disabled={templateActionLoading}>
+                          <Trash2 size={14} />
+                          {t('page.actions.delete')}
+                        </button>
+                      </>
+                    )}
+                  </div>
+
+                  <div className="rounded-xl border border-border bg-background p-4">
+                    <div className="mb-3 flex items-center justify-between">
+                      <div className="text-sm font-medium text-card-foreground">{t('page.templates.ratingTitle')}</div>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Star size={14} className="text-yellow-500" />
+                        <span>{templateRatings.avgRating.toFixed(2)} / 5</span>
+                        <span>({templateRatings.count})</span>
+                      </div>
+                    </div>
+                    {templateReviews.length > 0 && (
+                      <div className="space-y-2">
+                        {templateReviews.slice(0, 3).map((review) => (
+                          <div key={review.id} className="rounded-lg border border-border/70 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+                            <div className="font-medium text-foreground">{`* ${review.rating}`}</div>
+                            <div>{review.review || '-'}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="rounded-xl border border-border bg-background p-4">
+                    <div className="mb-3 flex items-center justify-between">
+                      <div className="text-sm font-medium text-card-foreground">{t('page.templates.commentsTitle')}</div>
+                      <MessageSquare size={14} className="text-muted-foreground" />
+                    </div>
+                    {selectedTemplate.source === 'marketplace' ? (
+                      <div className="mb-3">
+                        <label className="mb-1 block text-xs font-medium text-muted-foreground">{t('page.templates.ratingOptional')}</label>
+                        <select
+                          className={inputClass}
+                          value={ratingValue === null ? '' : String(ratingValue)}
+                          onChange={(event) => {
+                            const value = event.target.value
+                            setRatingValue(value ? Number(value) : null)
+                          }}
+                        >
+                          <option value="">{t('page.templates.noRating')}</option>
+                          {[5, 4, 3, 2, 1].map((value) => (
+                            <option key={value} value={value}>
+                              {value}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : (
+                      <div className="mb-3 text-xs text-muted-foreground">{t('page.templates.mineNoRatingHint')}</div>
+                    )}
+                    {templateComments.length > 0 ? (
+                      <div className="mb-3 space-y-2">
+                        {templateComments.slice(0, 4).map((comment) => (
+                          <div key={comment.id} className="rounded-lg border border-border/70 bg-muted/20 px-3 py-2 text-xs">
+                            <div className="text-foreground">{comment.content}</div>
+                            <div className="mt-1 text-muted-foreground">{formatDateTime(comment.created_at, currentLanguage)}</div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="mb-3 text-xs text-muted-foreground">{t('page.templates.noComments')}</div>
+                    )}
+                    <textarea
+                      className={`${inputClass} min-h-[80px] resize-y`}
+                      value={commentDraft}
+                      onChange={(event) => setCommentDraft(event.target.value)}
+                      placeholder={t('page.templates.commentPlaceholder')}
+                    />
+                    <button
+                      type="button"
+                      className={`${buttonPrimaryClass} mt-2`}
+                      onClick={() => void submitTemplateFeedback()}
+                      disabled={templateActionLoading || loadingTemplateFeedback || (!commentDraft.trim() && !(selectedTemplate.source === 'marketplace' && ratingValue !== null))}
+                    >
+                      {t('page.templates.submitFeedback')}
                     </button>
                   </div>
                 </div>
@@ -1522,6 +1938,75 @@ export default function Strategies() {
             <div className="mt-6 flex justify-end gap-2">
               <button type="button" className={buttonSecondaryClass} onClick={() => setCreateModalOpen(false)}>{t('page.actions.cancel')}</button>
               <button type="button" className={buttonPrimaryClass} onClick={handleCreateDraft} data-testid="create-strategy-confirm">{t('page.actions.create')}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {templateEditor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4">
+          <div className="max-h-[90vh] w-full max-w-3xl overflow-auto rounded-2xl border border-border bg-card p-6 shadow-xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-semibold text-card-foreground">
+                  {templateEditor.mode === 'create' ? t('page.templates.createTitle') : t('page.templates.editTitle')}
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">{t('page.templates.editorSubtitle')}</p>
+              </div>
+              <button type="button" className={buttonGhostClass} onClick={() => setTemplateEditor(null)}>
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="mt-5 space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm font-medium">{t('page.modals.name')}</label>
+                  <input className={inputClass} value={templateEditor.name} onChange={(event) => setTemplateEditor((current) => (current ? { ...current, name: event.target.value } : current))} />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium">{t('page.modals.type')}</label>
+                  <select className={inputClass} value={templateEditor.category} onChange={(event) => setTemplateEditor((current) => (current ? { ...current, category: event.target.value as StrategyCategoryKey } : current))}>
+                    <option value="cta">{t('page.types.cta')}</option>
+                    <option value="alpha">{t('page.types.alpha')}</option>
+                    <option value="statArb">{t('page.types.statArb')}</option>
+                    <option value="grid">{t('page.types.grid')}</option>
+                    <option value="ai">{t('page.types.ai')}</option>
+                    <option value="custom">{t('page.types.custom')}</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium">{t('page.modals.description')}</label>
+                <textarea className={`${inputClass} min-h-[88px] resize-y`} value={templateEditor.description} onChange={(event) => setTemplateEditor((current) => (current ? { ...current, description: event.target.value } : current))} />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium">{t('page.templates.visibility')}</label>
+                <select className={inputClass} value={templateEditor.visibility} onChange={(event) => setTemplateEditor((current) => (current ? { ...current, visibility: event.target.value as 'private' | 'team' | 'public' } : current))}>
+                  <option value="private">{t('page.templates.visibilityPrivate')}</option>
+                  <option value="team">{t('page.templates.visibilityTeam')}</option>
+                  <option value="public">{t('page.templates.visibilityPublic')}</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium">{t('form.code')}</label>
+                <textarea className={`${inputClass} min-h-[260px] resize-y font-mono text-xs leading-6`} value={templateEditor.code} onChange={(event) => setTemplateEditor((current) => (current ? { ...current, code: event.target.value } : current))} />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium">{t('page.detail.parameters.jsonLabel')}</label>
+                <textarea className={`${inputClass} min-h-[140px] resize-y font-mono text-xs leading-6`} value={templateEditor.defaultParamsText} onChange={(event) => setTemplateEditor((current) => (current ? { ...current, defaultParamsText: event.target.value } : current))} />
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-2">
+              <button type="button" className={buttonSecondaryClass} onClick={() => setTemplateEditor(null)}>{t('page.actions.cancel')}</button>
+              <button type="button" className={buttonPrimaryClass} onClick={() => void submitTemplateEditor()} disabled={templateActionLoading}>
+                {templateActionLoading ? t('form.saving') : t('page.actions.save')}
+              </button>
             </div>
           </div>
         </div>

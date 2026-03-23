@@ -11,7 +11,7 @@ interface Template {
   name: string
   description: string
   author: string
-  category: string
+  categoryKey: MarketplaceCategory
   rating: number
   downloads: number
   tags: string[]
@@ -19,31 +19,120 @@ interface Template {
 }
 
 const CATEGORY_KEYS = ['all', 'trend', 'meanReversion', 'multiFactor', 'arbitrage', 'hft', 'ml'] as const
+type CategoryKey = (typeof CATEGORY_KEYS)[number]
+type MarketplaceCategory = Exclude<CategoryKey, 'all'>
+
+type TemplateApiItem = {
+  id?: number | string | null
+  name?: string | null
+  description?: string | null
+  author?: string | null
+  author_id?: number | string | null
+  category?: string | null
+  rating?: number | string | null
+  downloads?: number | string | null
+  tags?: unknown
+  featured?: boolean | null
+}
+
+function unwrapTemplateRows(value: unknown): TemplateApiItem[] {
+  if (Array.isArray(value)) return value as TemplateApiItem[]
+  if (value && typeof value === 'object') {
+    const container = value as Record<string, unknown>
+    const direct = container.data ?? container.items ?? container.results ?? container.list
+    if (Array.isArray(direct)) return direct as TemplateApiItem[]
+    if (direct && typeof direct === 'object') {
+      const nested = direct as Record<string, unknown>
+      if (Array.isArray(nested.data)) return nested.data as TemplateApiItem[]
+      if (Array.isArray(nested.items)) return nested.items as TemplateApiItem[]
+    }
+  }
+  return []
+}
+
+function toNumber(value: unknown, fallback = 0) {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string') {
+    const parsed = Number(value)
+    if (Number.isFinite(parsed)) return parsed
+  }
+  return fallback
+}
+
+function normalizeCategoryKey(value: unknown): MarketplaceCategory {
+  const normalized = String(value || '').trim().toLowerCase()
+  if (['trend', 'trend_following', 'cta'].includes(normalized)) return 'trend'
+  if (['meanreversion', 'mean_reversion', 'mean_revert', 'statarb', 'stat_arb'].includes(normalized)) return 'meanReversion'
+  if (['multifactor', 'multi_factor', 'alpha', 'factor'].includes(normalized)) return 'multiFactor'
+  if (['arbitrage', 'pair'].includes(normalized)) return 'arbitrage'
+  if (['hft', 'high_frequency', 'highfrequency'].includes(normalized)) return 'hft'
+  if (['ml', 'ai', 'machine_learning'].includes(normalized)) return 'ml'
+  return 'trend'
+}
+
+function normalizeTags(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value
+      .filter((item): item is string => typeof item === 'string')
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .slice(0, 4)
+  }
+  if (typeof value === 'string') {
+    return value
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .slice(0, 4)
+  }
+  return []
+}
+
+function mapTemplate(item: TemplateApiItem, index: number): Template {
+  const id = item.id != null ? String(item.id) : `template-${index}`
+  const name = (item.name || '').trim() || `Template ${index + 1}`
+  const description = (item.description || '').trim()
+  const author = (item.author || '').trim() || (item.author_id != null ? `#${item.author_id}` : 'system')
+  return {
+    id,
+    name,
+    description,
+    author,
+    categoryKey: normalizeCategoryKey(item.category),
+    rating: toNumber(item.rating),
+    downloads: toNumber(item.downloads),
+    tags: normalizeTags(item.tags),
+    featured: Boolean(item.featured),
+  }
+}
 
 export default function Marketplace() {
   const { t } = useTranslation('social')
   const [search, setSearch] = useState('')
-  const [category, setCategory] = useState<(typeof CATEGORY_KEYS)[number]>('all')
+  const [category, setCategory] = useState<CategoryKey>('all')
   const [page, setPage] = useState(1)
 
   const { data: templates = [] } = useQuery<Template[]>({
     queryKey: ['marketplace-templates'],
     queryFn: () =>
       templateAPI.listMarketplace().then((r) => {
-        const d = r.data
-        return Array.isArray(d) ? d : d?.data ?? []
+        const items = unwrapTemplateRows(r.data)
+        return items.map((item, index) => mapTemplate(item, index))
       }),
   })
 
   const featured = templates.find((item) => item.featured) || templates[0]
+  const normalizedSearch = search.trim().toLowerCase()
   const filtered = useMemo(
     () =>
       templates.filter(
         (item) =>
-          (category === 'all' || item.category === t(`marketplace.categories.${category}`)) &&
-          (!search || item.name.includes(search) || item.description.includes(search))
+          (category === 'all' || item.categoryKey === category) &&
+          (!normalizedSearch ||
+            item.name.toLowerCase().includes(normalizedSearch) ||
+            item.description.toLowerCase().includes(normalizedSearch))
       ),
-    [category, search, t, templates]
+    [category, normalizedSearch, templates]
   )
 
   const pageSize = 6
@@ -133,18 +222,20 @@ export default function Marketplace() {
         {paged.map((item) => (
           <div key={item.id} className="rounded-lg border border-border bg-card p-5 hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between mb-2">
-              <Badge variant="primary">{item.category}</Badge>
+              <Badge variant="primary">{t(`marketplace.categories.${item.categoryKey}`)}</Badge>
               {renderStars(item.rating)}
             </div>
             <h3 className="font-semibold text-card-foreground mb-1">{item.name}</h3>
             <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{item.description}</p>
-            <div className="flex flex-wrap gap-1 mb-3">
-              {item.tags.map((tag) => (
-                <span key={tag} className="px-2 py-0.5 text-xs rounded-full bg-muted text-muted-foreground">
-                  {tag}
-                </span>
-              ))}
-            </div>
+            {item.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1 mb-3">
+                {item.tags.map((tag) => (
+                  <span key={tag} className="px-2 py-0.5 text-xs rounded-full bg-muted text-muted-foreground">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span>
                 {t('marketplace.by')} {item.author}
