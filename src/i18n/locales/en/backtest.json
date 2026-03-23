@@ -4,6 +4,20 @@
   "page": {
     "title": "Backtesting",
     "subtitle": "Strategy backtest engine with multi-dimensional performance analysis",
+    "bulkAction": "Bulk Backtest",
+    "realDataBadge": "Live Data",
+    "realFlowHint": "Live execution flow",
+    "runningSubtitle": "Queued and running jobs",
+    "completionSubtitle": "completion rate",
+    "bulkSubtitle": "Run one strategy across multiple symbols",
+    "workflowHint": "Click a completed backtest item to open result details. Bulk jobs support summary view and drill-down into child results.",
+    "latestCompleted": "Latest Completed Runs",
+    "latestCompletedSubtitle": "Keeps the old browsing flow, but now uses the current live APIs and persisted job results.",
+    "emptyLatest": "No completed backtests yet. Submitted jobs will appear here after finishing.",
+    "executionGuideTitle": "How It Works",
+    "executionGuideStep1": "Single backtests are submitted to the live queue and can be opened from the job list once completed.",
+    "executionGuideStep2": "Bulk backtests support industry, exchange, and manual multi-symbol selection with a summary view after submission.",
+    "executionGuideStep3": "Each symbol inside the bulk summary can drill down into the same result modal used by single backtests.",
     "tabs": {
       "runs": "Backtest Runs",
       "result": "Results",
@@ -13,6 +27,7 @@
     "newBacktest": "New Backtest",
     "searchPlaceholder": "Search strategies or symbols...",
     "allStatuses": "All Statuses",
+    "allStrategies": "All Strategies",
     "emptyRuns": "No backtest history yet",
     "selectRun": "Choose a run from the backtest list to inspect the result",
     "generateCompare": "Generate Compare",
@@ -131,7 +146,9 @@
     "processing": "Processing...",
     "confirmDelete": "Are you sure you want to delete this backtest job?",
     "loadMore": "load more",
-    "results": "results"
+      "results": "results",
+      "last7Days": "Last 7 days",
+      "last30Days": "Last 30 days"
   },
   "status": {
     "pending": "Pending",

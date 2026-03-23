@@ -6,18 +6,238 @@ import {
   List,
   RefreshCw,
 } from 'lucide-react'
-import { useCallback, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import CandlestickChart from '../components/charts/CandlestickChart'
-import DataTable, { type Column } from '../components/ui/DataTable'
-import FilterBar from '../components/ui/FilterBar'
 import TabPanel from '../components/ui/TabPanel'
 import { marketDataAPI } from '../lib/api'
 import type { MarketSymbol, OHLCBar } from '../types'
 
+type QuoteMarket = 'CN' | 'HK' | 'US' | 'CRYPTO' | 'FUTURES' | 'CN_INDEX'
+
+type Quote = {
+  symbol?: string
+  name?: string
+  price?: number
+  change?: number
+  change_percent?: number
+  open?: number
+  high?: number
+  low?: number
+  prev_close?: number
+  volume?: number
+  amount?: number
+  market?: string
+  currency?: string
+  source?: string
+  asof?: string
+  delayed?: boolean
+}
+
+type MarketCard = {
+  id: string
+  market: QuoteMarket
+  symbol: string
+  labelKey: string
+}
+
+const OVERVIEW_CARDS: MarketCard[] = [
+  { id: 'cn', market: 'CN_INDEX', symbol: '000300.SH', labelKey: 'page.marketCards.cn' },
+  { id: 'hk', market: 'HK', symbol: '00700', labelKey: 'page.marketCards.hk' },
+  { id: 'us', market: 'US', symbol: 'AAPL', labelKey: 'page.marketCards.us' },
+  { id: 'crypto', market: 'CRYPTO', symbol: 'BTCUSDT', labelKey: 'page.marketCards.crypto' },
+]
+
+const KLINE_MARKET_OPTIONS: Array<{ value: QuoteMarket; labelKey: string }> = [
+  { value: 'CN', labelKey: 'realtime.markets.cn' },
+  { value: 'HK', labelKey: 'realtime.markets.hk' },
+  { value: 'US', labelKey: 'realtime.markets.us' },
+  { value: 'CRYPTO', labelKey: 'realtime.markets.crypto' },
+]
+
+const YEAR_RANGES = [1, 2, 5, 10] as const
+
+type YearRange = (typeof YEAR_RANGES)[number]
+
+const QUICK_SYMBOLS: Record<QuoteMarket, string[]> = {
+  CN: ['600519', '000001', '000858', '601318', '300750'],
+  HK: ['00700', '09988', '03690', '01810', '00941'],
+  US: ['AAPL', 'MSFT', 'NVDA', 'TSLA', 'AMZN'],
+  CRYPTO: ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'DOGEUSDT'],
+  FUTURES: ['RB2410', 'AU2408', 'CU2409', 'IF2409', 'SC2409'],
+  CN_INDEX: ['000300.SH', '000001.SH', '399001.SZ', '399006.SZ'],
+}
+
+function unwrapList<T>(value: unknown): T[] {
+  if (Array.isArray(value)) return value as T[]
+  if (value && typeof value === 'object') {
+    const container = value as Record<string, unknown>
+    if (Array.isArray(container.data)) return container.data as T[]
+    if (container.data && typeof container.data === 'object') {
+      const nested = container.data as Record<string, unknown>
+      if (Array.isArray(nested.data)) return nested.data as T[]
+      if (Array.isArray(nested.items)) return nested.items as T[]
+    }
+  }
+  return []
+}
+
+function toNumber(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string') {
+    const parsed = Number(value)
+    if (Number.isFinite(parsed)) return parsed
+  }
+  return null
+}
+
+function formatDate(d: Date): string {
+  return d.toISOString().slice(0, 10)
+}
+
+function subtractYears(end: string, years: number): string {
+  const d = new Date(`${end}T00:00:00`)
+  d.setFullYear(d.getFullYear() - years)
+  return formatDate(d)
+}
+
+function normalizeQuoteSymbol(symbol: string, market: QuoteMarket): string {
+  const raw = symbol.trim().toUpperCase()
+  if (!raw) return ''
+
+  if (market === 'CN' || market === 'CN_INDEX') {
+    const code = raw.split('.')[0].replace(/^SH|^SZ/, '')
+    return code
+  }
+
+  if (market === 'HK') {
+    const code = raw.split('.')[0].replace(/^HK/, '')
+    return code.padStart(5, '0')
+  }
+
+  return raw.replace(/[^A-Z0-9]/g, '')
+}
+
+function toCnVtSymbol(input: string): string | null {
+  const raw = input.trim().toUpperCase()
+  if (!raw) return null
+
+  if (raw.includes('.')) {
+    const [codePart, suffixPart] = raw.split('.')
+    const code = codePart.replace(/[^0-9]/g, '')
+    const suffix = suffixPart.trim()
+    if (!code) return null
+    if (suffix === 'SSE' || suffix === 'SH') return `${code}.SSE`
+    if (suffix === 'SZSE' || suffix === 'SZ') return `${code}.SZSE`
+  }
+
+  const codeOnly = raw.replace(/[^0-9]/g, '')
+  if (!codeOnly) return null
+  const isShanghai = codeOnly.startsWith('5') || codeOnly.startsWith('6') || codeOnly.startsWith('9')
+  return `${codeOnly}.${isShanghai ? 'SSE' : 'SZSE'}`
+}
+
+function parseQuotePayload(value: unknown): Quote {
+  if (value && typeof value === 'object') {
+    return value as Quote
+  }
+  return {}
+}
+
+function quoteFromSeriesFallback(
+  points: Array<{ ts: number; price: number }>,
+  market: QuoteMarket,
+  symbol: string
+): Quote | null {
+  if (!Array.isArray(points) || points.length === 0) return null
+  const latest = points[points.length - 1]
+  return {
+    symbol,
+    market,
+    price: toNumber(latest.price) ?? undefined,
+    source: 'cache:series',
+    delayed: true,
+    asof: new Date((latest.ts || 0) * 1000).toISOString(),
+  }
+}
+
+async function fetchQuoteFast(params: { symbol: string; market: QuoteMarket }): Promise<Quote | null> {
+  try {
+    const timeoutMs = params.market === 'CN' || params.market === 'CN_INDEX' ? 5000 : 3000
+    const response = await marketDataAPI.quote(params, { timeoutMs })
+    const quote = parseQuotePayload(response.data)
+    if (toNumber(quote.price) !== null) return quote
+  } catch {
+    // Fall through to cache fallback
+  }
+
+  try {
+    const seriesResponse = await marketDataAPI.quoteSeries(params, { timeoutMs: 2500 })
+    const seriesPoints = ((seriesResponse.data as { points?: Array<{ ts: number; price: number }> })?.points || [])
+      .filter((point) => typeof point?.ts === 'number' && typeof point?.price === 'number')
+    return quoteFromSeriesFallback(seriesPoints, params.market, params.symbol)
+  } catch {
+    return null
+  }
+}
+
+function mergeRealtimeIntoDailyBars(bars: OHLCBar[], quote: Quote | undefined, tradeDate: string): OHLCBar[] {
+  if (!quote || toNumber(quote.price) === null) return bars
+
+  const price = toNumber(quote.price) as number
+  const open = toNumber(quote.open) ?? toNumber(quote.prev_close) ?? price
+  const high = Math.max(toNumber(quote.high) ?? price, price, open)
+  const low = Math.min(toNumber(quote.low) ?? price, price, open)
+  const volume = toNumber(quote.volume) ?? 0
+
+  const merged = [...bars].sort((a, b) => String(a.datetime).localeCompare(String(b.datetime)))
+  const currentBar: OHLCBar = {
+    datetime: `${tradeDate}T15:00:00`,
+    open,
+    high,
+    low,
+    close: price,
+    volume,
+  }
+
+  if (merged.length === 0) {
+    return [currentBar]
+  }
+
+  const last = merged[merged.length - 1]
+  const lastDate = String(last.datetime).slice(0, 10)
+  if (lastDate === tradeDate) {
+    merged[merged.length - 1] = {
+      ...last,
+      open: toNumber(last.open) ?? open,
+      high: Math.max(toNumber(last.high) ?? high, high),
+      low: Math.min(toNumber(last.low) ?? low, low),
+      close: price,
+      volume: Math.max(toNumber(last.volume) ?? 0, volume),
+    }
+    return merged
+  }
+
+  merged.push(currentBar)
+  return merged
+}
+
+function quoteChangeClass(change: number | null): string {
+  if (change === null) return 'text-muted-foreground'
+  return change >= 0 ? 'text-green-600' : 'text-red-600'
+}
+
+function formatPrice(value: number | null): string {
+  if (value === null) return '--'
+  if (Math.abs(value) >= 1000) return value.toLocaleString(undefined, { maximumFractionDigits: 2 })
+  return value.toFixed(4)
+}
+
 export default function MarketData() {
-  const { t } = useTranslation('market')
+  const { t, i18n } = useTranslation(['market', 'common'])
+  const currentLanguage = i18n.resolvedLanguage ?? i18n.language
+
   const [activeTab, setActiveTab] = useState('quotes')
   const tabs = useMemo(
     () => [
@@ -29,109 +249,154 @@ export default function MarketData() {
     ],
     [t]
   )
-  const klinePeriods = useMemo(
-    () => [t('page.periods.daily'), t('page.periods.weekly'), t('page.periods.monthly')],
-    [t]
-  )
-  const industries = useMemo(
-    () => [
-      t('page.allIndustries'),
-      t('page.industries.liquor'),
-      t('page.industries.bank'),
-      t('page.industries.solar'),
-      t('page.industries.newEnergy'),
-      t('page.industries.semiconductor'),
-      t('page.industries.healthcare'),
-      t('page.industries.property'),
-      t('page.industries.technology'),
-    ],
-    [t]
-  )
 
-  // ── Quotes tab state ───────────────────────────────────────────────
-  const [search, setSearch] = useState('')
-  const [industry, setIndustry] = useState('')
+  const today = useMemo(() => formatDate(new Date()), [])
 
-  const { data: symbols = [], isLoading: symbolsLoading } = useQuery<MarketSymbol[]>({
-    queryKey: ['market', 'symbols'],
-    queryFn: () => marketDataAPI.symbols(undefined, undefined, 500).then((r) => {
-      const d = r.data
-      return Array.isArray(d) ? d : d?.data ?? []
-    }),
+  const {
+    data: overviewQuotes = [],
+    isLoading: overviewLoading,
+    refetch: refetchOverview,
+    isFetching: overviewFetching,
+  } = useQuery({
+    queryKey: ['market', 'overview-multi'],
+    enabled: activeTab === 'quotes',
+    refetchInterval: 20000,
+    queryFn: async () => {
+      const rows = await Promise.all(
+        OVERVIEW_CARDS.map(async (card) => {
+          const quote = await fetchQuoteFast({ symbol: card.symbol, market: card.market })
+          return { ...card, quote, error: quote ? null : t('page.quoteTimeoutHint') }
+        })
+      )
+      return rows
+    },
   })
 
-  const filteredSymbols = useMemo(() => {
-    let list = symbols
-    if (search) {
-      const q = search.toLowerCase()
-      list = list.filter((s) => s.symbol.toLowerCase().includes(q) || s.name.toLowerCase().includes(q))
-    }
-    if (industry && industry !== t('page.allIndustries')) {
-      list = list.filter((s) => s.industry?.includes(industry))
-    }
-    return list
-  }, [industry, search, symbols, t])
-
-  const symbolColumns: Column<MarketSymbol>[] = [
-    { key: 'symbol', label: t('page.columns.symbol'), sortable: true, className: 'font-mono' },
-    { key: 'name', label: t('page.columns.name'), sortable: true },
-    { key: 'exchange', label: t('page.columns.exchange') },
-    { key: 'industry', label: t('page.columns.industry') },
-    { key: 'list_date', label: t('page.columns.listDate'), render: (r) => r.list_date || '-' },
-  ]
-
-  // ── K-line tab state ───────────────────────────────────────────────
-  const [klineSymbol, setKlineSymbol] = useState('600519.SH')
-  const [klinePeriod, setKlinePeriod] = useState<string>(t('page.periods.daily'))
+  const [klineMarket, setKlineMarket] = useState<QuoteMarket>('CN')
+  const [klineSymbolInput, setKlineSymbolInput] = useState('600519')
+  const [debouncedKlineSymbol, setDebouncedKlineSymbol] = useState('600519')
+  const [historyYears, setHistoryYears] = useState<YearRange>(1)
   const [showMA, setShowMA] = useState(true)
   const [showVol, setShowVol] = useState(true)
 
-  const endDate = useMemo(() => {
-    const d = new Date()
-    return d.toISOString().slice(0, 10)
-  }, [])
-  const startDate = useMemo(() => {
-    const d = new Date()
-    d.setMonth(d.getMonth() - 6)
-    return d.toISOString().slice(0, 10)
-  }, [])
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      setDebouncedKlineSymbol(klineSymbolInput.trim())
+    }, 300)
+    return () => window.clearTimeout(handle)
+  }, [klineSymbolInput])
 
-  const { data: klineData, isLoading: klineLoading } = useQuery<OHLCBar[]>({
-    queryKey: ['market', 'kline', klineSymbol, startDate, endDate],
-    queryFn: () => marketDataAPI.history(klineSymbol, startDate, endDate).then((r) => {
-      const d = r.data
-      return Array.isArray(d) ? d : d?.data ?? []
-    }),
-    enabled: activeTab === 'kline' && !!klineSymbol,
+  const quoteSymbol = useMemo(
+    () => normalizeQuoteSymbol(debouncedKlineSymbol, klineMarket),
+    [debouncedKlineSymbol, klineMarket]
+  )
+
+  const cnVtSymbol = useMemo(() => {
+    if (klineMarket !== 'CN') return null
+    return toCnVtSymbol(debouncedKlineSymbol)
+  }, [debouncedKlineSymbol, klineMarket])
+
+  const historyStartDate = useMemo(() => subtractYears(today, historyYears), [historyYears, today])
+
+  const { data: symbols = [] } = useQuery<MarketSymbol[]>({
+    queryKey: ['market', 'symbols', 'cn'],
+    enabled: activeTab === 'kline' && klineMarket === 'CN',
+    queryFn: () =>
+      marketDataAPI.symbols(undefined, undefined, 500).then((response) => unwrapList<MarketSymbol>(response.data)),
   })
 
-  const klineDates = (klineData ?? []).map((b) => b.datetime.slice(0, 10))
-  const klineOhlc: [number, number, number, number][] = (klineData ?? []).map((b) => [b.open, b.close, b.low, b.high])
-  const klineVolumes = showVol ? (klineData ?? []).map((b) => b.volume) : undefined
+  const klineSuggestions = useMemo(() => {
+    if (klineMarket !== 'CN') {
+      return QUICK_SYMBOLS[klineMarket].filter((item) =>
+        item.toLowerCase().includes(klineSymbolInput.trim().toLowerCase())
+      )
+    }
 
-  // Simple MA indicators
+    const q = klineSymbolInput.trim().toLowerCase()
+    const cnFromDb = symbols
+      .filter((item) => {
+        if (!q) return true
+        return item.symbol.toLowerCase().includes(q) || item.name.toLowerCase().includes(q)
+      })
+      .slice(0, 20)
+      .map((item) => item.symbol)
+
+    const fallback = QUICK_SYMBOLS.CN.filter((item) => item.includes(q))
+    return Array.from(new Set([...cnFromDb, ...fallback])).slice(0, 20)
+  }, [klineMarket, klineSymbolInput, symbols])
+
+  const {
+    data: klineQuote,
+    isLoading: quoteLoading,
+    refetch: refetchQuote,
+  } = useQuery<Quote>({
+    queryKey: ['market', 'kline-quote', klineMarket, quoteSymbol],
+    enabled: activeTab === 'kline' && quoteSymbol.length >= 2,
+    refetchInterval: 15000,
+    queryFn: async () => {
+      const quote = await fetchQuoteFast({ symbol: quoteSymbol, market: klineMarket })
+      return quote || {}
+    },
+  })
+
+  const {
+    data: historyBars = [],
+    isLoading: historyLoading,
+    error: historyError,
+    refetch: refetchHistory,
+  } = useQuery<OHLCBar[]>({
+    queryKey: ['market', 'kline-history', cnVtSymbol, historyStartDate, today],
+    enabled: activeTab === 'kline' && !!cnVtSymbol,
+    queryFn: () =>
+      marketDataAPI
+        .history(cnVtSymbol as string, historyStartDate, today, { pageSize: 5000 })
+        .then((response) => unwrapList<OHLCBar>(response.data)),
+  })
+
+  const mergedKlineBars = useMemo(
+    () => mergeRealtimeIntoDailyBars(historyBars, klineQuote, today),
+    [historyBars, klineQuote, today]
+  )
+
+  const klineDates = useMemo(
+    () => mergedKlineBars.map((bar) => String(bar.datetime).slice(0, 10)),
+    [mergedKlineBars]
+  )
+
+  const klineOhlc: [number, number, number, number][] = useMemo(
+    () =>
+      mergedKlineBars.map((bar) => [
+        toNumber(bar.open) ?? 0,
+        toNumber(bar.close) ?? 0,
+        toNumber(bar.low) ?? 0,
+        toNumber(bar.high) ?? 0,
+      ]),
+    [mergedKlineBars]
+  )
+
+  const klineVolumes = useMemo(
+    () => (showVol ? mergedKlineBars.map((bar) => toNumber(bar.volume) ?? 0) : undefined),
+    [mergedKlineBars, showVol]
+  )
+
   const maIndicators = useMemo(() => {
-    if (!showMA || !klineData?.length) return []
-    const closes = klineData.map((b) => b.close)
-    const ma = (period: number) => closes.map((_, i) => {
-      if (i < period - 1) return NaN
-      let sum = 0
-      for (let j = i - period + 1; j <= i; j++) sum += closes[j]
-      return +(sum / period).toFixed(2)
-    })
+    if (!showMA || mergedKlineBars.length === 0) return []
+    const closes = mergedKlineBars.map((bar) => toNumber(bar.close) ?? 0)
+    const ma = (period: number) =>
+      closes.map((_, index) => {
+        if (index < period - 1) return Number.NaN
+        let sum = 0
+        for (let j = index - period + 1; j <= index; j++) sum += closes[j]
+        return +(sum / period).toFixed(2)
+      })
+
     return [
       { name: 'MA5', data: ma(5), color: '#eab308' },
       { name: 'MA10', data: ma(10), color: '#3b82f6' },
       { name: 'MA20', data: ma(20), color: '#a855f7' },
     ]
-  }, [klineData, showMA])
+  }, [mergedKlineBars, showMA])
 
-  const handleSelectSymbol = useCallback((row: MarketSymbol) => {
-    setKlineSymbol(row.vt_symbol || `${row.symbol}.${row.exchange}`)
-    setActiveTab('kline')
-  }, [])
-
-  // ── Render ─────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
       <div>
@@ -140,74 +405,189 @@ export default function MarketData() {
       </div>
 
       <TabPanel tabs={tabs} activeTab={activeTab} onChange={setActiveTab}>
-        {/* ── Quotes Tab ──────────────────────────────── */}
         {activeTab === 'quotes' && (
           <div className="space-y-4">
-            <FilterBar
-              searchValue={search}
-              onSearchChange={setSearch}
-              searchPlaceholder={t('page.quoteSearchPlaceholder')}
-              filters={[
-                {
-                  key: 'industry',
-                  value: industry,
-                  options: industries.map((item) => ({ value: item === t('page.allIndustries') ? '' : item, label: item })),
-                  onChange: setIndustry,
-                  placeholder: t('page.allIndustries'),
-                },
-              ]}
-            />
-            <DataTable
-              columns={symbolColumns}
-              data={filteredSymbols.slice(0, 100)}
-              keyField="symbol"
-              emptyText={t('noData')}
-              onRowClick={handleSelectSymbol}
-            />
-            {filteredSymbols.length > 100 && (
-              <p className="text-xs text-muted-foreground text-center">
-                {t('page.showingTop', { count: filteredSymbols.length })}
-              </p>
-            )}
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">{t('page.quoteBoardTitle')}</h2>
+                <p className="text-sm text-muted-foreground">{t('page.quoteBoardSubtitle')}</p>
+              </div>
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm hover:bg-muted"
+                onClick={() => void refetchOverview()}
+                disabled={overviewFetching}
+              >
+                <RefreshCw size={14} className={overviewFetching ? 'animate-spin' : ''} />
+                {t('common:refresh')}
+              </button>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              {(overviewQuotes || []).map((card) => {
+                const quote = card.quote
+                const change = toNumber(quote?.change)
+                const changePct = toNumber(quote?.change_percent)
+                const price = toNumber(quote?.price)
+                const high = toNumber(quote?.high)
+                const low = toNumber(quote?.low)
+                const volume = toNumber(quote?.volume)
+
+                return (
+                  <article key={card.id} className="rounded-xl border border-border bg-card p-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <div className="text-sm font-medium text-foreground">{t(card.labelKey)}</div>
+                        <div className="text-xs text-muted-foreground">{quote?.symbol || card.symbol}</div>
+                      </div>
+                      {quote?.delayed && <span className="rounded bg-amber-100 px-2 py-0.5 text-[10px] text-amber-700">{t('realtime.delayed')}</span>}
+                    </div>
+
+                    <div className="mt-3 text-2xl font-semibold text-foreground">{formatPrice(price)}</div>
+                    <div className={`mt-1 text-sm ${quoteChangeClass(change)}`}>
+                      {change !== null ? `${change >= 0 ? '+' : ''}${change.toFixed(2)}` : '--'}
+                      {changePct !== null ? ` (${changePct >= 0 ? '+' : ''}${changePct.toFixed(2)}%)` : ''}
+                    </div>
+
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                      <div>{t('overview.high')}: {high !== null ? high.toFixed(2) : '--'}</div>
+                      <div>{t('overview.low')}: {low !== null ? low.toFixed(2) : '--'}</div>
+                      <div className="col-span-2">{t('overview.volume')}: {volume !== null ? volume.toLocaleString() : '--'}</div>
+                    </div>
+
+                    <div className="mt-2 text-[11px] text-muted-foreground">
+                      {quote?.asof
+                        ? t('realtime.asOf', {
+                            time: new Intl.DateTimeFormat(currentLanguage.startsWith('zh') ? 'zh-CN' : 'en-US', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              second: '2-digit',
+                            }).format(new Date(quote.asof)),
+                          })
+                        : t('realtime.asOfNow')}
+                    </div>
+
+                    {!quote && card.error && (
+                      <div className="mt-2 text-xs text-destructive">{card.error}</div>
+                    )}
+                  </article>
+                )
+              })}
+
+              {overviewLoading && overviewQuotes.length === 0 && (
+                Array.from({ length: 4 }).map((_, index) => (
+                  <div key={index} className="h-36 animate-pulse rounded-xl border border-border bg-muted/30" />
+                ))
+              )}
+            </div>
           </div>
         )}
 
-        {/* ── K-line Tab ──────────────────────────────── */}
         {activeTab === 'kline' && (
           <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-muted-foreground">{t('page.stockLabel')}</label>
+            <div className="grid gap-3 rounded-xl border border-border bg-card p-4 md:grid-cols-[180px_minmax(0,1fr)] xl:grid-cols-[180px_minmax(0,1fr)_auto]">
+              <div>
+                <label className="mb-1 block text-sm text-muted-foreground">{t('realtime.market')}</label>
+                <select
+                  value={klineMarket}
+                  onChange={(event) => {
+                    const nextMarket = event.target.value as QuoteMarket
+                    setKlineMarket(nextMarket)
+                    const fallback = QUICK_SYMBOLS[nextMarket][0] || ''
+                    setKlineSymbolInput(fallback)
+                  }}
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                >
+                  {KLINE_MARKET_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>{t(option.labelKey)}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm text-muted-foreground">{t('page.stockLabel')}</label>
                 <input
-                  type="text"
-                  value={klineSymbol}
-                  onChange={(e) => setKlineSymbol(e.target.value)}
-                  className="px-3 py-1.5 text-sm rounded-md border border-border bg-background text-foreground w-36"
+                  value={klineSymbolInput}
+                  onChange={(event) => setKlineSymbolInput(event.target.value)}
+                  list="kline-symbol-suggestions"
+                  placeholder={t('page.klineSymbolPlaceholder')}
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
                 />
+                <datalist id="kline-symbol-suggestions">
+                  {klineSuggestions.map((symbol) => (
+                    <option key={symbol} value={symbol} />
+                  ))}
+                </datalist>
               </div>
 
-              <div className="flex gap-1">
-                {klinePeriods.map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => setKlinePeriod(p)}
-                    className={`px-2.5 py-1 text-xs rounded ${klinePeriod === p ? 'bg-primary text-white' : 'text-muted-foreground hover:bg-muted'}`}
-                  >
-                    {p}
-                  </button>
-                ))}
+              <div>
+                <label className="mb-1 block text-sm text-muted-foreground">{t('page.historyRangeLabel')}</label>
+                <div className="flex flex-wrap gap-1">
+                  {YEAR_RANGES.map((years) => (
+                    <button
+                      key={years}
+                      type="button"
+                      onClick={() => setHistoryYears(years)}
+                      className={`rounded px-3 py-1 text-xs ${historyYears === years ? 'bg-primary text-white' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}
+                    >
+                      {t('page.historyYears', { years })}
+                    </button>
+                  ))}
+                </div>
               </div>
+            </div>
 
-              <div className="flex items-center gap-3 ml-auto">
-                <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
-                  <input type="checkbox" checked={showMA} onChange={(e) => setShowMA(e.target.checked)} className="rounded" />
-                  {t('page.movingAverage')}
-                </label>
-                <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
-                  <input type="checkbox" checked={showVol} onChange={(e) => setShowVol(e.target.checked)} className="rounded" />
-                  {t('page.volume')}
-                </label>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+              <div className="rounded-lg border border-border bg-card p-3">
+                <div className="text-xs text-muted-foreground">{t('realtime.lastPrice')}</div>
+                <div className="mt-1 text-lg font-semibold text-foreground">{formatPrice(toNumber(klineQuote?.price))}</div>
               </div>
+              <div className="rounded-lg border border-border bg-card p-3">
+                <div className="text-xs text-muted-foreground">{t('overview.changePercent')}</div>
+                <div className={`mt-1 text-lg font-semibold ${quoteChangeClass(toNumber(klineQuote?.change))}`}>
+                  {toNumber(klineQuote?.change_percent) !== null
+                    ? `${(toNumber(klineQuote?.change_percent) as number).toFixed(2)}%`
+                    : '--'}
+                </div>
+              </div>
+              <div className="rounded-lg border border-border bg-card p-3">
+                <div className="text-xs text-muted-foreground">{t('overview.high')}</div>
+                <div className="mt-1 text-lg font-semibold text-foreground">{formatPrice(toNumber(klineQuote?.high))}</div>
+              </div>
+              <div className="rounded-lg border border-border bg-card p-3">
+                <div className="text-xs text-muted-foreground">{t('overview.low')}</div>
+                <div className="mt-1 text-lg font-semibold text-foreground">{formatPrice(toNumber(klineQuote?.low))}</div>
+              </div>
+              <div className="rounded-lg border border-border bg-card p-3">
+                <div className="text-xs text-muted-foreground">{t('overview.volume')}</div>
+                <div className="mt-1 text-lg font-semibold text-foreground">
+                  {toNumber(klineQuote?.volume) !== null
+                    ? (toNumber(klineQuote?.volume) as number).toLocaleString()
+                    : '--'}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                <input type="checkbox" checked={showMA} onChange={(event) => setShowMA(event.target.checked)} className="rounded" />
+                {t('page.movingAverage')}
+              </label>
+              <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                <input type="checkbox" checked={showVol} onChange={(event) => setShowVol(event.target.checked)} className="rounded" />
+                {t('page.volume')}
+              </label>
+              <button
+                type="button"
+                className="ml-auto inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm hover:bg-muted"
+                onClick={() => {
+                  void refetchQuote()
+                  void refetchHistory()
+                }}
+              >
+                <RefreshCw size={14} />
+                {t('common:refresh')}
+              </button>
             </div>
 
             <div className="rounded-lg border border-border bg-card p-4">
@@ -217,25 +597,29 @@ export default function MarketData() {
                 volumes={klineVolumes}
                 indicators={maIndicators}
                 height={500}
-                loading={klineLoading}
+                loading={historyLoading || quoteLoading}
               />
             </div>
+
+            {historyError && (
+              <p className="text-sm text-destructive">{t('loadFailed')}</p>
+            )}
+            {!historyLoading && mergedKlineBars.length === 0 && (
+              <p className="text-sm text-muted-foreground">{t('dataView.noDataFor', { symbol: debouncedKlineSymbol || '-' })}</p>
+            )}
           </div>
         )}
 
-        {/* ── Sync Tab ──────────────────────────────── */}
         {activeTab === 'sync' && (
-          <p className="text-center text-muted-foreground py-8">{t('page.empty.sync')}</p>
+          <p className="py-8 text-center text-muted-foreground">{t('page.empty.sync')}</p>
         )}
 
-        {/* ── Calendar Tab ──────────────────────────── */}
         {activeTab === 'calendar' && (
-          <p className="text-center text-muted-foreground py-8">{t('page.empty.calendar')}</p>
+          <p className="py-8 text-center text-muted-foreground">{t('page.empty.calendar')}</p>
         )}
 
-        {/* ── Sentiment Tab ─────────────────────────── */}
         {activeTab === 'sentiment' && (
-          <p className="text-center text-muted-foreground py-8">{t('page.empty.sentiment')}</p>
+          <p className="py-8 text-center text-muted-foreground">{t('page.empty.sentiment')}</p>
         )}
       </TabPanel>
     </div>

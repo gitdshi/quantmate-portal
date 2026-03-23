@@ -79,7 +79,7 @@ export interface BacktestResult {
 export interface Job {
   job_id: string
   user_id: number
-  type: 'backtest' | 'batch_backtest' | 'optimization'
+  type: 'backtest' | 'batch_backtest' | 'bulk_backtest' | 'optimization'
   status: 'queued' | 'started' | 'finished' | 'failed' | 'cancelled'
   progress: number
   progress_message: string
@@ -96,6 +96,7 @@ export interface BulkBacktestRequest {
   strategy_class?: string
   strategy_name?: string
   symbols: string[]
+  symbol_names?: string[]
   start_date: string
   end_date: string
   initial_capital?: number

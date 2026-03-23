@@ -194,7 +194,7 @@ export default function BacktestResults({ jobId, onClose }: BacktestResultsProps
           {activeTab === 'performance' && (
             <div className="space-y-6">
               {/* Primary Metrics */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                 <StatCard
                   title={t('metrics.totalReturn')}
                   value={`${(stats.total_return || 0).toFixed(2)}%`}
@@ -228,27 +228,27 @@ export default function BacktestResults({ jobId, onClose }: BacktestResultsProps
               {(stats.alpha !== null && stats.alpha !== undefined) ||
               (stats.beta !== null && stats.beta !== undefined) ||
               (stats.benchmark_return !== null && stats.benchmark_return !== undefined) ? (
-                <div className="bg-muted/30 rounded-lg p-4">
+                <div className="rounded-lg bg-muted/30 p-3.5">
                   <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
                     <Target className="h-4 w-4" />
                     {t('comparison.title')} ({getBenchmarkLabel(benchmark)})
                   </h3>
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-3 gap-3">
                     <div>
-                      <div className="text-sm text-muted-foreground mb-1">{t('metrics.alpha')}</div>
-                      <div className={`text-2xl font-bold ${(stats.alpha || 0) >= 0 ? 'text-red-500' : 'text-green-500'}`}>
+                      <div className="mb-1 text-xs text-muted-foreground">{t('metrics.alpha')}</div>
+                      <div className={`text-xl font-bold ${(stats.alpha || 0) >= 0 ? 'text-red-500' : 'text-green-500'}`}>
                         {stats.alpha !== null && stats.alpha !== undefined ? `${(stats.alpha * 100).toFixed(2)}%` : 'N/A'}
                       </div>
                     </div>
                     <div>
-                      <div className="text-sm text-muted-foreground mb-1">{t('metrics.beta')}</div>
-                      <div className="text-2xl font-bold">
+                      <div className="mb-1 text-xs text-muted-foreground">{t('metrics.beta')}</div>
+                      <div className="text-xl font-bold">
                         {stats.beta !== null && stats.beta !== undefined ? stats.beta.toFixed(2) : 'N/A'}
                       </div>
                     </div>
                     <div>
-                      <div className="text-sm text-muted-foreground mb-1">{t('metrics.benchmarkReturn')}</div>
-                      <div className={`text-2xl font-bold ${(stats.benchmark_return || 0) >= 0 ? 'text-red-500' : 'text-green-500'}`}>
+                      <div className="mb-1 text-xs text-muted-foreground">{t('metrics.benchmarkReturn')}</div>
+                      <div className={`text-xl font-bold ${(stats.benchmark_return || 0) >= 0 ? 'text-red-500' : 'text-green-500'}`}>
                         {stats.benchmark_return !== null && stats.benchmark_return !== undefined ? `${stats.benchmark_return.toFixed(2)}%` : 'N/A'}
                       </div>
                     </div>
@@ -268,47 +268,50 @@ export default function BacktestResults({ jobId, onClose }: BacktestResultsProps
                     initialCapital={result.initial_capital || 100000}
                     benchmarkData={result.benchmark_curve}
                     benchmarkSymbol={getBenchmarkLabel(benchmark)}
+                    stockPriceData={result.stock_price_curve}
+                    stockSymbol={symbolDisplay || symbolCode || t('symbol')}
+                    annualReturn={stats.annual_return}
                   />
                 </div>
               )}
 
               {/* Trading Statistics */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-muted/50 rounded-lg p-4">
-                  <div className="text-sm text-muted-foreground mb-1">{t('metrics.totalTrades')}</div>
-                  <div className="text-2xl font-bold">{stats.total_trades || 0}</div>
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                <div className="rounded-lg bg-muted/50 p-3.5">
+                  <div className="mb-1 text-xs text-muted-foreground">{t('metrics.totalTrades')}</div>
+                  <div className="text-xl font-bold">{stats.total_trades || 0}</div>
                 </div>
-                <div className="bg-muted/50 rounded-lg p-4">
-                  <div className="text-sm text-muted-foreground mb-1">{t('metrics.winRate')}</div>
-                  <div className="text-2xl font-bold">
+                <div className="rounded-lg bg-muted/50 p-3.5">
+                  <div className="mb-1 text-xs text-muted-foreground">{t('metrics.winRate')}</div>
+                  <div className="text-xl font-bold">
                     {((stats.winning_rate || 0) * 100).toFixed(1)}%
                   </div>
                 </div>
-                <div className="bg-muted/50 rounded-lg p-4">
-                  <div className="text-sm text-muted-foreground mb-1">{t('metrics.profitFactor')}</div>
-                  <div className="text-2xl font-bold">{(stats.profit_factor || 0).toFixed(2)}</div>
+                <div className="rounded-lg bg-muted/50 p-3.5">
+                  <div className="mb-1 text-xs text-muted-foreground">{t('metrics.profitFactor')}</div>
+                  <div className="text-xl font-bold">{(stats.profit_factor || 0).toFixed(2)}</div>
                 </div>
-                <div className="bg-muted/50 rounded-lg p-4">
-                  <div className="text-sm text-muted-foreground mb-1">{t('metrics.endBalance')}</div>
-                  <div className="text-2xl font-bold">
+                <div className="rounded-lg bg-muted/50 p-3.5">
+                  <div className="mb-1 text-xs text-muted-foreground">{t('metrics.endBalance')}</div>
+                  <div className="text-xl font-bold">
                     ${(stats.end_balance || 0).toLocaleString()}
                   </div>
                 </div>
               </div>
 
               {/* Period Statistics */}
-              <div className="grid grid-cols-3 gap-4">
-                <div className="bg-muted/50 rounded-lg p-4">
-                  <div className="text-sm text-muted-foreground mb-1">{t('metrics.totalDays')}</div>
-                  <div className="text-xl font-bold">{stats.total_days || 0}</div>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="rounded-lg bg-muted/50 p-3.5">
+                  <div className="mb-1 text-xs text-muted-foreground">{t('metrics.totalDays')}</div>
+                  <div className="text-lg font-bold">{stats.total_days || 0}</div>
                 </div>
-                <div className="bg-muted/50 rounded-lg p-4">
-                  <div className="text-sm text-muted-foreground mb-1">{t('metrics.profitDays')}</div>
-                  <div className="text-xl font-bold text-red-500">{stats.profit_days || 0}</div>
+                <div className="rounded-lg bg-muted/50 p-3.5">
+                  <div className="mb-1 text-xs text-muted-foreground">{t('metrics.profitDays')}</div>
+                  <div className="text-lg font-bold text-red-500">{stats.profit_days || 0}</div>
                 </div>
-                <div className="bg-muted/50 rounded-lg p-4">
-                  <div className="text-sm text-muted-foreground mb-1">{t('metrics.lossDays')}</div>
-                  <div className="text-xl font-bold text-green-500">{stats.loss_days || 0}</div>
+                <div className="rounded-lg bg-muted/50 p-3.5">
+                  <div className="mb-1 text-xs text-muted-foreground">{t('metrics.lossDays')}</div>
+                  <div className="text-lg font-bold text-green-500">{stats.loss_days || 0}</div>
                 </div>
               </div>
             </div>
@@ -490,13 +493,13 @@ function StatCard({
   positive?: boolean
 }) {
   return (
-    <div className="bg-card border border-border rounded-lg p-4">
+    <div className="rounded-lg border border-border bg-card p-3.5">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-sm text-muted-foreground">{title}</span>
+        <span className="text-xs text-muted-foreground">{title}</span>
         {icon}
       </div>
       <div
-        className={`text-2xl font-bold ${
+        className={`text-xl font-bold ${
           positive !== undefined
             ? positive
               ? 'text-red-500'

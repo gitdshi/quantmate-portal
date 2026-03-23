@@ -187,11 +187,28 @@ export default function TradingChart({
   const option: EChartsOption = useMemo(() => ({
     animation: false,
     legend: {
-      bottom: 0,
-      data: [stockSymbol, ...(hasBenchmark ? [benchmarkSymbol] : [])],
+      type: 'scroll',
+      top: 0,
+      left: 8,
+      right: 8,
+      data: [
+        {
+          name: stockSymbol,
+          textStyle: { color: '#10b981' },
+        },
+        ...(hasBenchmark
+          ? [
+              {
+                name: benchmarkSymbol,
+                textStyle: { color: '#f59e0b' },
+              },
+            ]
+          : []),
+      ],
       textStyle: { color: themeColors.mutedForeground },
+      inactiveColor: '#9ca3af',
     },
-    grid: { left: 56, right: hasBenchmark ? 64 : 24, top: 16, bottom: 52 },
+    grid: { left: 56, right: hasBenchmark ? 64 : 24, top: 54, bottom: 52 },
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'cross' },

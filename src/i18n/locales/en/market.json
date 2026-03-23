@@ -19,7 +19,13 @@
     "quoteSearchPlaceholder": "Search stock code or name...",
     "allIndustries": "All Industries",
     "showingTop": "Showing first 100 rows, {{count}} total",
+    "quoteBoardTitle": "Realtime Market Overview",
+    "quoteBoardSubtitle": "Track key intraday indicators for A-shares, HK, US and crypto.",
+    "quoteTimeoutHint": "Timeout: showing latest cached data when available.",
     "stockLabel": "Symbol:",
+    "klineSymbolPlaceholder": "Enter symbol (e.g. 600519, AAPL, 00700, BTCUSDT)",
+    "historyRangeLabel": "History Range",
+    "historyYears": "{{years}}Y",
     "movingAverage": "Moving Averages",
     "candlestickLegend": "Candlestick",
     "volume": "Volume",
@@ -42,6 +48,12 @@
       "healthcare": "Healthcare",
       "property": "Property",
       "technology": "Technology"
+    },
+    "marketCards": {
+      "cn": "A-Share Index",
+      "hk": "HK Market",
+      "us": "US Market",
+      "crypto": "Crypto"
     }
   },
   "symbolSearch": "Symbol Search",

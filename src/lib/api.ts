@@ -188,6 +188,7 @@ export const queueAPI = {
     strategy_class?: string
     strategy_name?: string
     symbols: string[]
+    symbol_names?: string[]
     start_date: string
     end_date: string
     initial_capital?: number
@@ -225,8 +226,21 @@ export const marketDataAPI = {
     return api.get('/data/symbols', { params: { exchange: exchParam, keyword, limit, offset } })
   },
   
-  history: (symbol: string, startDate: string, endDate: string) =>
-    api.get(`/data/history/${encodeURIComponent(symbol)}`, { params: { start_date: startDate, end_date: endDate } }),
+  history: (
+    symbol: string,
+    startDate: string,
+    endDate: string,
+    options?: { interval?: 'daily' | 'weekly' | 'monthly'; page?: number; pageSize?: number }
+  ) =>
+    api.get(`/data/history/${encodeURIComponent(symbol)}`, {
+      params: {
+        start_date: startDate,
+        end_date: endDate,
+        interval: options?.interval || 'daily',
+        page: options?.page || 1,
+        page_size: options?.pageSize || 5000,
+      },
+    }),
   
   indicators: (symbol: string, startDate: string, endDate: string) =>
     api.get(`/data/indicators/${encodeURIComponent(symbol)}`, { params: { start_date: startDate, end_date: endDate } }),
@@ -240,10 +254,13 @@ export const marketDataAPI = {
   symbolsByFilter: (params: { industry?: string; exchange?: string; limit?: number }) =>
     api.get('/data/symbols-by-filter', { params }),
   indexes: () => api.get('/data/indexes'),
-  quote: (params: { symbol: string; market?: string }) =>
-    api.get('/data/quote', { params }),
-  quoteSeries: (params: { symbol: string; market?: string; start_ts?: number; end_ts?: number }) =>
-    api.get('/data/quote/series', { params }),
+  quote: (params: { symbol: string; market?: string }, options?: { timeoutMs?: number }) =>
+    api.get('/data/quote', { params, timeout: options?.timeoutMs }),
+  quoteSeries: (
+    params: { symbol: string; market?: string; start_ts?: number; end_ts?: number },
+    options?: { timeoutMs?: number }
+  ) =>
+    api.get('/data/quote/series', { params, timeout: options?.timeoutMs }),
 }
 
 // Analytics API

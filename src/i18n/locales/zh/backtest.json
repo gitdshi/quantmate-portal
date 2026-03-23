@@ -4,6 +4,20 @@
   "page": {
     "title": "回测评估",
     "subtitle": "策略回测引擎与多维度绩效分析",
+    "bulkAction": "批量回测",
+    "realDataBadge": "真实数据",
+    "realFlowHint": "真实任务流",
+    "runningSubtitle": "队列与执行中的任务",
+    "completionSubtitle": "完成率",
+    "bulkSubtitle": "支持多标的批量执行",
+    "workflowHint": "点击已完成的回测任务可直接弹出结果详情；批量任务可查看摘要并继续进入单标的结果。",
+    "latestCompleted": "最新完成结果",
+    "latestCompletedSubtitle": "保留旧版结果浏览习惯，但改为基于当前真实 API 与任务数据。",
+    "emptyLatest": "暂无已完成回测，提交任务后会在这里显示。",
+    "executionGuideTitle": "使用说明",
+    "executionGuideStep1": "单次回测会直接提交到真实队列，结果完成后可在列表中点开查看。",
+    "executionGuideStep2": "批量回测支持行业、交易所和手动多选股票，提交后可查看汇总表现。",
+    "executionGuideStep3": "批量摘要中的具体标的支持继续下钻到统一的回测结果弹窗。",
     "tabs": {
       "runs": "回测列表",
       "result": "回测结果",
@@ -13,6 +27,7 @@
     "newBacktest": "新建回测",
     "searchPlaceholder": "搜索策略或标的...",
     "allStatuses": "全部状态",
+    "allStrategies": "全部策略",
     "emptyRuns": "暂无回测记录",
     "selectRun": "请先从回测列表选择一条记录查看",
     "generateCompare": "生成对比",
@@ -131,7 +146,9 @@
     "processing": "处理中...",
     "confirmDelete": "确定要删除此回测任务吗？",
     "loadMore": "加载更多",
-    "results": "个结果"
+      "results": "个结果",
+      "last7Days": "最近 7 天",
+      "last30Days": "最近 30 天"
   },
   "status": {
     "pending": "等待中",

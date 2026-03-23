@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Layers, Play, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { marketDataAPI, queueAPI, strategiesAPI } from '../lib/api'
 import SymbolSearch from './SymbolSearch'
@@ -20,6 +20,23 @@ interface Stock {
 }
 
 type SelectionMode = 'industry' | 'exchange' | 'manual'
+
+function extractArray<T>(value: unknown): T[] {
+  if (Array.isArray(value)) return value as T[]
+  if (value && typeof value === 'object') {
+    const obj = value as Record<string, unknown>
+    if (Array.isArray(obj.data)) return obj.data as T[]
+    if (obj.data && typeof obj.data === 'object') {
+      const nested = obj.data as Record<string, unknown>
+      if (Array.isArray(nested.data)) return nested.data as T[]
+      if (Array.isArray(nested.items)) return nested.items as T[]
+      if (Array.isArray(nested.results)) return nested.results as T[]
+    }
+    if (Array.isArray(obj.items)) return obj.items as T[]
+    if (Array.isArray(obj.results)) return obj.results as T[]
+  }
+  return []
+}
 
 export default function BulkBacktestForm({ onClose, onSubmitSuccess }: BulkBacktestFormProps) {
   const { t } = useTranslation(['backtest', 'common'])
@@ -90,11 +107,18 @@ export default function BulkBacktestForm({ onClose, onSubmitSuccess }: BulkBackt
   }, [])
 
   // Strategies
-  const { data: strategiesData, isLoading: isLoadingStrategies } = useQuery({
+  const {
+    data: strategiesData,
+    isLoading: isLoadingStrategies,
+    isError: isStrategiesError,
+  } = useQuery({
     queryKey: ['strategies'],
     queryFn: () => strategiesAPI.list(),
+    staleTime: 0,
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
   })
-  const strategies = strategiesData?.data || []
+  const strategies = useMemo<any[]>(() => extractArray<any>(strategiesData?.data), [strategiesData])
 
   useEffect(() => {
     if (!strategyId && strategies.length > 0) {
@@ -131,18 +155,22 @@ export default function BulkBacktestForm({ onClose, onSubmitSuccess }: BulkBackt
   }, [strategyId, strategies])
 
   // Sectors (industries)
-  const { data: sectorsData } = useQuery({
+  const { data: sectorsData, isLoading: isLoadingSectors, isError: isSectorsError } = useQuery({
     queryKey: ['sectors'],
     queryFn: () => marketDataAPI.sectors(),
   })
-  const sectors: { name: string; count: number }[] = sectorsData?.data || []
+  const sectors = useMemo<{ name: string; count: number }[]>(() => {
+    return extractArray<{ name: string; count: number }>(sectorsData?.data)
+  }, [sectorsData])
 
   // Exchanges
-  const { data: exchangesData } = useQuery({
+  const { data: exchangesData, isLoading: isLoadingExchanges, isError: isExchangesError } = useQuery({
     queryKey: ['exchanges'],
     queryFn: () => marketDataAPI.exchanges(),
   })
-  const exchanges: { code: string; name: string; count: number }[] = exchangesData?.data || []
+  const exchanges = useMemo<{ code: string; name: string; count: number }[]>(() => {
+    return extractArray<{ code: string; name: string; count: number }>(exchangesData?.data)
+  }, [exchangesData])
 
   // Filtered symbols (by industry or exchange)
   const filterParams = selectionMode === 'industry' && selectedIndustry
@@ -156,7 +184,7 @@ export default function BulkBacktestForm({ onClose, onSubmitSuccess }: BulkBackt
     queryFn: () => marketDataAPI.symbolsByFilter(filterParams!),
     enabled: !!filterParams,
   })
-  const filteredStocks: Stock[] = filteredData?.data || []
+  const filteredStocks = useMemo<Stock[]>(() => extractArray<Stock>(filteredData?.data), [filteredData])
 
   
 
@@ -334,7 +362,15 @@ export default function BulkBacktestForm({ onClose, onSubmitSuccess }: BulkBackt
               required
               disabled={isLoadingStrategies}
             >
-              <option value="">{isLoadingStrategies ? t('common:loading') : t('selectStrategy')}</option>
+              <option value="">
+                {isLoadingStrategies
+                  ? t('form.loadingStrategies')
+                  : isStrategiesError
+                  ? t('form.errorLoadingStrategies')
+                  : strategies.length === 0
+                  ? t('form.noStrategies')
+                  : t('selectStrategy')}
+              </option>
               {strategies.map((s: any) => (
                 <option key={s.id} value={s.id}>
                   {s.name} v{s.version || 1} ({s.class_name})
@@ -424,8 +460,17 @@ export default function BulkBacktestForm({ onClose, onSubmitSuccess }: BulkBackt
                     value={selectedIndustry}
                     onChange={(e) => setSelectedIndustry(e.target.value)}
                     className="w-full px-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                    disabled={isLoadingSectors}
                   >
-                    <option value="">{t('bulk.selectIndustry')}</option>
+                    <option value="">
+                      {isLoadingSectors
+                        ? t('common:loading')
+                        : isSectorsError
+                        ? t('loadFailed')
+                        : sectors.length === 0
+                        ? t('bulk.noSymbols')
+                        : t('bulk.selectIndustry')}
+                    </option>
                     {sectors.map(s => (
                       <option key={s.name} value={s.name}>
                         {s.name} ({s.count})
@@ -451,6 +496,12 @@ export default function BulkBacktestForm({ onClose, onSubmitSuccess }: BulkBackt
             {selectionMode === 'exchange' && (
               <div className="space-y-2">
                 <div className="flex gap-2">
+                  {isLoadingExchanges ? (
+                    <span className="text-sm text-muted-foreground">{t('common:loading')}</span>
+                  ) : null}
+                  {isExchangesError ? (
+                    <span className="text-sm text-destructive">{t('loadFailed')}</span>
+                  ) : null}
                   {exchanges.map(ex => (
                     <button
                       key={ex.code}
@@ -508,7 +559,7 @@ export default function BulkBacktestForm({ onClose, onSubmitSuccess }: BulkBackt
                   </button>
                 </div>
                 <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
-                  {Array.from(selectedSymbols.entries()).map(([key, stock]) => (
+                  {Array.from(selectedSymbols.entries()).slice(0, 80).map(([key, stock]) => (
                     <span
                       key={key}
                       className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs"
@@ -519,6 +570,11 @@ export default function BulkBacktestForm({ onClose, onSubmitSuccess }: BulkBackt
                       </button>
                     </span>
                   ))}
+                  {selectedSymbols.size > 80 ? (
+                    <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                      +{selectedSymbols.size - 80}
+                    </span>
+                  ) : null}
                 </div>
               </div>
             )}
@@ -579,8 +635,17 @@ function SymbolCheckboxList({
   onDeselectAll: () => void
 }) {
   const { t } = useTranslation(['backtest', 'common'])
+  const [visibleCount, setVisibleCount] = useState(240)
+
+  useEffect(() => {
+    setVisibleCount(240)
+  }, [stocks])
+
   if (loading) return <div className="text-sm text-muted-foreground py-2">{t('bulk.loadingSymbols')}</div>
   if (stocks.length === 0) return <div className="text-sm text-muted-foreground py-2">{t('bulk.noSymbols')}</div>
+
+  const visibleStocks = stocks.slice(0, visibleCount)
+  const hasMore = visibleCount < stocks.length
 
   return (
     <div className="border border-border rounded-md">
@@ -595,7 +660,7 @@ function SymbolCheckboxList({
         </button>
       </div>
       <div className="max-h-48 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 gap-0">
-        {stocks.map(stock => {
+        {visibleStocks.map(stock => {
           const key = stock.ts_code || stock.vt_symbol
           const checked = selected.has(key)
           return (
@@ -617,6 +682,17 @@ function SymbolCheckboxList({
           )
         })}
       </div>
+      {hasMore ? (
+        <div className="border-t border-border px-3 py-2 text-center">
+          <button
+            type="button"
+            onClick={() => setVisibleCount((prev) => prev + 240)}
+            className="text-xs text-primary hover:underline"
+          >
+            {t('jobList.loadMore')} ({visibleStocks.length}/{stocks.length})
+          </button>
+        </div>
+      ) : null}
     </div>
   )
 }

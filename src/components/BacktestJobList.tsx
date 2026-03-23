@@ -1,39 +1,84 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowUp, BarChart3, Calendar, CheckCircle, ChevronDown, ChevronRight, Clock, DollarSign, Eye, Layers, Loader, Trash2, TrendingUp, XCircle } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import {
+  ArrowDown,
+  ArrowUp,
+  BarChart3,
+  CheckCircle,
+  ChevronDown,
+  ChevronRight,
+  Clock,
+  Eye,
+  Loader,
+  Search,
+  Trash2,
+  XCircle,
+} from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+
 import { usePagination } from '../hooks/usePagination'
 import { queueAPI } from '../lib/api'
 import type { BulkJobChildResult, BulkJobResultsPage } from '../types'
 import Pagination from './Pagination'
+import Badge from './ui/Badge'
 
 interface BacktestJobListProps {
   onViewResults: (jobId: string) => void
   onViewBulkSummary?: (jobId: string) => void
 }
 
+type BacktestListJob = {
+  job_id: string
+  status: string
+  type?: string
+  created_at: string
+  progress?: number
+  progress_message?: string
+  symbol?: string
+  symbol_name?: string
+  symbols?: string[]
+  total_symbols?: number
+  strategy_class?: string
+  strategy_name?: string
+  strategy_version?: number
+  start_date?: string
+  end_date?: string
+  result?: {
+    best_return?: number
+    best_symbol?: string
+    statistics?: {
+      total_return?: number
+      annual_return?: number
+      sharpe_ratio?: number
+      max_drawdown?: number
+      max_drawdown_percent?: number
+    }
+  }
+}
+
 export default function BacktestJobList({ onViewResults, onViewBulkSummary }: BacktestJobListProps) {
   const { t } = useTranslation(['backtest', 'common'])
   const [filter, setFilter] = useState<string>('all')
+  const [search, setSearch] = useState('')
+  const [strategyFilter, setStrategyFilter] = useState<string>('all')
   const [jobDetails, setJobDetails] = useState<Record<string, any>>({})
   const [expandedBulk, setExpandedBulk] = useState<Record<string, boolean>>({})
   const queryClient = useQueryClient()
 
   const { data: jobsData, isLoading } = useQuery({
     queryKey: ['backtest-jobs', filter],
-    queryFn: () => queueAPI.listJobs(filter === 'all' ? undefined : filter, 50),
-    refetchInterval: 5000, // Refresh every 5 seconds
+    queryFn: () => queueAPI.listJobs(filter === 'all' ? undefined : filter, 100),
+    refetchInterval: 5000,
   })
 
   const deleteMutation = useMutation({
     mutationFn: (jobId: string) => queueAPI.deleteJob(jobId),
     onSuccess: () => {
-      // Refetch the jobs list after successful deletion
       queryClient.invalidateQueries({ queryKey: ['backtest-jobs'] })
     },
   })
 
-  const handleDelete = async (jobId: string, e: React.MouseEvent) => {
+  const handleDelete = (jobId: string, e: React.MouseEvent) => {
     e.stopPropagation()
     if (confirm(t('jobList.confirmDelete'))) {
       deleteMutation.mutate(jobId)
@@ -44,9 +89,9 @@ export default function BacktestJobList({ onViewResults, onViewBulkSummary }: Ba
     if (!jobDetails[jobId]) {
       try {
         const response = await queueAPI.getJob(jobId)
-        setJobDetails(prev => ({
+        setJobDetails((prev) => ({
           ...prev,
-          [jobId]: response.data
+          [jobId]: response.data,
         }))
       } catch (error) {
         console.error('Failed to fetch job details:', error)
@@ -54,50 +99,165 @@ export default function BacktestJobList({ onViewResults, onViewBulkSummary }: Ba
     }
   }
 
-  const jobs = jobsData?.data || []
-  const jobsPagination = usePagination(jobs, { initialPageSize: 10 })
+  const jobs = useMemo<BacktestListJob[]>(() => {
+    const payload = jobsData?.data
+    return Array.isArray(payload) ? payload : []
+  }, [jobsData])
 
-  // Auto-fetch details for completed jobs
   useEffect(() => {
-    if (jobs && jobs.length > 0) {
-      jobs.forEach((job: any) => {
+    if (jobs.length > 0) {
+      jobs.forEach((job) => {
         if ((job.status === 'finished' || job.status === 'completed') && !jobDetails[job.job_id]) {
-          fetchJobDetails(job.job_id)
+          void fetchJobDetails(job.job_id)
         }
       })
     }
+  }, [jobs, jobDetails])
+
+  const filteredJobs = useMemo(() => {
+    const query = search.trim().toLowerCase()
+
+    return jobs.filter((job) => {
+      const matchesSearch = !query || [
+        job.job_id,
+        job.strategy_name,
+        job.strategy_class,
+        job.symbol,
+        job.symbol_name,
+      ].some((value) => String(value || '').toLowerCase().includes(query))
+
+      if (!matchesSearch) {
+        return false
+      }
+
+      if (strategyFilter === 'all') {
+        return true
+      }
+
+      const strategyName = job.strategy_name || job.strategy_class || ''
+      return strategyName === strategyFilter
+    })
+  }, [jobs, search, strategyFilter])
+
+  const strategyOptions = useMemo(() => {
+    const options = new Set<string>()
+    jobs.forEach((job) => {
+      const strategyName = (job.strategy_name || job.strategy_class || '').trim()
+      if (strategyName) {
+        options.add(strategyName)
+      }
+    })
+    return Array.from(options).sort((a, b) => a.localeCompare(b))
   }, [jobs])
 
-  const getStatusIcon = (status: string) => {
+  const jobsPagination = usePagination(filteredJobs, { initialPageSize: 10 })
+
+  const getStatusBadge = (status: string) => {
     switch (status) {
       case 'queued':
-        return <Clock className="h-4 w-4 text-yellow-500" />
+        return <Badge variant="warning">{t('status.queued')}</Badge>
       case 'started':
-        return <Loader className="h-4 w-4 text-blue-500 animate-spin" />
+        return <Badge variant="primary">{t('status.running')}</Badge>
       case 'finished':
       case 'completed':
-        return <CheckCircle className="h-4 w-4 text-green-500" />
+        return <Badge variant="success">{t('status.finished')}</Badge>
       case 'failed':
-        return <XCircle className="h-4 w-4 text-red-500" />
+        return <Badge variant="destructive">{t('status.failed')}</Badge>
       default:
-        return <Clock className="h-4 w-4 text-gray-500" />
+        return <Badge variant="muted">{status}</Badge>
     }
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'queued':
-        return 'bg-yellow-500/10 text-yellow-500'
-      case 'started':
-        return 'bg-blue-500/10 text-blue-500'
-      case 'finished':
-      case 'completed':
-        return 'bg-green-500/10 text-green-500'
-      case 'failed':
-        return 'bg-red-500/10 text-red-500'
-      default:
-        return 'bg-gray-500/10 text-gray-500'
+  const formatReturn = (value?: number | null) => {
+    if (value === undefined || value === null) {
+      return '-'
     }
+
+    return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`
+  }
+
+  const renderSingleRow = (job: BacktestListJob) => {
+    const isCompleted = job.status === 'finished' || job.status === 'completed'
+    const detail = jobDetails[job.job_id]
+    const stats = detail?.result?.statistics
+    const totalReturn = stats?.total_return
+    const sharpe = stats?.sharpe_ratio
+    const maxDrawdown = stats?.max_drawdown_percent ?? stats?.max_drawdown
+    const strategyLabel = job.strategy_name || job.strategy_class || '-'
+    const symbolLabel = job.symbol_name ? `${job.symbol} (${job.symbol_name})` : job.symbol || '-'
+
+    return (
+      <tr
+        key={job.job_id}
+        onClick={() => {
+          if (isCompleted) {
+            onViewResults(job.job_id)
+          }
+        }}
+        className={isCompleted ? 'cursor-pointer hover:bg-accent/50' : ''}
+      >
+        <td className="px-4 py-3 font-mono text-xs">{job.job_id.slice(0, 12)}</td>
+        <td className="px-4 py-3">
+          <div className="font-medium text-foreground">{strategyLabel}</div>
+          {job.strategy_version ? <div className="mt-0.5 text-[11px] text-muted-foreground">v{job.strategy_version}</div> : null}
+        </td>
+        <td className="px-4 py-3">
+          <div className="font-mono text-xs text-foreground">{symbolLabel}</div>
+          {job.start_date && job.end_date ? <div className="mt-0.5 text-[11px] text-muted-foreground">{job.start_date} ~ {job.end_date}</div> : null}
+        </td>
+        <td className="px-4 py-3">{getStatusBadge(job.status)}</td>
+        <td className="px-4 py-3">
+          <span className={totalReturn !== undefined && totalReturn !== null ? (totalReturn >= 0 ? 'font-semibold text-red-500' : 'font-semibold text-green-500') : 'text-muted-foreground'}>
+            {formatReturn(totalReturn)}
+          </span>
+        </td>
+        <td className="px-4 py-3">{sharpe !== undefined && sharpe !== null ? sharpe.toFixed(2) : '-'}</td>
+        <td className="px-4 py-3">
+          <span className={maxDrawdown !== undefined && maxDrawdown !== null ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}>
+            {maxDrawdown !== undefined && maxDrawdown !== null ? `${maxDrawdown.toFixed(2)}%` : '-'}
+          </span>
+        </td>
+        <td className="px-4 py-3">
+          <div className="text-xs text-foreground">{new Date(job.created_at).toLocaleDateString()}</div>
+          <div className="mt-0.5 text-[11px] text-muted-foreground">{new Date(job.created_at).toLocaleTimeString()}</div>
+        </td>
+        <td className="px-4 py-3">
+          <div className="flex items-center gap-1">
+            {isCompleted ? (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onViewResults(job.job_id)
+                }}
+                className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-primary transition-colors hover:bg-primary/10"
+              >
+                <Eye className="h-3.5 w-3.5" />
+                {t('common:view')}
+              </button>
+            ) : null}
+            <button
+              onClick={(e) => handleDelete(job.job_id, e)}
+              disabled={deleteMutation.isPending}
+              className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              {t('common:delete')}
+            </button>
+          </div>
+          {job.progress !== undefined && job.progress > 0 && job.progress < 100 ? (
+            <div className="mt-2 w-28">
+              <div className="mb-1 flex items-center justify-between text-[10px] text-muted-foreground">
+                <span>{job.progress_message || t('jobList.processing')}</span>
+                <span>{job.progress}%</span>
+              </div>
+              <div className="h-1.5 rounded-full bg-muted">
+                <div className="h-1.5 rounded-full bg-primary transition-all" style={{ width: `${job.progress}%` }} />
+              </div>
+            </div>
+          ) : null}
+        </td>
+      </tr>
+    )
   }
 
   if (isLoading) {
@@ -110,302 +270,90 @@ export default function BacktestJobList({ onViewResults, onViewBulkSummary }: Ba
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() => setFilter('all')}
-          className={`px-3 py-1 rounded text-sm transition-colors ${
-            filter === 'all'
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-muted hover:bg-muted/80'
-          }`}
+      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-muted/20 p-3">
+        <div className="relative min-w-[220px] max-w-sm flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t('page.searchPlaceholder')}
+            className="w-full rounded-md border border-input bg-background py-2 pl-9 pr-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20"
+          />
+        </div>
+
+        <select
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          className="min-w-[140px] rounded-md border border-input bg-background px-3 py-2 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20"
         >
-          {t('common:all')}
-        </button>
-        <button
-          onClick={() => setFilter('queued')}
-          className={`px-3 py-1 rounded text-sm transition-colors ${
-            filter === 'queued'
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-muted hover:bg-muted/80'
-          }`}
+          <option value="all">{t('page.allStatuses')}</option>
+          <option value="finished">{t('status.finished')}</option>
+          <option value="started">{t('status.running')}</option>
+          <option value="failed">{t('status.failed')}</option>
+          <option value="queued">{t('status.queued')}</option>
+        </select>
+
+        <select
+          value={strategyFilter}
+          onChange={(e) => setStrategyFilter(e.target.value)}
+          className="min-w-[180px] rounded-md border border-input bg-background px-3 py-2 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20"
         >
-          {t('status.queued')}
-        </button>
-        <button
-          onClick={() => setFilter('started')}
-          className={`px-3 py-1 rounded text-sm transition-colors ${
-            filter === 'started'
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-muted hover:bg-muted/80'
-          }`}
-        >
-          {t('status.running')}
-        </button>
-        <button
-          onClick={() => setFilter('finished')}
-          className={`px-3 py-1 rounded text-sm transition-colors ${
-            filter === 'finished'
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-muted hover:bg-muted/80'
-          }`}
-        >
-          {t('status.finished')}
-        </button>
-        <button
-          onClick={() => setFilter('failed')}
-          className={`px-3 py-1 rounded text-sm transition-colors ${
-            filter === 'failed'
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-muted hover:bg-muted/80'
-          }`}
-        >
-          {t('status.failed')}
-        </button>
+          <option value="all">{t('page.allStrategies')}</option>
+          {strategyOptions.map((strategy) => (
+            <option key={strategy} value={strategy}>
+              {strategy}
+            </option>
+          ))}
+        </select>
       </div>
 
-      {jobs.length === 0 ? (
-        <div className="text-center py-12 bg-card border border-border rounded-lg">
+      {filteredJobs.length === 0 ? (
+        <div className="rounded-lg border border-border bg-card py-12 text-center">
           <p className="text-muted-foreground">{t('jobList.noJobs')}</p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {jobsPagination.paginatedItems.map((job: {
-            job_id: string
-            status: string
-            type?: string
-            created_at: string
-            progress?: number
-            progress_message?: string
-            error?: string
-            symbol?: string
-            symbol_name?: string
-            symbols?: string[]
-            total_symbols?: number
-            strategy_class?: string
-            strategy_name?: string
-            strategy_version?: number
-            start_date?: string
-            end_date?: string
-            initial_capital?: number
-            rate?: number
-            slippage?: number
-            result?: {
-              best_return?: number
-              best_symbol?: string
-              statistics?: {
-                total_return?: number
-                annual_return?: number
-                sharpe_ratio?: number
-                max_drawdown?: number
-                max_drawdown_percent?: number
-              }
-            }
-          }) => {
-            const isBulk = job.job_id.startsWith('bulk_') || job.type === 'bulk_backtest'
+        <div className="overflow-x-auto rounded-lg border border-border">
+          <table className="w-full border-collapse text-sm">
+            <thead className="bg-muted">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.05em] text-muted-foreground">{t('jobList.id')}</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.05em] text-muted-foreground">{t('jobList.strategy')}</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.05em] text-muted-foreground">{t('symbol')}</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.05em] text-muted-foreground">{t('jobList.status')}</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.05em] text-muted-foreground">{t('metrics.totalReturn')}</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.05em] text-muted-foreground">{t('metrics.sharpeRatio')}</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.05em] text-muted-foreground">{t('metrics.maxDrawdown')}</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.05em] text-muted-foreground">{t('jobList.created')}</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.05em] text-muted-foreground">{t('jobList.actions')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {jobsPagination.paginatedItems.map((job) => {
+                const isBulk = job.job_id.startsWith('bulk_') || job.type === 'bulk_backtest'
+                if (isBulk) {
+                  return (
+                    <BulkTableRows
+                      key={job.job_id}
+                      job={job}
+                      expanded={!!expandedBulk[job.job_id]}
+                      onToggle={() => setExpandedBulk((prev) => ({ ...prev, [job.job_id]: !prev[job.job_id] }))}
+                      onDelete={(e) => handleDelete(job.job_id, e)}
+                      deleteIsPending={deleteMutation.isPending}
+                      onViewResults={onViewResults}
+                      onViewBulkSummary={onViewBulkSummary}
+                    />
+                  )
+                }
 
-            if (isBulk) {
-              return (
-                <BulkJobCard
-                  key={job.job_id}
-                  job={job}
-                  expanded={!!expandedBulk[job.job_id]}
-                  onToggle={() => setExpandedBulk(prev => ({ ...prev, [job.job_id]: !prev[job.job_id] }))}
-                  onDelete={(e) => handleDelete(job.job_id, e)}
-                  deleteIsPending={deleteMutation.isPending}
-                  onViewResults={onViewResults}
-                  onViewBulkSummary={onViewBulkSummary}
-                  getStatusIcon={getStatusIcon}
-                  getStatusColor={getStatusColor}
-                />
-              )
-            }
-
-            // -------- Single backtest card (unchanged) --------
-            const symbolDisplay = job.symbol_name 
-              ? `${job.symbol || ''} (${job.symbol_name})`
-              : job.symbol || ''
-            const strategyDisplay = job.strategy_name || job.strategy_class || ''
-            const strategyVersion = job.strategy_version
-            const jobDetail = jobDetails[job.job_id]
-            const hasStats = (job.status === 'finished' || job.status === 'completed')
-            const stats = jobDetail?.result?.statistics
-            // parameters may come from job metadata or from the saved result
-            const jobParams = (job as any).parameters || (jobDetail?.result && (jobDetail.result as any).parameters) || {}
-
-            return (
-              <div
-                key={job.job_id}
-                className="bg-card border border-border rounded-lg hover:shadow-md transition-shadow"
-              >
-                <div className="p-4">
-                  {/* Line 1: status + timestamp + job ID (full width) */}
-                  <div className="flex items-center gap-3 mb-1.5 flex-wrap">
-                    {getStatusIcon(job.status)}
-                    <span
-                      className={`px-2 py-0.5 rounded text-xs font-medium capitalize ${getStatusColor(
-                        job.status
-                      )}`}
-                    >
-                      {job.status}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {new Date(job.created_at).toLocaleString()}
-                    </span>
-                    <span className="text-xs text-muted-foreground/60 font-mono">
-                      {job.job_id}
-                    </span>
-                  </div>
-
-                  {/* Lines 2-3: left info + right metrics/buttons */}
-                  <div className="flex items-center justify-between gap-4">
-                    {/* Left: line 2 strategy+symbol, line 3 parameters */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        {strategyDisplay && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-medium">
-                            <TrendingUp className="h-3 w-3" />
-                            {strategyDisplay}
-                            {strategyVersion && (
-                              <span className="ml-1 px-1 py-0 rounded bg-purple-500/10 text-purple-600 dark:text-purple-400 text-[10px] font-semibold">
-                                v{strategyVersion}
-                              </span>
-                            )}
-                          </span>
-                        )}
-                        {symbolDisplay && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-medium">
-                            {symbolDisplay}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
-                        {job.start_date && job.end_date && (
-                          <span className="inline-flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {job.start_date} ~ {job.end_date}
-                          </span>
-                        )}
-                        {job.initial_capital && (
-                          <span className="inline-flex items-center gap-1">
-                            <DollarSign className="h-3 w-3" />
-                            {Number(job.initial_capital).toLocaleString()}
-                          </span>
-                        )}
-                        {job.rate !== undefined && (
-                          <span>{t('commission')}: {job.rate}</span>
-                        )}
-                        {job.slippage !== undefined && (
-                          <span>{t('slippage')}: {job.slippage}</span>
-                        )}
-                        {/* Parameters summary */}
-                        {(jobParams && Object.keys(jobParams).length > 0) && (
-                          <span className="inline-flex items-center gap-1">
-                            <Layers className="h-3 w-3" />
-                            {t('common:parameters')}: {Object.keys(jobParams).length}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Right: metrics + buttons in one row, vertically centered with left lines 2-3 */}
-                    {hasStats && stats ? (
-                      <div className="flex-shrink-0 flex items-center gap-3">
-                        <div className={`text-lg font-extrabold ${
-                            (stats.total_return || 0) >= 0 ? 'text-red-500' : 'text-green-500'
-                          }`}>
-                            <span className="text-sm text-muted-foreground font-normal mr-2">{t('metrics.totalReturn')}</span>
-                            {(stats.total_return || 0).toFixed(2)}%
-                          </div>
-                          <div className="text-lg font-extrabold">
-                            <span className="text-sm text-muted-foreground font-normal mr-2">{t('metrics.annualReturn')}</span>
-                            {(stats.annual_return || 0).toFixed(2)}%
-                          </div>
-                          <div className="text-lg font-extrabold">
-                            <span className="text-sm text-muted-foreground font-normal mr-2">{t('metrics.sharpeRatio')}</span>
-                            {(stats.sharpe_ratio || 0).toFixed(2)}
-                          </div>
-                          <div className="text-lg font-extrabold text-green-500">
-                            <span className="text-sm text-muted-foreground font-normal mr-2">{t('metrics.maxDrawdown')}</span>
-                            {(stats.max_drawdown_percent || stats.max_drawdown || 0).toFixed(2)}%
-                          </div>
-                        <div className="flex items-center gap-2 ml-2 border-l border-border pl-3">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              onViewResults(job.job_id)
-                            }}
-                            className="px-3 py-2 hover:bg-primary/10 text-primary rounded-md transition-colors text-sm font-medium"
-                            title={t('common:view')}
-                          >
-                            <Eye className="h-5 w-5" />
-                          </button>
-                          <button
-                            onClick={(e) => handleDelete(job.job_id, e)}
-                            disabled={deleteMutation.isPending}
-                            className="px-3 py-2 hover:bg-destructive/10 text-destructive rounded-md transition-colors disabled:opacity-50 text-sm font-medium"
-                            title={t('common:delete')}
-                          >
-                            <Trash2 className="h-5 w-5" />
-                          </button>
-                        </div>
-                      </div>
-                    ) : hasStats ? (
-                      <div className="flex-shrink-0 flex items-center px-4">
-                        <Loader className="h-5 w-5 animate-spin text-muted-foreground" />
-                      </div>
-                    ) : (
-                      <div className="flex-shrink-0 flex items-center gap-1">
-                        {(job.status === 'finished' || job.status === 'completed') && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              onViewResults(job.job_id)
-                            }}
-                            className="px-3 py-2 hover:bg-primary/10 text-primary rounded-md transition-colors text-sm font-medium"
-                            title={t('common:view')}
-                          >
-                            <Eye className="h-5 w-5" />
-                          </button>
-                        )}
-                        <button
-                          onClick={(e) => handleDelete(job.job_id, e)}
-                          disabled={deleteMutation.isPending}
-                          className="px-3 py-2 hover:bg-destructive/10 text-destructive rounded-md transition-colors disabled:opacity-50 text-sm font-medium"
-                          title={t('common:delete')}
-                        >
-                          <Trash2 className="h-5 w-5" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  {job.progress !== undefined && job.progress > 0 && (
-                    <div className="mt-2">
-                      <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-                        <span>{job.progress_message || t('jobList.processing')}</span>
-                        <span>{job.progress}%</span>
-                      </div>
-                      <div className="w-full bg-muted rounded-full h-2">
-                        <div
-                          className="bg-primary h-2 rounded-full transition-all"
-                          style={{ width: `${job.progress}%` }}
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {job.error && (
-                    <div className="text-sm text-destructive mt-2">
-                      Error: {job.error}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )
-          })}
+                return renderSingleRow(job)
+              })}
+            </tbody>
+          </table>
         </div>
       )}
-      {jobs.length > 0 && (
+
+      {filteredJobs.length > 0 ? (
         <Pagination
           page={jobsPagination.page}
           pageSize={jobsPagination.pageSize}
@@ -413,15 +361,12 @@ export default function BacktestJobList({ onViewResults, onViewBulkSummary }: Ba
           onPageChange={jobsPagination.onPageChange}
           onPageSizeChange={jobsPagination.onPageSizeChange}
         />
-      )}
+      ) : null}
     </div>
   )
 }
 
-
-/* ========== Bulk Job Card with expandable child results ========== */
-
-function BulkJobCard({
+function BulkTableRows({
   job,
   expanded,
   onToggle,
@@ -429,66 +374,67 @@ function BulkJobCard({
   deleteIsPending,
   onViewResults,
   onViewBulkSummary,
-  getStatusIcon,
-  getStatusColor,
 }: {
-  job: any
+  job: BacktestListJob
   expanded: boolean
   onToggle: () => void
   onDelete: (e: React.MouseEvent) => void
   deleteIsPending: boolean
   onViewResults: (jobId: string) => void
   onViewBulkSummary?: (jobId: string) => void
-  getStatusIcon: (s: string) => React.ReactNode
-  getStatusColor: (s: string) => string
 }) {
+  const { t } = useTranslation(['backtest', 'common'])
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [page, setPage] = useState(1)
   const [allResults, setAllResults] = useState<BulkJobChildResult[]>([])
   const [total, setTotal] = useState(0)
   const [loadingMore, setLoadingMore] = useState(false)
-  const PAGE_SIZE = 10
-  const { t } = useTranslation(['backtest', 'common'])
-
-  const strategyDisplay = job.strategy_name || job.strategy_class || ''
-  const strategyVersion = job.strategy_version
-  const totalSymbols = job.total_symbols || job.symbols?.length || 0
+  const pageSize = 10
   const hasFinished = job.status === 'finished' || job.status === 'completed'
+  const totalSymbols = job.total_symbols || job.symbols?.length || 0
   const bestReturn = job.result?.best_return
   const bestSymbol = job.result?.best_symbol
-  // parameters for bulk job (may be present on job or inside result)
-  const jobParams = job.parameters || (job.result && (job.result as any).parameters) || {}
+  const strategyLabel = job.strategy_name || job.strategy_class || '-'
 
-  // Fetch first page when expanded
+  const { data: bulkSummaryData } = useQuery({
+    queryKey: ['bulk-summary-inline', job.job_id],
+    queryFn: async () => {
+      const res = await queueAPI.getBulkJobSummary(job.job_id)
+      return res.data
+    },
+    enabled: hasFinished,
+    staleTime: 30_000,
+  })
+
+  const avgMetrics = bulkSummaryData?.avg_metrics
+  const avgTotalReturn = avgMetrics?.total_return
+  const avgSharpe = avgMetrics?.sharpe_ratio
+  const avgMaxDrawdown = avgMetrics?.max_drawdown
+
   useEffect(() => {
     if (expanded && allResults.length === 0 && hasFinished) {
-      loadPage(1)
+      void loadPage(1)
     }
-  }, [expanded])
+  }, [expanded, allResults.length, hasFinished])
 
-  // Reset when sort order changes
   useEffect(() => {
     if (expanded && hasFinished) {
       setAllResults([])
       setPage(1)
-      loadPage(1)
+      void loadPage(1)
     }
   }, [sortOrder])
 
-  const loadPage = async (p: number) => {
+  const loadPage = async (nextPage: number) => {
     setLoadingMore(true)
     try {
-      const res = await queueAPI.getBulkJobResults(job.job_id, p, PAGE_SIZE, sortOrder)
+      const res = await queueAPI.getBulkJobResults(job.job_id, nextPage, pageSize, sortOrder)
       const data: BulkJobResultsPage = res.data
-      if (p === 1) {
-        setAllResults(data.results)
-      } else {
-        setAllResults(prev => [...prev, ...data.results])
-      }
+      setAllResults((prev) => (nextPage === 1 ? data.results : [...prev, ...data.results]))
       setTotal(data.total)
-      setPage(p)
-    } catch (err) {
-      console.error('Failed to load bulk results', err)
+      setPage(nextPage)
+    } catch (error) {
+      console.error('Failed to load bulk results', error)
     } finally {
       setLoadingMore(false)
     }
@@ -497,240 +443,169 @@ function BulkJobCard({
   const hasMore = allResults.length < total
 
   return (
-    <div className="bg-card border border-border rounded-lg hover:shadow-md transition-shadow">
-      <div className="p-4">
-        {/* Line 1: status + timestamp + job ID */}
-        <div className="flex items-center gap-3 mb-1.5 flex-wrap">
-          {getStatusIcon(job.status)}
-          <span className={`px-2 py-0.5 rounded text-xs font-medium capitalize ${getStatusColor(job.status)}`}>
-            {job.status}
-          </span>
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-orange-500/10 text-orange-600 dark:text-orange-400 text-xs font-semibold">
-            <Layers className="h-3 w-3" />
-            {t('bulk.label')}
-          </span>
-          <span className="text-xs text-muted-foreground">
-            {new Date(job.created_at).toLocaleString()}
-          </span>
-          <span className="text-xs text-muted-foreground/60 font-mono">{job.job_id}</span>
-        </div>
-
-        {/* Line 2-3: strategy + params + metrics */}
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1 flex-wrap">
-              {strategyDisplay && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-medium">
-                  <TrendingUp className="h-3 w-3" />
-                  {strategyDisplay}
-                  {strategyVersion && (
-                    <span className="ml-1 px-1 py-0 rounded bg-purple-500/10 text-purple-600 dark:text-purple-400 text-[10px] font-semibold">
-                      v{strategyVersion}
-                    </span>
-                  )}
-                </span>
-              )}
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-orange-500/10 text-orange-600 dark:text-orange-400 text-xs font-medium">
-                {t('bulk.symbols', { count: totalSymbols })}
-              </span>
-            </div>
-            <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
-              {job.start_date && job.end_date && (
-                <span className="inline-flex items-center gap-1">
-                  <Calendar className="h-3 w-3" />
-                  {job.start_date} ~ {job.end_date}
-                </span>
-              )}
-              {job.initial_capital && (
-                <span className="inline-flex items-center gap-1">
-                  <DollarSign className="h-3 w-3" />
-                  {Number(job.initial_capital).toLocaleString()}
-                </span>
-              )}
-              {job.rate !== undefined && <span>{t('commission')}: {job.rate}</span>}
-              {job.slippage !== undefined && <span>{t('slippage')}: {job.slippage}</span>}
-              {/* Parameters summary for bulk job */}
-              {(jobParams && Object.keys(jobParams).length > 0) && (
-                <span className="inline-flex items-center gap-1">
-                  <Layers className="h-3 w-3" />
-                  {t('common:parameters')}: {Object.keys(jobParams).length}
-                </span>
-              )}
-            </div>
+    <>
+      <tr className="hover:bg-accent/50">
+        <td className="px-4 py-3 font-mono text-xs">{job.job_id.slice(0, 12)}</td>
+        <td className="px-4 py-3">
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-foreground">{strategyLabel}</span>
+            <Badge variant="warning">{t('bulk.label')}</Badge>
           </div>
-
-          {/* Right: best return metrics + buttons */}
-          <div className="flex-shrink-0 flex items-center gap-3">
-            {hasFinished && bestReturn !== undefined && bestReturn !== null && (
-              <div className="flex items-center gap-3">
-                <div>
-                  <div className={`text-lg font-extrabold ${bestReturn >= 0 ? 'text-red-500' : 'text-green-500'}`}>
-                    <span className="text-sm text-muted-foreground font-normal mr-1">{t('metrics.totalReturn')}</span>
-                    {bestReturn.toFixed(2)}%
-                  </div>
-                  {bestSymbol && (
-                    <div className="text-[10px] text-muted-foreground text-right">
-                      {bestSymbol}
-                      {job.result?.best_symbol_name ? (
-                        <span className="text-[10px] text-muted-foreground/80 ml-1">({job.result.best_symbol_name})</span>
-                      ) : null}
-                    </div>
-                  )}
-                </div>
-                {job.result?.best_annual_return !== undefined && (
-                  <div className="text-lg font-extrabold">
-                    <span className="text-sm text-muted-foreground font-normal mr-1">{t('metrics.annualReturn')}</span>
-                    {job.result.best_annual_return.toFixed(2)}%
-                  </div>
-                )}
-                {job.result?.best_sharpe_ratio !== undefined && (
-                  <div className="text-lg font-extrabold">
-                    <span className="text-sm text-muted-foreground font-normal mr-1">{t('metrics.sharpeRatio')}</span>
-                    {job.result.best_sharpe_ratio.toFixed(2)}
-                  </div>
-                )}
-                {job.result?.best_max_drawdown !== undefined && (
-                  <div className="text-lg font-extrabold text-green-500">
-                    <span className="text-sm text-muted-foreground font-normal mr-1">{t('metrics.maxDrawdown')}</span>
-                    {job.result.best_max_drawdown.toFixed(2)}%
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div className="flex items-center gap-1 border-l border-border pl-3">
-              {hasFinished && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); onToggle() }}
-                  className="px-3 py-2 hover:bg-primary/10 text-primary rounded-md transition-colors text-sm font-medium"
-                  title={expanded ? t('common:close') : t('common:view')}
-                >
-                  {expanded ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
-                </button>
-              )}
-              {hasFinished && onViewBulkSummary && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); onViewBulkSummary(job.job_id) }}
-                  className="px-3 py-2 hover:bg-primary/10 text-primary rounded-md transition-colors text-sm font-medium"
-                  title={t('common:view')}
-                >
-                  <BarChart3 className="h-5 w-5" />
-                </button>
-              )}
+          {job.strategy_version ? <div className="mt-0.5 text-[11px] text-muted-foreground">v{job.strategy_version}</div> : null}
+        </td>
+        <td className="px-4 py-3">
+          <div className="font-medium text-foreground">{t('bulk.symbols', { count: totalSymbols })}</div>
+          {job.start_date && job.end_date ? <div className="mt-0.5 text-[11px] text-muted-foreground">{job.start_date} ~ {job.end_date}</div> : null}
+        </td>
+        <td className="px-4 py-3">
+          {job.status === 'finished' || job.status === 'completed' ? <Badge variant="success">{t('status.finished')}</Badge> : null}
+          {job.status === 'started' ? <Badge variant="primary">{t('status.running')}</Badge> : null}
+          {job.status === 'queued' ? <Badge variant="warning">{t('status.queued')}</Badge> : null}
+          {job.status === 'failed' ? <Badge variant="destructive">{t('status.failed')}</Badge> : null}
+        </td>
+        <td className="px-4 py-3">
+          <span className={avgTotalReturn !== undefined && avgTotalReturn !== null ? (avgTotalReturn >= 0 ? 'font-semibold text-red-500' : 'font-semibold text-green-500') : 'text-muted-foreground'}>
+            {avgTotalReturn !== undefined && avgTotalReturn !== null ? `${avgTotalReturn >= 0 ? '+' : ''}${avgTotalReturn.toFixed(2)}%` : '-'}
+          </span>
+          {bestSymbol ? <div className="mt-0.5 text-[11px] text-muted-foreground">Best: {bestSymbol}</div> : null}
+        </td>
+        <td className="px-4 py-3">{avgSharpe !== undefined && avgSharpe !== null ? avgSharpe.toFixed(2) : '-'}</td>
+        <td className="px-4 py-3">{avgMaxDrawdown !== undefined && avgMaxDrawdown !== null ? `${avgMaxDrawdown.toFixed(2)}%` : '-'}</td>
+        <td className="px-4 py-3">
+          <div className="text-xs text-foreground">{new Date(job.created_at).toLocaleDateString()}</div>
+          <div className="mt-0.5 text-[11px] text-muted-foreground">{new Date(job.created_at).toLocaleTimeString()}</div>
+        </td>
+        <td className="px-4 py-3">
+          <div className="flex items-center gap-1">
+            {hasFinished ? (
               <button
-                onClick={onDelete}
-                disabled={deleteIsPending}
-                className="px-3 py-2 hover:bg-destructive/10 text-destructive rounded-md transition-colors disabled:opacity-50 text-sm font-medium"
-                title={t('common:delete')}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onToggle()
+                }}
+                className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-primary transition-colors hover:bg-primary/10"
+                title={t('common:view')}
               >
-                <Trash2 className="h-5 w-5" />
+                {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
               </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Progress bar (while running) */}
-        {job.progress !== undefined && job.progress > 0 && job.progress < 100 && (
-          <div className="mt-2">
-            <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-              <span>{job.progress_message || t('jobList.processing')}</span>
-              <span>{job.progress}%</span>
-            </div>
-            <div className="w-full bg-muted rounded-full h-2">
-              <div className="bg-primary h-2 rounded-full transition-all" style={{ width: `${job.progress}%` }} />
-            </div>
-          </div>
-        )}
-
-        {job.error && (
-          <div className="text-sm text-destructive mt-2">Error: {job.error}</div>
-        )}
-      </div>
-
-      {/* Expanded child results */}
-      {expanded && hasFinished && (
-        <div className="border-t border-border">
-          {/* Sort control */}
-          <div className="flex items-center justify-between px-4 py-2 bg-muted/20">
-            <span className="text-xs text-muted-foreground">{total} {t('jobList.results')}</span>
+            ) : null}
+            {hasFinished && onViewBulkSummary ? (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onViewBulkSummary(job.job_id)
+                }}
+                className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-primary transition-colors hover:bg-primary/10"
+              >
+                <BarChart3 className="h-3.5 w-3.5" />
+                {t('common:view')}
+              </button>
+            ) : null}
             <button
-              onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
-              className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+              onClick={onDelete}
+              disabled={deleteIsPending}
+              className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50"
             >
-              {t('metrics.totalReturn')} {sortOrder === 'desc' ? <ArrowDown className="h-3 w-3" /> : <ArrowUp className="h-3 w-3" />}
+              <Trash2 className="h-3.5 w-3.5" />
+              {t('common:delete')}
             </button>
           </div>
-
-          {/* Table header */}
-          <div className="grid grid-cols-[1fr_80px_80px_80px_80px_60px] gap-2 px-4 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase border-b border-border bg-muted/10">
-            <span>{t('common:symbol')}</span>
-            <span className="text-right">{t('metrics.totalReturn')}</span>
-            <span className="text-right">{t('metrics.annualReturn')}</span>
-            <span className="text-right">{t('metrics.sharpeRatio')}</span>
-            <span className="text-right">{t('metrics.maxDrawdown')}</span>
-            <span className="text-right">{t('common:status')}</span>
-          </div>
-
-          {/* Rows */}
-          {allResults.map((child) => {
-            const childParams = (child as any).parameters || {}
-            const ret = child.statistics?.total_return
-            return (
-              <button
-                key={child.job_id}
-                onClick={() => onViewResults(child.job_id)}
-                className="grid grid-cols-[1fr_80px_80px_80px_80px_60px] gap-2 px-4 py-2 text-xs w-full text-left hover:bg-muted/30 transition-colors border-b border-border last:border-0"
-              >
-                <span className="truncate font-medium">
-                  {child.symbol}
-                  {child.symbol_name && <span className="text-muted-foreground ml-1">({child.symbol_name})</span>}
-                  {childParams && Object.keys(childParams).length > 0 && (
-                    <span className="text-[10px] text-muted-foreground ml-2">{t('common:parameters')}: {Object.keys(childParams).length}</span>
-                  )}
-                </span>
-                <span className={`text-right font-semibold ${ret !== undefined ? (ret >= 0 ? 'text-red-500' : 'text-green-500') : ''}`}>
-                  {ret !== undefined ? `${ret.toFixed(2)}%` : '-'}
-                </span>
-                <span className="text-right">
-                  {child.statistics?.annual_return !== undefined ? `${child.statistics.annual_return.toFixed(2)}%` : '-'}
-                </span>
-                <span className="text-right">
-                  {child.statistics?.sharpe_ratio !== undefined ? child.statistics.sharpe_ratio.toFixed(2) : '-'}
-                </span>
-                <span className="text-right text-green-500">
-                  {child.statistics?.max_drawdown_percent !== undefined
-                    ? `${child.statistics.max_drawdown_percent.toFixed(2)}%`
-                    : child.statistics?.max_drawdown !== undefined
-                    ? `${child.statistics.max_drawdown.toFixed(2)}%`
-                    : '-'}
-                </span>
-                <span className={`text-right capitalize ${child.status === 'completed' || child.status === 'finished' ? 'text-green-500' : child.status === 'failed' ? 'text-red-500' : 'text-muted-foreground'}`}>
-                  {child.status === 'completed' || child.status === 'finished' ? '✓' : child.status === 'failed' ? '✗' : child.status}
-                </span>
-              </button>
-            )
-          })}
-
-          {/* Load more */}
-          {hasMore && (
-            <div className="px-4 py-2 text-center border-t border-border">
-              <button
-                onClick={() => loadPage(page + 1)}
-                disabled={loadingMore}
-                className="text-sm text-primary hover:underline disabled:opacity-50"
-              >
-                {loadingMore ? t('common:loading') : `... ${t('jobList.loadMore')} (${allResults.length}/${total})`}
-              </button>
+          {job.progress !== undefined && job.progress > 0 && job.progress < 100 ? (
+            <div className="mt-2 w-28">
+              <div className="mb-1 flex items-center justify-between text-[10px] text-muted-foreground">
+                <span>{job.progress_message || t('jobList.processing')}</span>
+                <span>{job.progress}%</span>
+              </div>
+              <div className="h-1.5 rounded-full bg-muted">
+                <div className="h-1.5 rounded-full bg-primary transition-all" style={{ width: `${job.progress}%` }} />
+              </div>
             </div>
-          )}
+          ) : null}
+        </td>
+      </tr>
 
-          {loadingMore && allResults.length === 0 && (
-            <div className="px-4 py-4 text-center">
-              <Loader className="h-5 w-5 animate-spin text-muted-foreground mx-auto" />
+      {expanded && hasFinished ? (
+        <tr>
+          <td colSpan={9} className="px-0 py-0">
+            <div className="border-t border-border bg-muted/10">
+              <div className="flex items-center justify-between px-4 py-2">
+                <span className="text-xs text-muted-foreground">{total} {t('jobList.results')}</span>
+                <button
+                  onClick={() => setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'))}
+                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                >
+                  {t('metrics.totalReturn')}
+                  {sortOrder === 'desc' ? <ArrowDown className="h-3 w-3" /> : <ArrowUp className="h-3 w-3" />}
+                </button>
+              </div>
+
+              <div className="overflow-x-auto border-t border-border bg-background">
+                <table className="w-full border-collapse text-xs">
+                  <thead className="bg-muted/60">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">{t('symbol')}</th>
+                      <th className="px-4 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">{t('metrics.totalReturn')}</th>
+                      <th className="px-4 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">{t('metrics.annualReturn')}</th>
+                      <th className="px-4 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">{t('metrics.sharpeRatio')}</th>
+                      <th className="px-4 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">{t('metrics.maxDrawdown')}</th>
+                      <th className="px-4 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">{t('jobList.status')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allResults.map((child) => {
+                      const ret = child.statistics?.total_return
+                      const annual = child.statistics?.annual_return
+                      const sharpe = child.statistics?.sharpe_ratio
+                      const maxDrawdown = child.statistics?.max_drawdown_percent ?? child.statistics?.max_drawdown
+
+                      return (
+                        <tr key={child.job_id} className="cursor-pointer hover:bg-accent/50" onClick={() => onViewResults(child.job_id)}>
+                          <td className="px-4 py-2">
+                            <div className="font-medium text-foreground">{child.symbol}</div>
+                            {child.symbol_name ? <div className="text-[11px] text-muted-foreground">{child.symbol_name}</div> : null}
+                          </td>
+                          <td className="px-4 py-2 text-right">
+                            <span className={ret !== undefined && ret !== null ? (ret >= 0 ? 'font-semibold text-red-500' : 'font-semibold text-green-500') : 'text-muted-foreground'}>
+                              {ret !== undefined && ret !== null ? `${ret >= 0 ? '+' : ''}${ret.toFixed(2)}%` : '-'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2 text-right">{annual !== undefined && annual !== null ? `${annual.toFixed(2)}%` : '-'}</td>
+                          <td className="px-4 py-2 text-right">{sharpe !== undefined && sharpe !== null ? sharpe.toFixed(2) : '-'}</td>
+                          <td className="px-4 py-2 text-right">{maxDrawdown !== undefined && maxDrawdown !== null ? `${maxDrawdown.toFixed(2)}%` : '-'}</td>
+                          <td className="px-4 py-2 text-right">
+                            {child.status === 'completed' || child.status === 'finished' ? <CheckCircle className="ml-auto h-3.5 w-3.5 text-green-500" /> : null}
+                            {child.status === 'started' ? <Clock className="ml-auto h-3.5 w-3.5 text-blue-500" /> : null}
+                            {child.status === 'queued' ? <Clock className="ml-auto h-3.5 w-3.5 text-yellow-500" /> : null}
+                            {child.status === 'failed' ? <XCircle className="ml-auto h-3.5 w-3.5 text-red-500" /> : null}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {hasMore ? (
+                <div className="border-t border-border px-4 py-2 text-center">
+                  <button
+                    onClick={() => void loadPage(page + 1)}
+                    disabled={loadingMore}
+                    className="text-sm text-primary hover:underline disabled:opacity-50"
+                  >
+                    {loadingMore ? t('common:loading') : `... ${t('jobList.loadMore')} (${allResults.length}/${total})`}
+                  </button>
+                </div>
+              ) : null}
+
+              {loadingMore && allResults.length === 0 ? (
+                <div className="px-4 py-4 text-center">
+                  <Loader className="mx-auto h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : null}
             </div>
-          )}
-        </div>
-      )}
-    </div>
+          </td>
+        </tr>
+      ) : null}
+    </>
   )
 }

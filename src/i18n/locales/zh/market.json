@@ -19,7 +19,13 @@
     "quoteSearchPlaceholder": "搜索股票代码或名称...",
     "allIndustries": "全部行业",
     "showingTop": "显示前 100 条，共 {{count}} 条",
+    "quoteBoardTitle": "实时市场总览",
+    "quoteBoardSubtitle": "聚合展示 A 股、港股、美股、加密货币的当日核心指标。",
+    "quoteTimeoutHint": "请求超时：如有缓存则展示最近数据。",
     "stockLabel": "股票:",
+    "klineSymbolPlaceholder": "输入代码（如 600519、AAPL、00700、BTCUSDT）",
+    "historyRangeLabel": "历史区间",
+    "historyYears": "{{years}}年",
     "movingAverage": "均线",
     "candlestickLegend": "K线",
     "volume": "成交量",
@@ -42,6 +48,12 @@
       "healthcare": "医药",
       "property": "地产",
       "technology": "科技"
+    },
+    "marketCards": {
+      "cn": "A股指数",
+      "hk": "港股市场",
+      "us": "美股市场",
+      "crypto": "加密货币"
     }
   },
   "symbolSearch": "标的搜索",
