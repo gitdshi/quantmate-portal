@@ -309,12 +309,20 @@
     },
     "templates": {
       "title": "策略模板库",
-      "subtitle": "按原型布局整理模板入口，并与真实内置策略目录做能力映射。",
+      "subtitle": "基于 strategy_templates 数据表的策略模板库。",
       "availableOnServer": "后端可用",
       "localStarter": "本地起始模板",
       "previewTitle": "模板预览",
       "previewDescription": "选择一个模板卡片，查看起始代码并创建新的策略草稿。",
-      "fallbackDescription": "可直接继续扩展的起始模板。"
+      "fallbackDescription": "可直接继续扩展的起始模板。",
+      "scopeMarketplace": "模板市场",
+      "scopeMine": "我的模板",
+      "sourceMarketplace": "模板市场",
+      "sourceMine": "我的模板",
+      "downloads": "{{count}} 次使用",
+      "empty": "当前范围暂无模板。",
+      "loadCode": "加载代码",
+      "loadCodeHint": "当前未加载模板代码，点击“加载代码”获取完整内容。"
     },
     "modals": {
       "createTitle": "创建策略草稿",
@@ -344,7 +352,9 @@
       "draftCreated": "策略草稿已创建，请继续编辑后保存。",
       "duplicated": "已基于 {{name}} 创建一个复制草稿",
       "imported": "策略文件已导入",
-      "importFailed": "导入策略文件失败"
+      "importFailed": "导入策略文件失败",
+      "loadTemplatesFailed": "加载模板库失败",
+      "loadTemplateDetailFailed": "加载模板详情失败"
     },
     "unsaved": {
       "title": "存在未保存更改",

@@ -672,7 +672,7 @@ export default function Strategies() {
     }
   }
 
-  const refreshTemplates = async () => {
+  const refreshBuiltinStrategies = async () => {
     try {
       const response = await strategiesAPI.listBuiltin()
       const builtinItems = unwrapArray<BuiltinStrategyApiItem>(response.data)
@@ -680,58 +680,50 @@ export default function Strategies() {
         builtinItems.map((item) => (item.class_name || item.name || '').toLowerCase()).filter(Boolean)
       )
       setAvailableBuiltinNames(serverNameSet)
-
-      const mergedTemplates = TEMPLATE_CATALOG.map((item) => {
-        const apiItem = builtinItems.find(
-          (builtin) =>
-            (builtin.class_name || builtin.name || '').toLowerCase() === item.backendName.toLowerCase() ||
-            (builtin.name || '').toLowerCase() === item.backendName.toLowerCase()
-        )
-        return {
-          ...item,
-          availableOnServer: Boolean(apiItem),
-          serverDescription: apiItem?.description || null,
-        }
-      })
-
-      const extraTemplates = builtinItems
-        .filter((item) => !templateCatalogMap.has((item.class_name || item.name || '').toLowerCase()))
-        .map<TemplateCard>((item) => {
-          const className = item.class_name || sanitizeIdentifier(item.name)
-          return {
-            key: item.name.toLowerCase(),
-            backendName: className,
-            category: inferCategory({
-              name: item.name,
-              class_name: className,
-              description: item.description || '',
-            }),
-            nameKey: '',
-            descriptionKey: '',
-            code: buildSkeletonCode(className, item.name, item.description || 'Built-in strategy.'),
-            defaultParameters: DEFAULT_PARAMETERS,
-            availableOnServer: true,
-            serverDescription: item.description || null,
-          }
-        })
-
-      setTemplates([...mergedTemplates, ...extraTemplates])
     } catch {
       setAvailableBuiltinNames(new Set())
-      setTemplates(
-        TEMPLATE_CATALOG.map((item) => ({
-          ...item,
-          availableOnServer: false,
-          serverDescription: null,
-        }))
-      )
+    }
+  }
+
+  const refreshTemplates = async (scope: TemplateScope) => {
+    setLoadingTemplates(true)
+    try {
+      const response =
+        scope === 'mine'
+          ? await templateAPI.listMine({ page: 1, page_size: 100 })
+          : await templateAPI.listMarketplace({ page: 1, page_size: 100 })
+      const items = unwrapArray<TemplateApiItem>(response.data).map((item) => mapTemplateCard(item, scope))
+      setTemplateCatalog((current) => ({
+        ...current,
+        [scope]: items,
+      }))
+    } catch (error: unknown) {
+      const requestError = error as { response?: { data?: { detail?: string } } }
+      showToast(requestError.response?.data?.detail || t('page.toasts.loadTemplatesFailed'), 'error')
+      setTemplateCatalog((current) => ({
+        ...current,
+        [scope]: [],
+      }))
+    } finally {
+      setLoadingTemplates(false)
     }
   }
 
   useEffect(() => {
     void refreshStrategies()
-    void refreshTemplates()
+    void refreshBuiltinStrategies()
+    void refreshTemplates('marketplace')
+    void refreshTemplates('mine')
   }, [])
+
+  useEffect(() => {
+    setSelectedTemplateKey((current) => {
+      if (current && templates.some((item) => item.key === current)) {
+        return current
+      }
+      return templates[0]?.key || null
+    })
+  }, [templates])
 
   const validateCode = async (content: string) => {
     try {
@@ -810,17 +802,41 @@ export default function Strategies() {
     }
   }
 
-  const createDraftFromTemplate = (
+  const ensureTemplateReady = async (template: TemplateCard) => {
+    if (template.code) return template
+    const response = await templateAPI.get(template.id)
+    const detail = mapTemplateCard(response.data as TemplateApiItem, template.source)
+    setTemplateCatalog((current) => ({
+      ...current,
+      [template.source]: current[template.source].map((item) => (item.id === template.id ? detail : item)),
+    }))
+    return detail
+  }
+
+  const createDraftFromTemplate = async (
     template: TemplateCard | null,
     overrides?: Partial<CreateFormState>
   ) => {
     const name = overrides?.name?.trim() || t('page.modals.defaultName')
+    let selectedTemplate = template
+    if (selectedTemplate) {
+      try {
+        setSelectedTemplateLoading(true)
+        selectedTemplate = await ensureTemplateReady(selectedTemplate)
+      } catch (error: unknown) {
+        const requestError = error as { response?: { data?: { detail?: string } } }
+        showToast(requestError.response?.data?.detail || t('page.toasts.loadTemplateDetailFailed'), 'error')
+        return
+      } finally {
+        setSelectedTemplateLoading(false)
+      }
+    }
     const description =
       overrides?.description?.trim() ||
-      (template ? t(template.descriptionKey) : t('page.modals.blankDescription'))
+      (selectedTemplate?.description?.trim() || t('page.modals.blankDescription'))
     const className = sanitizeIdentifier(name)
-    const code = template
-      ? template.code.replace(new RegExp(template.backendName, 'g'), className)
+    const code = selectedTemplate?.code
+      ? replacePrimaryClassName(selectedTemplate.code, className)
       : buildSkeletonCode(className, name, description)
 
     setSelectedId(UNSAVED_DRAFT_ID)
@@ -831,11 +847,11 @@ export default function Strategies() {
       class_name: className,
       description,
       code,
-      parametersText: JSON.stringify(template?.defaultParameters || DEFAULT_PARAMETERS, null, 2),
+      parametersText: JSON.stringify(selectedTemplate?.defaultParameters || DEFAULT_PARAMETERS, null, 2),
     })
     setMainTab('workspace')
     setDetailTab('code')
-    setSelectedTemplateKey(template?.key || null)
+    setSelectedTemplateKey(selectedTemplate?.key || null)
     setCreateModalOpen(false)
     showToast(t('page.toasts.draftCreated'), 'success')
   }
@@ -844,8 +860,8 @@ export default function Strategies() {
     const template =
       createForm.templateKey === 'blank'
         ? null
-        : templates.find((item) => item.key === createForm.templateKey) || null
-    createDraftFromTemplate(template, createForm)
+        : allTemplates.find((item) => item.key === createForm.templateKey) || null
+    void createDraftFromTemplate(template, createForm)
   }
 
   const handleDuplicate = () => {
@@ -976,6 +992,28 @@ export default function Strategies() {
       }
       void selectStrategy(strategy.id)
     })
+  }
+
+  const handleTemplateScopeChange = (scope: TemplateScope) => {
+    if (scope === templateScope) return
+    setTemplateScope(scope)
+    if (templateCatalog[scope].length === 0) {
+      void refreshTemplates(scope)
+    }
+  }
+
+  const handleTemplatePreview = async (template: TemplateCard) => {
+    setSelectedTemplateKey(template.key)
+    if (template.code) return
+    try {
+      setSelectedTemplateLoading(true)
+      await ensureTemplateReady(template)
+    } catch (error: unknown) {
+      const requestError = error as { response?: { data?: { detail?: string } } }
+      showToast(requestError.response?.data?.detail || t('page.toasts.loadTemplateDetailFailed'), 'error')
+    } finally {
+      setSelectedTemplateLoading(false)
+    }
   }
 
   const listCountLabel = t('page.list.count', { count: filteredStrategies.length })
@@ -1321,47 +1359,105 @@ export default function Strategies() {
         {mainTab === 'templates' && (
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
             <section className={`${shellCardClass} p-5`}>
-              <div className="mb-4">
-                <h2 className="text-lg font-semibold text-card-foreground">{t('page.templates.title')}</h2>
-                <p className="mt-1 text-sm text-muted-foreground">{t('page.templates.subtitle')}</p>
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-semibold text-card-foreground">{t('page.templates.title')}</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">{t('page.templates.subtitle')}</p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    className={templateScope === 'marketplace' ? buttonPrimaryClass : buttonSecondaryClass}
+                    onClick={() => handleTemplateScopeChange('marketplace')}
+                  >
+                    {t('page.templates.scopeMarketplace')}
+                  </button>
+                  <button
+                    type="button"
+                    className={templateScope === 'mine' ? buttonPrimaryClass : buttonSecondaryClass}
+                    onClick={() => handleTemplateScopeChange('mine')}
+                  >
+                    {t('page.templates.scopeMine')}
+                  </button>
+                </div>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3" data-testid="strategy-templates-grid">
-                {templates.map((template) => (
-                  <article key={template.key} className="rounded-2xl border border-border bg-background p-4" data-testid={`template-card-${template.key}`}>
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <div className="text-base font-semibold text-foreground">{template.nameKey ? t(template.nameKey) : template.backendName}</div>
-                        <div className="mt-1 text-sm text-muted-foreground">{template.serverDescription || (template.descriptionKey ? t(template.descriptionKey) : t('page.templates.fallbackDescription'))}</div>
+              {loadingTemplates && templates.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
+                  {t('page.table.loading')}
+                </div>
+              ) : templates.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
+                  {t('page.templates.empty')}
+                </div>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3" data-testid="strategy-templates-grid">
+                  {templates.map((template) => (
+                    <article key={template.key} className="rounded-2xl border border-border bg-background p-4" data-testid={`template-card-${template.key}`}>
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="text-base font-semibold text-foreground">{template.name}</div>
+                          <div className="mt-1 text-sm text-muted-foreground">{template.description || t('page.templates.fallbackDescription')}</div>
+                        </div>
+                        <Badge variant={getCategoryVariant(template.category)}>{translateCategory(template.category)}</Badge>
                       </div>
-                      <Badge variant={getCategoryVariant(template.category)}>{translateCategory(template.category)}</Badge>
-                    </div>
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      <Badge variant={template.availableOnServer ? 'success' : 'muted'}>{template.availableOnServer ? t('page.templates.availableOnServer') : t('page.templates.localStarter')}</Badge>
-                    </div>
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      <button type="button" className={buttonGhostClass} onClick={() => setSelectedTemplateKey(template.key)}>
-                        <Eye size={14} />
-                        {t('page.actions.preview')}
-                      </button>
-                      <button type="button" className={buttonPrimaryClass} onClick={() => createDraftFromTemplate(template)}>
-                        {t('page.actions.useTemplate')}
-                      </button>
-                    </div>
-                  </article>
-                ))}
-              </div>
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <Badge variant={template.source === 'marketplace' ? 'success' : 'muted'}>
+                          {template.source === 'marketplace' ? t('page.templates.sourceMarketplace') : t('page.templates.sourceMine')}
+                        </Badge>
+                        <Badge variant="muted">{template.visibility}</Badge>
+                      </div>
+                      <div className="mt-3 text-xs text-muted-foreground">
+                        {t('page.templates.downloads', { count: template.downloads })} · {formatDateTime(template.updatedAt, currentLanguage)}
+                      </div>
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <button type="button" className={buttonGhostClass} onClick={() => void handleTemplatePreview(template)}>
+                          <Eye size={14} />
+                          {t('page.actions.preview')}
+                        </button>
+                        <button
+                          type="button"
+                          className={buttonPrimaryClass}
+                          onClick={() => void createDraftFromTemplate(template)}
+                          disabled={selectedTemplateLoading}
+                        >
+                          {t('page.actions.useTemplate')}
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
             </section>
 
             <aside className={`${shellCardClass} p-5`} data-testid="template-preview-panel">
               {selectedTemplate ? (
                 <div className="space-y-4">
                   <div>
-                    <h3 className="text-lg font-semibold text-card-foreground">{selectedTemplate.nameKey ? t(selectedTemplate.nameKey) : selectedTemplate.backendName}</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">{selectedTemplate.serverDescription || (selectedTemplate.descriptionKey ? t(selectedTemplate.descriptionKey) : t('page.templates.fallbackDescription'))}</p>
+                    <h3 className="text-lg font-semibold text-card-foreground">{selectedTemplate.name}</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">{selectedTemplate.description || t('page.templates.fallbackDescription')}</p>
                   </div>
-                  <pre className="max-h-[440px] overflow-auto rounded-xl border border-border bg-muted/20 p-4 text-xs leading-6 text-foreground">{selectedTemplate.code}</pre>
-                  <button type="button" className={`${buttonPrimaryClass} w-full`} onClick={() => createDraftFromTemplate(selectedTemplate)}>{t('page.actions.useTemplate')}</button>
+                  {selectedTemplateLoading ? (
+                    <div className="rounded-xl border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
+                      {t('page.table.loading')}
+                    </div>
+                  ) : selectedTemplate.code ? (
+                    <pre className="max-h-[440px] overflow-auto rounded-xl border border-border bg-muted/20 p-4 text-xs leading-6 text-foreground">{selectedTemplate.code}</pre>
+                  ) : (
+                    <div className="rounded-xl border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
+                      {t('page.templates.loadCodeHint')}
+                    </div>
+                  )}
+                  <div className="flex flex-wrap gap-2">
+                    {!selectedTemplate.code && (
+                      <button type="button" className={buttonSecondaryClass} onClick={() => void handleTemplatePreview(selectedTemplate)} disabled={selectedTemplateLoading}>
+                        {t('page.templates.loadCode')}
+                      </button>
+                    )}
+                    <button type="button" className={`${buttonPrimaryClass} flex-1`} onClick={() => void createDraftFromTemplate(selectedTemplate)} disabled={selectedTemplateLoading}>
+                      {t('page.actions.useTemplate')}
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="flex min-h-[320px] flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-muted/20 px-6 text-center">
@@ -1413,8 +1509,10 @@ export default function Strategies() {
                   <label className="mb-1 block text-sm font-medium">{t('page.modals.template')}</label>
                   <select className={inputClass} value={createForm.templateKey} onChange={(event) => setCreateForm((current) => ({ ...current, templateKey: event.target.value }))}>
                     <option value="blank">{t('page.modals.blankTemplate')}</option>
-                    {templates.map((template) => (
-                      <option key={template.key} value={template.key}>{template.nameKey ? t(template.nameKey) : template.backendName}</option>
+                    {allTemplates.map((template) => (
+                      <option key={template.key} value={template.key}>
+                        {template.name} ({template.source === 'marketplace' ? t('page.templates.sourceMarketplace') : t('page.templates.sourceMine')})
+                      </option>
                     ))}
                   </select>
                 </div>

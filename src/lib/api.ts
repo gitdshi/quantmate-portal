@@ -539,7 +539,15 @@ export const templateAPI = {
   listMine: (params?: { page?: number; page_size?: number }) =>
     api.get('/templates/mine', { params }),
   get: (id: number) => api.get(`/templates/${id}`),
-  create: (data: { name: string; description?: string; category?: string; code: string; parameters_schema?: Record<string, unknown>; is_public?: boolean }) =>
+  create: (data: {
+    name: string
+    code: string
+    description?: string
+    category?: string
+    params_schema?: Record<string, unknown>
+    default_params?: Record<string, unknown>
+    visibility?: 'private' | 'team' | 'public'
+  }) =>
     api.post('/templates', data),
   update: (id: number, data: Record<string, unknown>) => api.put(`/templates/${id}`, data),
   delete: (id: number) => api.delete(`/templates/${id}`),
@@ -550,7 +558,7 @@ export const templateAPI = {
   deleteComment: (id: number, commentId: number) =>
     api.delete(`/templates/${id}/comments/${commentId}`),
   getRatings: (id: number) => api.get(`/templates/${id}/ratings`),
-  rate: (id: number, data: { score: number }) =>
+  rate: (id: number, data: { rating: number; review?: string }) =>
     api.post(`/templates/${id}/ratings`, data),
 }
 
