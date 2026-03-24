@@ -50,10 +50,10 @@ function toStrategies(value: unknown): Strategy[] {
 function normalizeStrategyDetail(value: unknown): Strategy | null {
   if (!value || typeof value !== 'object') return null
   const payload = value as Record<string, unknown>
-  if (typeof payload.id === 'number') return payload as Strategy
+  if (typeof payload.id === 'number') return payload as unknown as Strategy
   if (payload.data && typeof payload.data === 'object') {
     const nested = payload.data as Record<string, unknown>
-    if (typeof nested.id === 'number') return nested as Strategy
+    if (typeof nested.id === 'number') return nested as unknown as Strategy
   }
   return null
 }

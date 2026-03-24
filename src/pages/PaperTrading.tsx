@@ -151,7 +151,7 @@ export default function PaperTrading() {
 
   const orderCols: Column<PaperOrder>[] = [
     { key: 'symbol', label: t('paper.columns.symbol') },
-    { key: 'direction', label: t('paper.columns.direction'), render: (order) => <Badge variant={order.direction === 'buy' ? 'success' : 'danger'}>{order.direction === 'buy' ? t('paper.side.buy') : t('paper.side.sell')}</Badge> },
+    { key: 'direction', label: t('paper.columns.direction'), render: (order) => <Badge variant={order.direction === 'buy' ? 'success' : 'destructive'}>{order.direction === 'buy' ? t('paper.side.buy') : t('paper.side.sell')}</Badge> },
     { key: 'price', label: t('paper.columns.price'), render: (order) => `?${order.price.toFixed(2)}` },
     { key: 'quantity', label: t('paper.columns.quantity') },
     { key: 'status', label: t('paper.columns.status'), render: (order) => <Badge variant={order.status === 'filled' ? 'success' : 'primary'}>{order.status === 'filled' ? t('management.status.filled') : t('management.status.pending')}</Badge> },
@@ -194,9 +194,8 @@ export default function PaperTrading() {
         {activeTab === 'orders' && (
           <div className="space-y-4">
             <FilterBar
-              filters={[{ key: 'search', label: t('paper.search'), type: 'search' as const }]}
-              values={{ search }}
-              onChange={(v) => setSearch((v.search as string) || '')}
+              searchValue={search}
+              onSearchChange={setSearch}
             />
             <DataTable columns={orderCols} data={search ? paperOrders.filter((order) => order.symbol.includes(search)) : paperOrders} emptyText={t('paper.empty.orders')} />
           </div>

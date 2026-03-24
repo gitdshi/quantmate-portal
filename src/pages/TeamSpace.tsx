@@ -61,7 +61,7 @@ export default function TeamSpace() {
       label: t('teamSpace.columns.role'),
       render: (member) => (
         <Badge
-          variant={member.role === 'owner' ? 'danger' : member.role === 'admin' ? 'warning' : 'primary'}
+          variant={member.role === 'owner' ? 'destructive' : member.role === 'admin' ? 'warning' : 'primary'}
         >
           {roleLabel(member.role)}
         </Badge>
@@ -113,7 +113,7 @@ export default function TeamSpace() {
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="font-semibold text-card-foreground text-lg">{ws.name}</h3>
                   <Badge
-                    variant={ws.role === 'owner' ? 'danger' : ws.role === 'admin' ? 'warning' : 'primary'}
+                    variant={ws.role === 'owner' ? 'destructive' : ws.role === 'admin' ? 'warning' : 'primary'}
                   >
                     {roleLabel(ws.role)}
                   </Badge>

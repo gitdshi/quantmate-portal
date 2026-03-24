@@ -34,8 +34,8 @@ interface AlertRule {
   last_triggered?: string
 }
 
-const LEVEL_MAP: Record<string, { color: string; variant: 'danger' | 'warning' | 'primary' }> = {
-  critical: { color: 'border-red-500', variant: 'danger' },
+const LEVEL_MAP: Record<string, { color: string; variant: 'destructive' | 'warning' | 'primary' }> = {
+  critical: { color: 'border-red-500', variant: 'destructive' },
   warning: { color: 'border-yellow-500', variant: 'warning' },
   info: { color: 'border-blue-500', variant: 'primary' },
 }
@@ -46,6 +46,7 @@ export default function Monitoring() {
   const [activeTab, setActiveTab] = useState('live')
   const [newRuleModal, setNewRuleModal] = useState(false)
   const [search, setSearch] = useState('')
+  const [levelFilter, setLevelFilter] = useState('')
 
   const tabs = [
     { key: 'live', label: t('page.tabs.live'), icon: <BellRing size={16} /> },
@@ -250,24 +251,24 @@ export default function Monitoring() {
         {activeTab === 'history' && (
           <div className="space-y-4">
             <FilterBar
+              searchValue={search}
+              onSearchChange={setSearch}
               filters={[
-                { key: 'search', label: t('page.search'), type: 'search' as const },
                 {
                   key: 'level',
-                  label: t('page.columns.level'),
-                  type: 'select' as const,
+                  value: levelFilter,
                   options: [
                     { label: t('page.all'), value: '' },
                     { label: levelLabel('critical'), value: 'critical' },
                     { label: levelLabel('warning'), value: 'warning' },
                     { label: levelLabel('info'), value: 'info' },
                   ],
+                  onChange: setLevelFilter,
+                  placeholder: t('page.columns.level'),
                 },
               ]}
-              values={{ search }}
-              onChange={(v) => setSearch((v.search as string) || '')}
             />
-            <DataTable columns={histCols} data={alertHistory} emptyText={t('page.empty.history')} />
+            <DataTable columns={histCols} data={alertHistory.filter(a => (!search || a.title?.includes(search) || a.message?.includes(search)) && (!levelFilter || a.level === levelFilter))} emptyText={t('page.empty.history')} />
           </div>
         )}
 

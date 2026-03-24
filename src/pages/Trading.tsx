@@ -32,6 +32,7 @@ export default function Trading() {
   const [activeTab, setActiveTab] = useState('pending')
   const [orderModal, setOrderModal] = useState(false)
   const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
   const [form, setForm] = useState({
     symbol: '',
     direction: 'buy',
@@ -50,13 +51,13 @@ export default function Trading() {
 
   const statusMap: Record<
     string,
-    { label: string; variant: 'success' | 'warning' | 'danger' | 'primary' | 'muted' }
+    { label: string; variant: 'success' | 'warning' | 'destructive' | 'primary' | 'muted' }
   > = {
     filled: { label: t('management.status.filled'), variant: 'success' },
     partial: { label: t('management.status.partial'), variant: 'warning' },
     pending: { label: t('management.status.pending'), variant: 'primary' },
     cancelled: { label: t('management.status.cancelled'), variant: 'muted' },
-    rejected: { label: t('management.status.rejected'), variant: 'danger' },
+    rejected: { label: t('management.status.rejected'), variant: 'destructive' },
   }
 
   const { data: orders = [] } = useQuery<Order[]>({
@@ -96,7 +97,7 @@ export default function Trading() {
     onError: () => showToast(t('management.submitFailed'), 'error'),
   })
 
-  const filtered = orders.filter((order) => !search || order.symbol?.toLowerCase().includes(search.toLowerCase()))
+  const filtered = orders.filter((order) => (!search || order.symbol?.toLowerCase().includes(search.toLowerCase())) && (!statusFilter || order.status === statusFilter))
 
   const todayStats = {
     total: orders.length,
@@ -110,7 +111,7 @@ export default function Trading() {
     {
       key: 'direction',
       label: t('management.columns.direction'),
-      render: (order) => <Badge variant={order.direction === 'buy' ? 'success' : 'danger'}>{order.direction === 'buy' ? t('management.buy') : t('management.sell')}</Badge>,
+      render: (order) => <Badge variant={order.direction === 'buy' ? 'success' : 'destructive'}>{order.direction === 'buy' ? t('management.buy') : t('management.sell')}</Badge>,
     },
     { key: 'order_type', label: t('management.columns.type') },
     { key: 'price', label: t('management.columns.orderPrice'), render: (order) => `?${order.price.toFixed(2)}` },
@@ -144,7 +145,7 @@ export default function Trading() {
     {
       key: 'direction',
       label: t('management.columns.direction'),
-      render: (order) => <Badge variant={order.direction === 'buy' ? 'success' : 'danger'}>{order.direction === 'buy' ? t('management.buy') : t('management.sell')}</Badge>,
+      render: (order) => <Badge variant={order.direction === 'buy' ? 'success' : 'destructive'}>{order.direction === 'buy' ? t('management.buy') : t('management.sell')}</Badge>,
     },
     { key: 'price', label: t('management.columns.tradePrice'), render: (order) => `?${order.price.toFixed(2)}` },
     { key: 'quantity', label: t('management.columns.tradeQty') },
@@ -175,9 +176,8 @@ export default function Trading() {
               <StatCard label={t('management.stats.cancelled')} value={todayStats.cancelled} />
             </div>
             <FilterBar
-              filters={[{ key: 'search', label: t('management.search'), type: 'search' as const }]}
-              values={{ search }}
-              onChange={(v) => setSearch((v.search as string) || '')}
+              searchValue={search}
+              onSearchChange={setSearch}
             />
             <DataTable columns={pendingCols} data={filtered} emptyText={t('management.empty.pending')} />
           </div>
@@ -186,9 +186,8 @@ export default function Trading() {
         {activeTab === 'filled' && (
           <div className="space-y-4">
             <FilterBar
-              filters={[{ key: 'search', label: t('management.search'), type: 'search' as const }]}
-              values={{ search }}
-              onChange={(v) => setSearch((v.search as string) || '')}
+              searchValue={search}
+              onSearchChange={setSearch}
             />
             <DataTable columns={filledCols} data={filtered.filter((order) => order.status === 'filled')} emptyText={t('management.empty.filled')} />
           </div>
@@ -197,21 +196,21 @@ export default function Trading() {
         {activeTab === 'history' && (
           <div className="space-y-4">
             <FilterBar
+              searchValue={search}
+              onSearchChange={setSearch}
               filters={[
-                { key: 'search', label: t('management.search'), type: 'search' as const },
                 {
                   key: 'status',
-                  label: t('management.columns.status'),
-                  type: 'select' as const,
+                  value: statusFilter,
                   options: [
                     { label: t('management.all'), value: '' },
                     { label: t('management.status.filled'), value: 'filled' },
                     { label: t('management.status.cancelled'), value: 'cancelled' },
                   ],
+                  onChange: setStatusFilter,
+                  placeholder: t('management.columns.status'),
                 },
               ]}
-              values={{ search }}
-              onChange={(v) => setSearch((v.search as string) || '')}
             />
             <DataTable columns={pendingCols} data={filtered} emptyText={t('management.empty.history')} />
           </div>

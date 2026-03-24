@@ -54,7 +54,7 @@ export default function FactorLab() {
   })
 
   const createMutation = useMutation({
-    mutationFn: (data: { name: string; category: string; formula: string }) => factorAPI.create(data),
+    mutationFn: (data: { name: string; category: string; expression: string }) => factorAPI.create(data),
     onSuccess: () => {
       showToast(t('factorLab.created'), 'success')
       setNewFactorModal(false)
@@ -150,9 +150,9 @@ export default function FactorLab() {
           <div className="space-y-4">
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <FilterBar
-                filters={[{ key: 'search', label: t('factorLab.search'), type: 'search' as const }]}
-                values={{ search }}
-                onChange={(v) => setSearch((v.search as string) || '')}
+                searchValue={search}
+                onSearchChange={setSearch}
+                searchPlaceholder={t('factorLab.search')}
               />
               <div className="text-sm text-muted-foreground">
                 {t('factorLab.total', { count: filtered.length })}
@@ -190,7 +190,7 @@ export default function FactorLab() {
                 createMutation.mutate({
                   name: t('factorLab.modal.newFactorName'),
                   category: t('factorLab.modal.customCategory'),
-                  formula: '',
+                  expression: '',
                 })
               }
               className="px-4 py-2 text-sm rounded-md bg-primary text-white hover:opacity-90"
