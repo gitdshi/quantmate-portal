@@ -8,6 +8,8 @@ import BacktestJobList from '../components/BacktestJobList'
 import BacktestResults from '../components/BacktestResults'
 import BulkBacktestForm from '../components/BulkBacktestForm'
 import BulkBacktestSummary from '../components/BulkBacktestSummary'
+import OptimizationTaskList from '../components/OptimizationTaskList'
+import OptimizationTaskResultsModal from '../components/OptimizationTaskResultsModal'
 import PerformanceComparison from '../components/PerformanceComparison'
 import StrategyOptimization from '../components/StrategyOptimization'
 import TabPanel from '../components/ui/TabPanel'
@@ -39,6 +41,7 @@ export default function Backtest() {
   const [activeResultJobId, setActiveResultJobId] = useState<string | null>(null)
   const [activeBulkSummaryJobId, setActiveBulkSummaryJobId] = useState<string | null>(null)
   const [resumeBulkSummaryJobId, setResumeBulkSummaryJobId] = useState<string | null>(null)
+  const [activeOptimizationTaskId, setActiveOptimizationTaskId] = useState<number | null>(null)
   const [activeTab, setActiveTab] = useState<'runs' | 'compare' | 'optimize'>('runs')
 
   const { data: jobsResponse } = useQuery({
@@ -103,20 +106,26 @@ export default function Backtest() {
           <p className="mt-1 text-sm text-muted-foreground">{t('page.subtitle')}</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <button
-            onClick={() => setShowBulkForm(true)}
-            className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-card-foreground transition-colors hover:bg-muted"
-          >
-            <Layers className="h-4 w-4" />
-            {t('page.bulkAction')}
-          </button>
-          <button
-            onClick={() => setShowSingleForm(true)}
-            className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
-          >
-            <Play className="h-4 w-4" />
-            {t('page.newBacktest')}
-          </button>
+          {activeTab === 'runs' && (
+            <>
+              <button
+                onClick={() => setShowBulkForm(true)}
+                className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-card-foreground transition-colors hover:bg-muted"
+              >
+                <Layers className="h-4 w-4" />
+                {t('page.bulkAction')}
+              </button>
+              <button
+                onClick={() => setShowSingleForm(true)}
+                className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+              >
+                <Play className="h-4 w-4" />
+                {t('page.newBacktest')}
+              </button>
+            </>
+          )}
+
+          {activeTab === 'optimize' && <StrategyOptimization onCreated={() => setActiveTab('optimize')} />}
         </div>
       </div>
 
@@ -175,12 +184,7 @@ export default function Backtest() {
 
           {activeTab === 'compare' && <PerformanceComparison />}
 
-          {activeTab === 'optimize' && (
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">{t('page.optimizationPending')}</p>
-              <StrategyOptimization />
-            </div>
-          )}
+          {activeTab === 'optimize' && <OptimizationTaskList onViewResults={(taskId) => setActiveOptimizationTaskId(taskId)} />}
         </TabPanel>
       </div>
 
@@ -220,6 +224,10 @@ export default function Backtest() {
           onClose={() => setActiveBulkSummaryJobId(null)}
           onViewChildResult={handleOpenChildResult}
         />
+      )}
+
+      {activeOptimizationTaskId !== null && (
+        <OptimizationTaskResultsModal taskId={activeOptimizationTaskId} onClose={() => setActiveOptimizationTaskId(null)} />
       )}
     </div>
   )

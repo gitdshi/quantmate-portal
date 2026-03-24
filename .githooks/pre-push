@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "[pre-push] Running local CI checks (lint + typecheck + unit tests)..."
+npm run check:ci-local
+
+echo "[pre-push] Checks passed. Continuing push."

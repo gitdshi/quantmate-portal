@@ -7,6 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.test.json --noEmit",
+    "check:ci-local": "npm run lint && npm run typecheck && npm run test:run",
+    "hooks:install": "git config core.hooksPath .githooks",
     "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui",
@@ -16,7 +19,8 @@
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:debug": "playwright test --debug",
-    "test:all": "npm run test:run && npm run test:e2e"
+    "test:all": "npm run test:run && npm run test:e2e",
+    "check:ci-local:wsl": "npm run check:ci-local"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",

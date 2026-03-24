@@ -314,6 +314,8 @@ export const optimizationAPI = {
   }) => api.post('/optimization/tasks', data),
 
   getResults: (taskId: number) => api.get(`/optimization/tasks/${taskId}/results`),
+
+  deleteTask: (taskId: number) => api.delete(`/optimization/tasks/${taskId}`),
 }
 
 // Legacy aliases for backward compatibility (deprecated - use strategiesAPI instead)

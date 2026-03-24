@@ -9,6 +9,9 @@
     "typescript",
     "typescriptreact"
   ],
-  "eslint.packageManager": "npm",
+  "eslint.useWorkspaceDependencies": true,
+  "eslint.run": "onType",
+  "files.autoSave": "afterDelay",
+  "files.autoSaveDelay": 800,
   "eslint.alwaysShowStatus": true
 }
