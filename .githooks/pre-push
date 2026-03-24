@@ -2,6 +2,15 @@
 set -euo pipefail
 
 echo "[pre-push] Running local CI checks (lint + typecheck + unit tests)..."
-npm run check:ci-local
+
+# Resolve the repo root (works whether hook is called from .githooks/ or .git/hooks/)
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+
+# Use wsl.exe when npm is not available natively (Windows + WSL setup)
+if command -v npm &>/dev/null; then
+  npm run check:ci-local
+else
+  wsl.exe bash -lc "cd \"$(wslpath "$REPO_ROOT")\" && npm run check:ci-local"
+fi
 
 echo "[pre-push] Checks passed. Continuing push."
