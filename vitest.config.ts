@@ -9,6 +9,8 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: './test/support/setup.ts',
     css: true,
+    // Limit concurrent workers to reduce NTFS/WSL startup contention (avoids 60s timeout)
+    maxWorkers: 2,
     include: [
       'test/unit/**/*.{test,spec}.{ts,tsx}',
       'test/integration/**/*.{test,spec}.{ts,tsx}',
