@@ -273,10 +273,16 @@ describe('API Client - HTTP Calls', () => {
       })
     })
 
-    it('history sends GET with encoded symbol and date params', () => {
+    it('history sends GET with encoded symbol and default pagination params', () => {
       marketDataAPI.history('000001.SZ', '2024-01-01', '2024-12-31')
       expect(mockGet).toHaveBeenCalledWith('/data/history/000001.SZ', {
-        params: { start_date: '2024-01-01', end_date: '2024-12-31' },
+        params: {
+          start_date: '2024-01-01',
+          end_date: '2024-12-31',
+          interval: 'daily',
+          page: 1,
+          page_size: 5000,
+        },
       })
     })
 
@@ -369,25 +375,32 @@ describe('API Client - HTTP Calls', () => {
 
   // ─── Optimization API ────────────────────────────────────
   describe('optimizationAPI', () => {
-    it('submit sends POST', () => {
-      const data = { strategy_id: 1 }
-      optimizationAPI.submit(data)
-      expect(mockPost).toHaveBeenCalledWith('/optimization', data)
+    it('listTasks sends GET with default pagination', () => {
+      optimizationAPI.listTasks()
+      expect(mockGet).toHaveBeenCalledWith('/optimization/tasks', {
+        params: { page: 1, page_size: 20 },
+      })
     })
 
-    it('getStatus sends GET with job id', () => {
-      optimizationAPI.getStatus('opt-123')
-      expect(mockGet).toHaveBeenCalledWith('/optimization/opt-123')
+    it('getTask sends GET with task id', () => {
+      optimizationAPI.getTask(123)
+      expect(mockGet).toHaveBeenCalledWith('/optimization/tasks/123')
     })
 
-    it('getHistory sends GET', () => {
-      optimizationAPI.getHistory()
-      expect(mockGet).toHaveBeenCalledWith('/optimization/history')
+    it('createTask sends POST', () => {
+      const data = {
+        strategy_id: 1,
+        search_method: 'grid' as const,
+        param_space: { window: { min: 5, max: 20, step: 5 } },
+        objective_metric: 'sharpe_ratio',
+      }
+      optimizationAPI.createTask(data)
+      expect(mockPost).toHaveBeenCalledWith('/optimization/tasks', data)
     })
 
-    it('cancel sends POST', () => {
-      optimizationAPI.cancel('opt-123')
-      expect(mockPost).toHaveBeenCalledWith('/optimization/opt-123/cancel')
+    it('getResults sends GET with task id', () => {
+      optimizationAPI.getResults(123)
+      expect(mockGet).toHaveBeenCalledWith('/optimization/tasks/123/results')
     })
   })
 

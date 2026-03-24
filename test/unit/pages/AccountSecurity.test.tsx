@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@test/support/utils'
+import { fireEvent, render, screen } from '@test/support/utils'
+import i18n from '@/i18n'
 import AccountSecurity from '@/pages/AccountSecurity'
+
+vi.mock('@/components/ui/toast-service', () => ({
+  showToast: vi.fn(),
+}))
 
 vi.mock('@/lib/api', () => ({
   api: {
@@ -8,68 +13,68 @@ vi.mock('@/lib/api', () => ({
     interceptors: { request: { use: vi.fn() }, response: { use: vi.fn() } },
   },
   accountSecurityAPI: {
-    listAPIKeys: vi.fn(),
-    createAPIKey: vi.fn(),
-    revokeAPIKey: vi.fn(),
+    listApiKeys: vi.fn(),
+    createApiKey: vi.fn(),
+    deleteApiKey: vi.fn(),
+    listSessions: vi.fn(),
+    revokeSession: vi.fn(),
   },
 }))
 
 import { accountSecurityAPI } from '@/lib/api'
 
-const mockKeys = [
-  { id: '1', name: '交易机器人', key_prefix: 'qm_sk_abc1', permissions: ['读取', '交易'], created_at: '2025-01-15', status: 'active' },
-]
-
 describe('AccountSecurity Page', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks()
-    ;(accountSecurityAPI.listAPIKeys as any).mockResolvedValue({ data: mockKeys })
+    localStorage.setItem('quantmate-lang', 'en')
+    await i18n.changeLanguage('en')
+    vi.mocked(accountSecurityAPI.listApiKeys).mockResolvedValue({ data: [] } as never)
+    vi.mocked(accountSecurityAPI.createApiKey).mockResolvedValue({ data: {} } as never)
+    vi.mocked(accountSecurityAPI.deleteApiKey).mockResolvedValue({ data: {} } as never)
+    vi.mocked(accountSecurityAPI.listSessions).mockResolvedValue({ data: [] } as never)
+    vi.mocked(accountSecurityAPI.revokeSession).mockResolvedValue({ data: {} } as never)
   })
 
   it('renders heading', () => {
     render(<AccountSecurity />)
-    expect(screen.getByText('账户安全')).toBeInTheDocument()
+    expect(screen.getByText('Account Security')).toBeInTheDocument()
   })
 
   it('shows all 5 tabs', () => {
     render(<AccountSecurity />)
-    expect(screen.getByText('个人资料')).toBeInTheDocument()
-    expect(screen.getByText('安全设置')).toBeInTheDocument()
-    expect(screen.getByText('API 密钥')).toBeInTheDocument()
-    expect(screen.getByText('登录会话')).toBeInTheDocument()
-    expect(screen.getByText('订阅计费')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Profile' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Security' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'API Keys' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Sessions' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Billing' })).toBeInTheDocument()
   })
 
   it('shows profile tab by default', () => {
     render(<AccountSecurity />)
-    expect(screen.getByText('基本信息')).toBeInTheDocument()
+    expect(screen.getByText('Display Name')).toBeInTheDocument()
   })
 
   it('switches to security tab', () => {
     render(<AccountSecurity />)
-    fireEvent.click(screen.getByText('安全设置'))
-    expect(screen.getByText('修改密码')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Security' }))
+    expect(screen.getAllByText('Update Password').length).toBeGreaterThan(0)
   })
 
   it('switches to API keys tab', async () => {
     render(<AccountSecurity />)
-    fireEvent.click(screen.getByText('API 密钥'))
-    await waitFor(() => {
-      expect(screen.getByText('创建密钥')).toBeInTheDocument()
-    })
+    fireEvent.click(screen.getByRole('button', { name: 'API Keys' }))
+    expect(await screen.findByText('Create Key')).toBeInTheDocument()
   })
 
-  it('switches to sessions tab', () => {
+  it('switches to sessions tab', async () => {
     render(<AccountSecurity />)
-    fireEvent.click(screen.getByText('登录会话'))
-    expect(screen.getByText('Chrome')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Sessions' }))
+    expect(await screen.findByText('No active sessions')).toBeInTheDocument()
   })
 
   it('switches to billing tab', () => {
     render(<AccountSecurity />)
-    fireEvent.click(screen.getByText('订阅计费'))
-    expect(screen.getByText('Pro Plan')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Billing' }))
+    expect(screen.getAllByText('Pro Plan').length).toBeGreaterThan(0)
   })
 })
-
-

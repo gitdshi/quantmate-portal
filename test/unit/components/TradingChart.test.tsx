@@ -46,10 +46,14 @@ describe('TradingChart', () => {
     const option = chartSpy.mock.calls.at(-1)?.[0]?.option as {
       series?: Array<{ type?: string; name?: string; data?: unknown[] }>
       dataZoom?: unknown[]
-      legend?: { data?: string[] }
+      legend?: { data?: Array<string | { name?: string }> }
     }
 
-    expect(option.legend?.data).toEqual(expect.arrayContaining(['600519.SH', 'HS300']))
+    const legendNames = (option.legend?.data ?? []).map((entry) =>
+      typeof entry === 'string' ? entry : entry.name,
+    )
+
+    expect(legendNames).toEqual(expect.arrayContaining(['600519.SH', 'HS300']))
     expect(option.dataZoom).toHaveLength(2)
     expect(option.series?.some((series) => series.type === 'candlestick' && series.name === '600519.SH')).toBe(true)
     expect(option.series?.some((series) => series.type === 'line' && series.name === 'HS300')).toBe(true)

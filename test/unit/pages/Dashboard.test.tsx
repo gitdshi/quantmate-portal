@@ -1,13 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@test/support/utils'
+import i18n from '@/i18n'
 import Dashboard from '@/pages/Dashboard'
 
-// Mock chart components (depend on echarts)
 vi.mock('@/components/charts/LineChart', () => ({
-  default: (props: any) => <div data-testid="line-chart">{props.series?.[0]?.name}</div>,
+  default: (props: { series?: Array<{ name?: string }> }) => (
+    <div data-testid="line-chart">{props.series?.[0]?.name}</div>
+  ),
 }))
+
 vi.mock('@/components/charts/PieChart', () => ({
-  default: (props: any) => <div data-testid="pie-chart">{props.data?.length ?? 0} items</div>,
+  default: (props: { data?: unknown[] }) => (
+    <div data-testid="pie-chart">{props.data?.length ?? 0} items</div>
+  ),
 }))
 
 vi.mock('@/lib/api', () => ({
@@ -21,7 +26,7 @@ vi.mock('@/lib/api', () => ({
   alertsAPI: { listHistory: vi.fn() },
 }))
 
-import { analyticsAPI, portfolioAPI, tradingAPI, alertsAPI } from '@/lib/api'
+import { alertsAPI, analyticsAPI, portfolioAPI, tradingAPI } from '@/lib/api'
 
 const mockDashboard = {
   portfolio_stats: { total_value: 1500000, daily_pnl: 12500, daily_pnl_pct: 0.84 },
@@ -29,17 +34,42 @@ const mockDashboard = {
     { name: 'DualMA', status: 'running', daily_return: 1.2, total_return: 15.5 },
     { name: 'RSI', status: 'stopped', daily_return: -0.3, total_return: 8.2 },
   ],
-  performance_history: [{ date: '2025-01-01', value: 1.0 }, { date: '2025-01-02', value: 1.01 }],
-  sector_allocation: [{ name: '白酒', value: 40 }, { name: '科技', value: 30 }],
+  performance_history: [
+    { date: '2025-01-01', value: 1.0 },
+    { date: '2025-01-02', value: 1.01 },
+  ],
+  sector_allocation: [
+    { name: 'Liquor', value: 40 },
+    { name: 'Tech', value: 30 },
+  ],
 }
 
 describe('Dashboard Page', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks()
-    ;(analyticsAPI.dashboard as any).mockResolvedValue({ data: mockDashboard })
-    ;(portfolioAPI.positions as any).mockResolvedValue({ data: { positions: [{ symbol: '600519.SH', name: '贵州茅台', direction: 'long', quantity: 100, avg_cost: 1800, market_price: 1850, market_value: 185000, pnl: 5000, pnl_pct: 2.78 }] } })
-    ;(tradingAPI.listOrders as any).mockResolvedValue({ data: [] })
-    ;(alertsAPI.listHistory as any).mockResolvedValue({ data: [] })
+    localStorage.setItem('quantmate-lang', 'en')
+    await i18n.changeLanguage('en')
+
+    vi.mocked(analyticsAPI.dashboard).mockResolvedValue({ data: mockDashboard } as never)
+    vi.mocked(portfolioAPI.positions).mockResolvedValue({
+      data: {
+        positions: [
+          {
+            symbol: '600519.SH',
+            name: 'Kweichow Moutai',
+            direction: 'long',
+            quantity: 100,
+            avg_cost: 1800,
+            market_price: 1850,
+            market_value: 185000,
+            pnl: 5000,
+            pnl_pct: 2.78,
+          },
+        ],
+      },
+    } as never)
+    vi.mocked(tradingAPI.listOrders).mockResolvedValue({ data: [] } as never)
+    vi.mocked(alertsAPI.listHistory).mockResolvedValue({ data: [] } as never)
   })
 
   it('renders heading', () => {
@@ -50,10 +80,10 @@ describe('Dashboard Page', () => {
   it('displays KPI stat cards', async () => {
     render(<Dashboard />)
     await waitFor(() => {
-      expect(screen.getByText('总资产')).toBeInTheDocument()
-      expect(screen.getByText('今日盈亏')).toBeInTheDocument()
-      expect(screen.getByText('活跃策略')).toBeInTheDocument()
-      expect(screen.getByText('未处理告警')).toBeInTheDocument()
+      expect(screen.getByText('Total Assets')).toBeInTheDocument()
+      expect(screen.getByText('Daily P&L')).toBeInTheDocument()
+      expect(screen.getByText('Active Strategies')).toBeInTheDocument()
+      expect(screen.getByText('Unread Alerts')).toBeInTheDocument()
     })
   })
 
@@ -64,10 +94,12 @@ describe('Dashboard Page', () => {
     })
   })
 
-  it('renders NAV chart and allocation pie', () => {
+  it('renders NAV chart and allocation pie', async () => {
     render(<Dashboard />)
-    expect(screen.getByText('净值走势')).toBeInTheDocument()
-    expect(screen.getByText('持仓分布')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('NAV Trend')).toBeInTheDocument()
+      expect(screen.getByText('Position Allocation')).toBeInTheDocument()
+    })
     expect(screen.getByTestId('line-chart')).toBeInTheDocument()
     expect(screen.getByTestId('pie-chart')).toBeInTheDocument()
   })
@@ -80,18 +112,20 @@ describe('Dashboard Page', () => {
     expect(screen.getByText('ytd')).toBeInTheDocument()
   })
 
-  it('renders positions and orders sections', () => {
+  it('renders positions and orders sections', async () => {
     render(<Dashboard />)
-    expect(screen.getByText('当前持仓')).toBeInTheDocument()
-    expect(screen.getByText('最近委托')).toBeInTheDocument()
-    expect(screen.getByText('告警信息')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('Current Positions')).toBeInTheDocument()
+      expect(screen.getByText('Recent Orders')).toBeInTheDocument()
+      expect(screen.getByText('Alert Feed')).toBeInTheDocument()
+    })
   })
 
   it('displays position data from API', async () => {
     render(<Dashboard />)
     await waitFor(() => {
       expect(screen.getByText('600519.SH')).toBeInTheDocument()
-      expect(screen.getByText('贵州茅台')).toBeInTheDocument()
+      expect(screen.getByText('Kweichow Moutai')).toBeInTheDocument()
     })
   })
 
@@ -99,18 +133,16 @@ describe('Dashboard Page', () => {
     render(<Dashboard />)
     await waitFor(() => {
       expect(screen.getByText('DualMA')).toBeInTheDocument()
-      expect(screen.getByText('运行中')).toBeInTheDocument()
-      expect(screen.getByText('已停止')).toBeInTheDocument()
+      expect(screen.getByText('Running')).toBeInTheDocument()
+      expect(screen.getByText('Stopped')).toBeInTheDocument()
     })
   })
 
   it('handles API error gracefully', async () => {
-    ;(analyticsAPI.dashboard as any).mockRejectedValue(new Error('fail'))
+    vi.mocked(analyticsAPI.dashboard).mockRejectedValue(new Error('fail') as never)
     render(<Dashboard />)
     await waitFor(() => {
       expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument()
     })
   })
 })
-
-

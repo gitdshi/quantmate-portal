@@ -46,19 +46,25 @@ describe('EquityCurveChart', () => {
     expect(chartSpy).toHaveBeenCalled()
 
     const option = chartSpy.mock.calls.at(-1)?.[0]?.option as {
-      series?: Array<{ type?: string; name?: string; markLine?: unknown }>
-      legend?: { data?: string[] }
+      series?: Array<{ type?: string; name?: string; markLine?: unknown; yAxisIndex?: number }>
+      legend?: { data?: Array<string | { name?: string }> }
     }
 
-    expect(option.legend?.data).toEqual(
+    const legendNames = (option.legend?.data ?? []).map((entry) =>
+      typeof entry === 'string' ? entry : entry.name,
+    )
+
+    expect(legendNames).toEqual(
       expect.arrayContaining([
-        'Strategy Equity',
+        'Strategy Equity (600519.SH)',
         'Buy & Hold HS300',
-        '600519.SH Price (Normalized)',
+        '600519.SH',
         'Annual Trend',
       ]),
     )
-    expect(option.series?.filter((series) => series.type === 'line')).toHaveLength(4)
-    expect(option.series?.some((series) => series.name === 'Strategy Equity' && series.markLine)).toBe(true)
+    expect(option.series?.some((series) => series.name === 'Strategy Equity (600519.SH)' && series.markLine)).toBe(true)
+    expect(option.series?.some((series) => series.name === '600519.SH' && (series.type === 'line' || series.type === 'candlestick'))).toBe(true)
+    expect(option.series?.some((series) => series.name === 'Buy & Hold HS300' && series.type === 'line')).toBe(true)
+    expect(option.series?.some((series) => series.name === 'Annual Trend' && series.type === 'line')).toBe(true)
   })
 })

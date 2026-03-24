@@ -1,8 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@test/support/utils'
+import i18n from '@/i18n'
 import Reports from '@/pages/Reports'
 
-vi.mock('@/components/charts/BarChart', () => ({ default: (props: any) => <div data-testid="bar-chart">{props.title}</div> }))
+vi.mock('@/components/ui/toast-service', () => ({
+  showToast: vi.fn(),
+}))
 
 vi.mock('@/lib/api', () => ({
   api: {
@@ -18,54 +21,52 @@ vi.mock('@/lib/api', () => ({
 import { reportsAPI } from '@/lib/api'
 
 describe('Reports Page', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks()
-    ;(reportsAPI.list as any).mockResolvedValue({ data: [] })
+    localStorage.setItem('quantmate-lang', 'en')
+    await i18n.changeLanguage('en')
+    vi.mocked(reportsAPI.list).mockResolvedValue({ data: [] } as never)
+    vi.mocked(reportsAPI.generate).mockResolvedValue({ data: {} } as never)
   })
 
   it('renders heading', () => {
     render(<Reports />)
-    expect(screen.getByText('报告复盘')).toBeInTheDocument()
+    expect(screen.getByText('Reports & Review')).toBeInTheDocument()
   })
 
   it('shows all 4 tabs', () => {
     render(<Reports />)
-    expect(screen.getByText('绩效报告')).toBeInTheDocument()
-    expect(screen.getByText('交易复盘')).toBeInTheDocument()
-    expect(screen.getByText('归因分析')).toBeInTheDocument()
-    expect(screen.getByText('报告列表')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Performance' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Trade Review' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Attribution' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Reports' })).toBeInTheDocument()
   })
 
   it('shows generate button', () => {
     render(<Reports />)
-    expect(screen.getByText('生成报告')).toBeInTheDocument()
+    expect(screen.getByText('Generate Report')).toBeInTheDocument()
   })
 
-  it('shows perf stat cards on default tab', () => {
+  it('shows perf empty state on default tab', () => {
     render(<Reports />)
-    expect(screen.getByText('月收益率')).toBeInTheDocument()
-    expect(screen.getByText('基准收益')).toBeInTheDocument()
-    expect(screen.getByText('超额收益')).toBeInTheDocument()
-    expect(screen.getByText('最大回撤')).toBeInTheDocument()
+    expect(screen.getByText('No performance reports yet. Generate one first.')).toBeInTheDocument()
   })
 
   it('switches to review tab', () => {
     render(<Reports />)
-    fireEvent.click(screen.getByText('交易复盘'))
-    expect(screen.getByText('总交易次数')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Trade Review' }))
+    expect(screen.getByText('No trade review data available')).toBeInTheDocument()
   })
 
   it('switches to attribution tab', () => {
     render(<Reports />)
-    fireEvent.click(screen.getByText('归因分析'))
-    expect(screen.getByText('收益归因')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Attribution' }))
+    expect(screen.getByText('No attribution data available')).toBeInTheDocument()
   })
 
-  it('switches to list tab', () => {
+  it('switches to list tab', async () => {
     render(<Reports />)
-    fireEvent.click(screen.getByText('报告列表'))
-    expect(screen.getByText('报告名称')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Reports' }))
+    expect(await screen.findByText('No reports available')).toBeInTheDocument()
   })
 })
-
-

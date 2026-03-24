@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@test/support/utils'
+import i18n from '@/i18n'
 import Marketplace from '@/pages/Marketplace'
 
 vi.mock('@/lib/api', () => ({
@@ -8,48 +9,45 @@ vi.mock('@/lib/api', () => ({
     interceptors: { request: { use: vi.fn() }, response: { use: vi.fn() } },
   },
   templateAPI: {
-    list: vi.fn(),
+    listMarketplace: vi.fn(),
   },
 }))
 
 import { templateAPI } from '@/lib/api'
 
 describe('Marketplace Page', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks()
-    ;(templateAPI.list as any).mockResolvedValue({ data: [] })
+    localStorage.setItem('quantmate-lang', 'en')
+    await i18n.changeLanguage('en')
+    vi.mocked(templateAPI.listMarketplace).mockResolvedValue({ data: [] } as never)
   })
 
   it('renders heading', () => {
     render(<Marketplace />)
-    expect(screen.getByText('策略市场')).toBeInTheDocument()
+    expect(screen.getByText('Strategy Marketplace')).toBeInTheDocument()
   })
 
   it('shows search input', () => {
     render(<Marketplace />)
-    expect(screen.getByPlaceholderText('搜索策略模板...')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('Search strategy templates...')).toBeInTheDocument()
   })
 
   it('shows category filter buttons', () => {
     render(<Marketplace />)
-    expect(screen.getByText('全部')).toBeInTheDocument()
-    expect(screen.getByText('趋势跟踪')).toBeInTheDocument()
-    expect(screen.getByText('均值回归')).toBeInTheDocument()
-    expect(screen.getByText('多因子')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'All' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Trend Following' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Mean Reversion' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Multi-Factor' })).toBeInTheDocument()
   })
 
-  it('shows featured template card', () => {
+  it('shows empty state when no templates are available', async () => {
     render(<Marketplace />)
-    expect(screen.getByText('推荐')).toBeInTheDocument()
-    expect(screen.getByText('双均线交叉策略')).toBeInTheDocument()
+    expect(await screen.findByText('No strategy templates available')).toBeInTheDocument()
   })
 
-  it('shows template grid with placeholder data', () => {
+  it('hides featured card when there are no templates', () => {
     render(<Marketplace />)
-    expect(screen.getByText('RSI 超买超卖策略')).toBeInTheDocument()
-    expect(screen.getByText('多因子选股模型')).toBeInTheDocument()
-    expect(screen.getByText('使用模板')).toBeInTheDocument()
+    expect(screen.queryByText('Featured')).not.toBeInTheDocument()
   })
 })
-
-

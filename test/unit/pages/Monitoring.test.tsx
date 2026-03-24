@@ -1,6 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen } from '@test/support/utils'
+import { fireEvent, render, screen, waitFor } from '@test/support/utils'
+import i18n from '@/i18n'
 import Monitoring from '@/pages/Monitoring'
+
+vi.mock('@/components/ui/FilterBar', () => ({
+  default: () => <div data-testid="filter-bar" />,
+}))
+
+vi.mock('@/components/ui/toast-service', () => ({
+  showToast: vi.fn(),
+}))
 
 vi.mock('@/lib/api', () => ({
   api: {
@@ -8,10 +17,10 @@ vi.mock('@/lib/api', () => ({
     interceptors: { request: { use: vi.fn() }, response: { use: vi.fn() } },
   },
   alertsAPI: {
-    listActive: vi.fn(),
     listHistory: vi.fn(),
     listRules: vi.fn(),
-    acknowledge: vi.fn(),
+    listChannels: vi.fn(),
+    acknowledgeAlert: vi.fn(),
     createRule: vi.fn(),
     updateRule: vi.fn(),
   },
@@ -19,60 +28,95 @@ vi.mock('@/lib/api', () => ({
 
 import { alertsAPI } from '@/lib/api'
 
+const liveAlerts = [
+  {
+    id: '1',
+    title: 'Strategy Halted',
+    message: 'DualMA stopped unexpectedly',
+    level: 'critical',
+    source: 'strategy-engine',
+    created_at: '2025-01-01T10:00:00Z',
+    acknowledged: false,
+  },
+]
+
+const rules = [
+  {
+    id: '1',
+    name: 'Max Drawdown Alert',
+    type: 'Risk',
+    condition: 'drawdown > 5%',
+    level: 'warning',
+    enabled: true,
+    channels: ['email'],
+    last_triggered: '2025-01-01 10:00',
+  },
+]
+
+const channels = [
+  { id: 1, channel_type: 'email', config: { to: 'daniel@example.com' } },
+]
+
 describe('Monitoring Page', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks()
-    ;(alertsAPI.listActive as any).mockResolvedValue({ data: [] })
-    ;(alertsAPI.listHistory as any).mockResolvedValue({ data: [] })
-    ;(alertsAPI.listRules as any).mockResolvedValue({ data: [] })
+    localStorage.setItem('quantmate-lang', 'en')
+    await i18n.changeLanguage('en')
+    vi.mocked(alertsAPI.listHistory).mockResolvedValue({ data: liveAlerts } as never)
+    vi.mocked(alertsAPI.listRules).mockResolvedValue({ data: rules } as never)
+    vi.mocked(alertsAPI.listChannels).mockResolvedValue({ data: channels } as never)
+    vi.mocked(alertsAPI.acknowledgeAlert).mockResolvedValue({ data: {} } as never)
+    vi.mocked(alertsAPI.createRule).mockResolvedValue({ data: {} } as never)
+    vi.mocked(alertsAPI.updateRule).mockResolvedValue({ data: {} } as never)
   })
 
   it('renders heading', () => {
     render(<Monitoring />)
-    expect(screen.getByText('监控告警')).toBeInTheDocument()
+    expect(screen.getByText('Monitoring & Alerts')).toBeInTheDocument()
   })
 
   it('shows all 4 tabs', () => {
     render(<Monitoring />)
-    expect(screen.getByText('实时告警')).toBeInTheDocument()
-    expect(screen.getByText('告警规则')).toBeInTheDocument()
-    expect(screen.getByText('告警历史')).toBeInTheDocument()
-    expect(screen.getByText('通知渠道')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Live Alerts' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Rules' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'History' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Channels' })).toBeInTheDocument()
   })
 
   it('shows new rule button', () => {
     render(<Monitoring />)
-    expect(screen.getByText('新建规则')).toBeInTheDocument()
+    expect(screen.getByText('New Rule')).toBeInTheDocument()
   })
 
-  it('shows stat cards on live tab', () => {
+  it('shows stat cards on live tab', async () => {
     render(<Monitoring />)
-    expect(screen.getByText('活跃告警')).toBeInTheDocument()
-    expect(screen.getByText('严重')).toBeInTheDocument()
-    expect(screen.getByText('今日触发')).toBeInTheDocument()
-    expect(screen.getByText('活跃规则')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('Active Alerts')).toBeInTheDocument()
+      expect(screen.getByText('Critical')).toBeInTheDocument()
+      expect(screen.getByText('Triggered Today')).toBeInTheDocument()
+      expect(screen.getByText('Active Rules')).toBeInTheDocument()
+    })
   })
 
-  it('shows placeholder alert cards', () => {
+  it('shows live alert cards', async () => {
     render(<Monitoring />)
-    expect(screen.getByText('策略停止运行')).toBeInTheDocument()
-    expect(screen.getByText('持仓集中度过高')).toBeInTheDocument()
+    expect(await screen.findByText('Strategy Halted')).toBeInTheDocument()
+    expect(screen.getByText('DualMA stopped unexpectedly')).toBeInTheDocument()
   })
 
-  it('switches to rules tab', () => {
+  it('switches to rules tab', async () => {
     render(<Monitoring />)
-    fireEvent.click(screen.getByText('告警规则'))
-    expect(screen.getByText('规则名称')).toBeInTheDocument()
-    expect(screen.getByText('策略停止告警')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Rules' }))
+    expect(await screen.findByText('Rule Name')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('drawdown > 5%')).toBeInTheDocument()
+    })
   })
 
-  it('switches to channels tab', () => {
+  it('switches to channels tab', async () => {
     render(<Monitoring />)
-    fireEvent.click(screen.getByText('通知渠道'))
-    expect(screen.getByText('微信机器人')).toBeInTheDocument()
-    expect(screen.getByText('邮件通知')).toBeInTheDocument()
-    expect(screen.getByText('短信通知')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Channels' }))
+    expect(await screen.findByText('email')).toBeInTheDocument()
+    expect(screen.getByText(/daniel@example.com/)).toBeInTheDocument()
   })
 })
-
-

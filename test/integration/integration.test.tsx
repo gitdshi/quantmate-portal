@@ -1,10 +1,8 @@
-import { userEvent } from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '@/App'
 import * as authStore from '@/stores/auth'
 import { render, screen, waitFor } from '@test/support/utils'
 
-// Mock components
 vi.mock('@/pages/Dashboard', () => ({
   default: () => <div>Dashboard Page</div>,
 }))
@@ -41,7 +39,6 @@ vi.mock('@/pages/auth/ChangePassword', () => ({
   default: () => <div>Change Password Page</div>,
 }))
 
-// Mock Layout to just render children via Outlet
 vi.mock('@/components/Layout', () => {
   const { Outlet } = require('react-router-dom')
   return { default: () => <Outlet /> }
@@ -51,11 +48,10 @@ vi.mock('@/stores/auth', () => ({
   useAuthStore: vi.fn(),
 }))
 
-// Mock authAPI.me for PrivateRoute's session check
 const mockMe = vi.fn()
 vi.mock('@/lib/api', () => ({
   authAPI: {
-    me: (...args: any[]) => mockMe(...args),
+    me: (...args: unknown[]) => mockMe(...args),
   },
 }))
 
@@ -67,39 +63,39 @@ describe('App Integration', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorage.clear()
+    sessionStorage.clear()
     window.history.pushState({}, '', '/')
   })
 
-  it('redirects to login when not authenticated', () => {
-    ;(authStore.useAuthStore as any).mockReturnValue({
+  it('redirects to login when not authenticated', async () => {
+    vi.mocked(authStore.useAuthStore).mockReturnValue({
       isAuthenticated: false,
       user: null,
       setAuth: mockSetAuth,
       logout: mockLogout,
-    })
+    } as never)
 
     render(<App />)
-    
-    expect(screen.getByText('Login Page')).toBeInTheDocument()
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/login')
+    })
   })
 
   it('shows dashboard when authenticated and on root path', async () => {
-    // Set localStorage token so PrivateRoute enters checking flow
     localStorage.setItem('access_token', 'test-token')
     localStorage.setItem('refresh_token', 'test-refresh')
-
-    // Mock authAPI.me to succeed â€?PrivateRoute calls this to verify session
     mockMe.mockResolvedValue({ data: mockUser })
 
-    ;(authStore.useAuthStore as any).mockReturnValue({
+    vi.mocked(authStore.useAuthStore).mockReturnValue({
       isAuthenticated: true,
       user: mockUser,
       setAuth: mockSetAuth,
       logout: mockLogout,
-    })
+    } as never)
 
     render(<App />)
-    
+
     await waitFor(() => {
       expect(screen.getByText('Dashboard Page')).toBeInTheDocument()
     })
@@ -110,15 +106,15 @@ describe('App Integration', () => {
     localStorage.setItem('refresh_token', 'test-refresh')
     mockMe.mockResolvedValue({ data: mockUser })
 
-    ;(authStore.useAuthStore as any).mockReturnValue({
+    vi.mocked(authStore.useAuthStore).mockReturnValue({
       isAuthenticated: true,
       user: mockUser,
       setAuth: mockSetAuth,
       logout: mockLogout,
-    })
+    } as never)
 
     render(<App />)
-    
+
     await waitFor(() => {
       expect(screen.getByText('Dashboard Page')).toBeInTheDocument()
     })
@@ -126,68 +122,64 @@ describe('App Integration', () => {
 
   describe('Route Protection', () => {
     it('protects /strategies route', async () => {
-      ;(authStore.useAuthStore as any).mockReturnValue({
+      vi.mocked(authStore.useAuthStore).mockReturnValue({
         isAuthenticated: false,
         user: null,
         setAuth: mockSetAuth,
         logout: mockLogout,
-      })
+      } as never)
 
       window.history.pushState({}, 'Strategies', '/strategies')
-      
       render(<App />)
-      
+
       await waitFor(() => {
         expect(screen.getByText('Login Page')).toBeInTheDocument()
       })
     })
 
     it('protects /backtest route', async () => {
-      ;(authStore.useAuthStore as any).mockReturnValue({
+      vi.mocked(authStore.useAuthStore).mockReturnValue({
         isAuthenticated: false,
         user: null,
         setAuth: mockSetAuth,
         logout: mockLogout,
-      })
+      } as never)
 
       window.history.pushState({}, 'Backtest', '/backtest')
-      
       render(<App />)
-      
+
       await waitFor(() => {
         expect(screen.getByText('Login Page')).toBeInTheDocument()
       })
     })
 
     it('protects /analytics route', async () => {
-      ;(authStore.useAuthStore as any).mockReturnValue({
+      vi.mocked(authStore.useAuthStore).mockReturnValue({
         isAuthenticated: false,
         user: null,
         setAuth: mockSetAuth,
         logout: mockLogout,
-      })
+      } as never)
 
       window.history.pushState({}, 'Analytics', '/analytics')
-      
       render(<App />)
-      
+
       await waitFor(() => {
         expect(screen.getByText('Login Page')).toBeInTheDocument()
       })
     })
 
     it('protects /portfolio route', async () => {
-      ;(authStore.useAuthStore as any).mockReturnValue({
+      vi.mocked(authStore.useAuthStore).mockReturnValue({
         isAuthenticated: false,
         user: null,
         setAuth: mockSetAuth,
         logout: mockLogout,
-      })
+      } as never)
 
       window.history.pushState({}, 'Portfolio', '/portfolio')
-      
       render(<App />)
-      
+
       await waitFor(() => {
         expect(screen.getByText('Login Page')).toBeInTheDocument()
       })
@@ -196,29 +188,29 @@ describe('App Integration', () => {
 
   describe('Authentication Flow', () => {
     it('completes full authentication flow', async () => {
-      // Verify unauthenticated user sees login
-      ;(authStore.useAuthStore as any).mockReturnValue({
+      vi.mocked(authStore.useAuthStore).mockReturnValue({
         isAuthenticated: false,
         user: null,
         setAuth: mockSetAuth,
         logout: mockLogout,
-      })
+      } as never)
 
       const { unmount } = render(<App />)
-      expect(screen.getByText('Login Page')).toBeInTheDocument()
+      await waitFor(() => {
+        expect(window.location.pathname).toBe('/login')
+      })
       unmount()
 
-      // After login: authenticated user navigating to root sees Dashboard
       localStorage.setItem('access_token', 'test-token')
       localStorage.setItem('refresh_token', 'test-refresh')
       mockMe.mockResolvedValue({ data: mockUser })
 
-      ;(authStore.useAuthStore as any).mockReturnValue({
+      vi.mocked(authStore.useAuthStore).mockReturnValue({
         isAuthenticated: true,
         user: mockUser,
         setAuth: mockSetAuth,
         logout: mockLogout,
-      })
+      } as never)
 
       window.history.pushState({}, '', '/')
       render(<App />)
@@ -229,5 +221,3 @@ describe('App Integration', () => {
     })
   })
 })
-
-

@@ -166,20 +166,20 @@ describe('API Client', () => {
   })
 
   describe('Optimization API', () => {
-    it('has submit endpoint', () => {
-      expect(optimizationAPI.submit).toBeDefined()
+    it('has listTasks endpoint', () => {
+      expect(optimizationAPI.listTasks).toBeDefined()
     })
 
-    it('has getStatus endpoint', () => {
-      expect(optimizationAPI.getStatus).toBeDefined()
+    it('has getTask endpoint', () => {
+      expect(optimizationAPI.getTask).toBeDefined()
     })
 
-    it('has getHistory endpoint', () => {
-      expect(optimizationAPI.getHistory).toBeDefined()
+    it('has createTask endpoint', () => {
+      expect(optimizationAPI.createTask).toBeDefined()
     })
 
-    it('has cancel endpoint', () => {
-      expect(optimizationAPI.cancel).toBeDefined()
+    it('has getResults endpoint', () => {
+      expect(optimizationAPI.getResults).toBeDefined()
     })
   })
 

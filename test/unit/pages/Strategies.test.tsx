@@ -27,9 +27,22 @@ vi.mock('@/lib/api', () => ({
     getCodeHistory: vi.fn(),
     restoreCodeHistory: vi.fn(),
   },
+  templateAPI: {
+    listMarketplace: vi.fn(),
+    listMine: vi.fn(),
+    get: vi.fn(),
+    getRatings: vi.fn(),
+    listComments: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    clone: vi.fn(),
+    delete: vi.fn(),
+    rate: vi.fn(),
+    addComment: vi.fn(),
+  },
 }))
 
-import { strategiesAPI, strategyCodeAPI } from '@/lib/api'
+import { strategiesAPI, strategyCodeAPI, templateAPI } from '@/lib/api'
 
 const mockList = [
   {
@@ -86,26 +99,53 @@ const mockBuiltins = [
   },
 ]
 
+const mockMarketplaceTemplates = [
+  {
+    id: 101,
+    name: 'Dual MA Crossover',
+    category: 'trend',
+    description: 'Built-in trend strategy',
+    code: 'class DualMAStrategy:\n    pass\n',
+    default_params: { fast_window: 5, slow_window: 20 },
+    visibility: 'public',
+    downloads: 12,
+  },
+]
+
 describe('Strategies Page', () => {
   beforeEach(async () => {
     vi.clearAllMocks()
     localStorage.setItem('quantmate-lang', 'en')
     await i18n.changeLanguage('en')
 
-    ;(strategiesAPI.list as any).mockResolvedValue({ data: { data: mockList } })
-    ;(strategiesAPI.get as any).mockResolvedValue({ data: mockDetail })
-    ;(strategiesAPI.create as any).mockResolvedValue({
+    vi.mocked(strategiesAPI.list).mockResolvedValue({ data: mockList } as never)
+    vi.mocked(strategiesAPI.get).mockResolvedValue({ data: mockDetail } as never)
+    vi.mocked(strategiesAPI.create).mockResolvedValue({
       data: { ...mockDetail, id: 11, name: 'MyStrategy', class_name: 'MyStrategy' },
-    })
-    ;(strategiesAPI.update as any).mockResolvedValue({ data: { ...mockDetail } })
-    ;(strategiesAPI.delete as any).mockResolvedValue({ data: {} })
-    ;(strategiesAPI.listBuiltin as any).mockResolvedValue({ data: mockBuiltins })
+    } as never)
+    vi.mocked(strategiesAPI.update).mockResolvedValue({ data: { ...mockDetail } } as never)
+    vi.mocked(strategiesAPI.delete).mockResolvedValue({ data: {} } as never)
+    vi.mocked(strategiesAPI.listBuiltin).mockResolvedValue({ data: mockBuiltins } as never)
 
-    ;(strategyCodeAPI.listCodeHistory as any).mockResolvedValue({ data: mockHistory })
-    ;(strategyCodeAPI.lintPyright as any).mockResolvedValue({ data: { diagnostics: [] } })
-    ;(strategyCodeAPI.parse as any).mockResolvedValue({ data: { classes: [] } })
-    ;(strategyCodeAPI.getCodeHistory as any).mockResolvedValue({ data: mockHistory[0] })
-    ;(strategyCodeAPI.restoreCodeHistory as any).mockResolvedValue({ data: {} })
+    vi.mocked(templateAPI.listMarketplace).mockResolvedValue({ data: mockMarketplaceTemplates } as never)
+    vi.mocked(templateAPI.listMine).mockResolvedValue({ data: [] } as never)
+    vi.mocked(templateAPI.get).mockResolvedValue({ data: mockMarketplaceTemplates[0] } as never)
+    vi.mocked(templateAPI.getRatings).mockResolvedValue({
+      data: { summary: { avg_rating: 4.5, count: 2 }, reviews: [] },
+    } as never)
+    vi.mocked(templateAPI.listComments).mockResolvedValue({ data: [] } as never)
+    vi.mocked(templateAPI.create).mockResolvedValue({ data: mockMarketplaceTemplates[0] } as never)
+    vi.mocked(templateAPI.update).mockResolvedValue({ data: mockMarketplaceTemplates[0] } as never)
+    vi.mocked(templateAPI.clone).mockResolvedValue({ data: mockMarketplaceTemplates[0] } as never)
+    vi.mocked(templateAPI.delete).mockResolvedValue({ data: {} } as never)
+    vi.mocked(templateAPI.rate).mockResolvedValue({ data: {} } as never)
+    vi.mocked(templateAPI.addComment).mockResolvedValue({ data: {} } as never)
+
+    vi.mocked(strategyCodeAPI.listCodeHistory).mockResolvedValue({ data: mockHistory } as never)
+    vi.mocked(strategyCodeAPI.lintPyright).mockResolvedValue({ data: { diagnostics: [] } } as never)
+    vi.mocked(strategyCodeAPI.parse).mockResolvedValue({ data: { classes: [] } } as never)
+    vi.mocked(strategyCodeAPI.getCodeHistory).mockResolvedValue({ data: mockHistory[0] } as never)
+    vi.mocked(strategyCodeAPI.restoreCodeHistory).mockResolvedValue({ data: {} } as never)
   })
 
   it('loads strategy list, detail, and history from the real API shape', async () => {
@@ -118,18 +158,25 @@ describe('Strategies Page', () => {
       expect(strategiesAPI.get).toHaveBeenCalledWith(1)
       expect(strategyCodeAPI.listCodeHistory).toHaveBeenCalledWith(1)
       expect(strategiesAPI.listBuiltin).toHaveBeenCalledTimes(1)
+      expect(templateAPI.listMarketplace).toHaveBeenCalledTimes(1)
+      expect(templateAPI.listMine).toHaveBeenCalledTimes(1)
     })
 
+    fireEvent.click(await screen.findByRole('button', { name: 'Basic Info' }))
     expect(await screen.findByDisplayValue('Momentum Alpha')).toBeInTheDocument()
-    expect(screen.getByTestId('strategy-card-2')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Parameters' }))
     expect(screen.getByTestId('strategy-parameters-json')).toHaveValue(
       JSON.stringify({ lookback: 20, threshold: 1.5 }, null, 2)
     )
+
+    expect(screen.getByTestId('strategy-card-2')).toBeInTheDocument()
   })
 
   it('allows editing strategy name and description before saving', async () => {
     render(<Strategies />)
 
+    fireEvent.click(await screen.findByRole('button', { name: 'Basic Info' }))
     const nameInput = await screen.findByTestId('strategy-name-input')
     const descriptionInput = screen.getByTestId('strategy-description-input')
 
@@ -158,9 +205,10 @@ describe('Strategies Page', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Templates' }))
 
     const grid = await screen.findByTestId('strategy-templates-grid')
-    const firstCard = within(grid).getByTestId('template-card-dual-ma')
+    const firstCard = within(grid).getByTestId('template-card-marketplace-101')
     fireEvent.click(within(firstCard).getByRole('button', { name: 'Use Template' }))
 
+    fireEvent.click(await screen.findByRole('button', { name: 'Basic Info' }))
     const draftNameInput = await screen.findByTestId('strategy-name-input')
     expect(draftNameInput).toHaveValue('MyStrategy')
 
