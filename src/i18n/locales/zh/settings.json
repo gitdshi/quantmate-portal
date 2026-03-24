@@ -45,7 +45,10 @@
       "akshareTitle": "AkShare",
       "akshareDesc": "指数与宏观经济数据",
       "index": "指数数据",
-      "macro": "宏观数据"
+      "macro": "宏观数据",
+      "testBtn": "测试连接",
+      "testOk": "连接成功",
+      "testFail": "连接失败"
     },
     "trading": {
       "title": "交易参数",

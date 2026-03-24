@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Bell, Database, Monitor, Palette, Server, Settings2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -6,7 +6,106 @@ import { useTranslation } from 'react-i18next'
 import TabPanel from '../components/ui/TabPanel'
 import ToggleSwitch from '../components/ui/ToggleSwitch'
 import { showToast } from '../components/ui/toast-service'
-import { systemAPI } from '../lib/api'
+import { dataSourceAPI, systemAPI } from '../lib/api'
+
+// ---------------------------------------------------------------------------
+// DataSourceTab — loads data_source_configs + data_source_items from backend
+// ---------------------------------------------------------------------------
+
+type DSConfig = { source_key: string; display_name: string; enabled: number; config_json: string | null; requires_token: number }
+type DSItem = { source: string; item_key: string; display_name: string; enabled: number; target_database: string; target_table: string; table_created: number; sync_priority: number }
+
+function DataSourceTab() {
+  const { t } = useTranslation('settings')
+  const qc = useQueryClient()
+
+  const { data: configs = [] } = useQuery<DSConfig[]>({
+    queryKey: ['ds-configs'],
+    queryFn: () => dataSourceAPI.listConfigs().then((r) => (r.data as { data: DSConfig[] }).data ?? []),
+  })
+
+  const { data: items = [] } = useQuery<DSItem[]>({
+    queryKey: ['ds-items'],
+    queryFn: () => dataSourceAPI.listItems().then((r) => (r.data as { data: DSItem[] }).data ?? []),
+  })
+
+  const toggleConfigMut = useMutation({
+    mutationFn: ({ key, enabled }: { key: string; enabled: boolean }) =>
+      dataSourceAPI.updateConfig(key, { enabled }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['ds-configs'] }),
+  })
+
+  const toggleItemMut = useMutation({
+    mutationFn: ({ source, item_key, enabled }: { source: string; item_key: string; enabled: boolean }) =>
+      dataSourceAPI.updateItem(item_key, { source, enabled }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['ds-items'] }),
+  })
+
+  const testMut = useMutation({
+    mutationFn: (source: string) => dataSourceAPI.testConnection(source),
+    onSuccess: (_data, source) => showToast(`${source}: ${t('page.datasource.testOk')}`, 'success'),
+    onError: (_err, source) => showToast(`${source}: ${t('page.datasource.testFail')}`, 'error'),
+  })
+
+  const grouped = useMemo(() => {
+    const map: Record<string, DSItem[]> = {}
+    for (const item of items) {
+      ;(map[item.source] ??= []).push(item)
+    }
+    return map
+  }, [items])
+
+  return (
+    <div className="space-y-4 max-w-3xl">
+      {configs.map((cfg) => {
+        const sourceItems = grouped[cfg.source_key] ?? []
+        return (
+          <div key={cfg.source_key} className="rounded-lg border border-border bg-card p-5">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="font-semibold text-card-foreground">{cfg.display_name}</h3>
+                <p className="text-xs text-muted-foreground">{cfg.source_key}</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  className="text-xs text-primary hover:underline"
+                  onClick={() => testMut.mutate(cfg.source_key)}
+                  disabled={testMut.isPending}
+                >
+                  {t('page.datasource.testBtn')}
+                </button>
+                <ToggleSwitch
+                  checked={!!cfg.enabled}
+                  onChange={(v) => toggleConfigMut.mutate({ key: cfg.source_key, enabled: v })}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {sourceItems.map((item) => (
+                <label key={item.item_key} className="flex items-center gap-2 text-sm">
+                  <ToggleSwitch
+                    checked={!!item.enabled}
+                    onChange={(v) => toggleItemMut.mutate({ source: item.source, item_key: item.item_key, enabled: v })}
+                  />
+                  <span>{item.display_name || item.item_key}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )
+      })}
+      {configs.length === 0 && (
+        <p className="py-6 text-center text-sm text-muted-foreground">{t('common:loading')}</p>
+      )}
+    </div>
+  )
+}
+
+
+// ---------------------------------------------------------------------------
+// Main Settings page
+// ---------------------------------------------------------------------------
 
 export default function Settings() {
   const { t, i18n } = useTranslation('settings')
@@ -30,23 +129,6 @@ export default function Settings() {
     dateFormat: 'YYYY-MM-DD',
     currency: 'CNY',
     autoSave: true,
-  })
-
-  const [ds, setDs] = useState({
-    tushareToken: '',
-    tushareEnabled: true,
-    akshareEnabled: true,
-    tushareItems: {
-      daily: true,
-      adj: true,
-      income: true,
-      balance: true,
-      cashflow: true,
-      fina: true,
-      margin: true,
-      moneyflow: true,
-    },
-    akshareItems: { index: true, macro: false },
   })
 
   const [trading, setTrading] = useState({
@@ -100,22 +182,6 @@ export default function Settings() {
 
   const inputCls = 'w-full px-3 py-2 text-sm rounded-md border border-border bg-background'
   const labelCls = 'block text-sm font-medium mb-1'
-
-  const tushareLabels: Record<string, string> = {
-    daily: t('page.datasource.daily'),
-    adj: t('page.datasource.adj'),
-    income: t('page.datasource.income'),
-    balance: t('page.datasource.balance'),
-    cashflow: t('page.datasource.cashflow'),
-    fina: t('page.datasource.fina'),
-    margin: t('page.datasource.margin'),
-    moneyflow: t('page.datasource.moneyflow'),
-  }
-
-  const akshareLabels: Record<string, string> = {
-    index: t('page.datasource.index'),
-    macro: t('page.datasource.macro'),
-  }
 
   const notifications = [
     'strategyAlert',
@@ -195,65 +261,7 @@ export default function Settings() {
           </div>
         )}
 
-        {activeTab === 'datasource' && (
-          <div className="space-y-4 max-w-3xl">
-            <div className="rounded-lg border border-border bg-card p-5">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="font-semibold text-card-foreground">{t('page.datasource.tushareTitle')}</h3>
-                  <p className="text-xs text-muted-foreground">{t('page.datasource.tushareDesc')}</p>
-                </div>
-                <ToggleSwitch checked={ds.tushareEnabled} onChange={(value) => setDs({ ...ds, tushareEnabled: value })} />
-              </div>
-              <div className="mb-4">
-                <label className={labelCls}>{t('page.datasource.token')}</label>
-                <input
-                  type="password"
-                  value={ds.tushareToken}
-                  onChange={(event) => setDs({ ...ds, tushareToken: event.target.value })}
-                  placeholder={t('page.datasource.tokenPlaceholder')}
-                  className={inputCls}
-                />
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {Object.entries(ds.tushareItems).map(([key, value]) => (
-                  <label key={key} className="flex items-center gap-2 text-sm">
-                    <ToggleSwitch
-                      checked={value}
-                      onChange={(nextValue) =>
-                        setDs({ ...ds, tushareItems: { ...ds.tushareItems, [key]: nextValue } })
-                      }
-                    />
-                    <span>{tushareLabels[key] || key}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <div className="rounded-lg border border-border bg-card p-5">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="font-semibold text-card-foreground">{t('page.datasource.akshareTitle')}</h3>
-                  <p className="text-xs text-muted-foreground">{t('page.datasource.akshareDesc')}</p>
-                </div>
-                <ToggleSwitch checked={ds.akshareEnabled} onChange={(value) => setDs({ ...ds, akshareEnabled: value })} />
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                {Object.entries(ds.akshareItems).map(([key, value]) => (
-                  <label key={key} className="flex items-center gap-2 text-sm">
-                    <ToggleSwitch
-                      checked={value}
-                      onChange={(nextValue) =>
-                        setDs({ ...ds, akshareItems: { ...ds.akshareItems, [key]: nextValue } })
-                      }
-                    />
-                    <span>{akshareLabels[key] || key}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
+        {activeTab === 'datasource' && <DataSourceTab />}
 
         {activeTab === 'trading-cfg' && (
           <div className="max-w-2xl space-y-4">

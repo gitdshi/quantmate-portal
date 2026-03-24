@@ -385,6 +385,19 @@ export const dataSourceAPI = {
     api.put('/settings/datasource-items/batch', data),
   testConnection: (source: string) =>
     api.post(`/settings/datasource-items/test/${source}`),
+  listConfigs: () => api.get('/settings/datasource-configs'),
+  updateConfig: (sourceKey: string, data: { enabled?: boolean; config_json?: Record<string, unknown> }) =>
+    api.put(`/settings/datasource-configs/${sourceKey}`, data),
+}
+
+// DataSync API
+export const datasyncAPI = {
+  status: (params?: { sync_date?: string; source?: string; status?: string; limit?: number; offset?: number }) =>
+    api.get('/datasync/status', { params }),
+  summary: (days?: number) => api.get('/datasync/status/summary', { params: { days } }),
+  latest: () => api.get('/datasync/status/latest'),
+  trigger: (targetDate?: string) =>
+    api.post('/datasync/trigger', { target_date: targetDate }),
 }
 
 // Trading API

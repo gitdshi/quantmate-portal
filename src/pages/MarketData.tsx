@@ -1,17 +1,22 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import {
   Calendar,
+  CheckCircle2,
   Gauge,
   LineChart as LineChartIcon,
   List,
+  Loader2,
+  Play,
   RefreshCw,
+  XCircle,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import CandlestickChart from '../components/charts/CandlestickChart'
 import TabPanel from '../components/ui/TabPanel'
-import { marketDataAPI } from '../lib/api'
+import { showToast } from '../components/ui/toast-service'
+import { datasyncAPI, marketDataAPI } from '../lib/api'
 import type { MarketSymbol, OHLCBar } from '../types'
 
 type QuoteMarket = 'CN' | 'HK' | 'US' | 'CRYPTO' | 'FUTURES' | 'CN_INDEX'
@@ -233,6 +238,184 @@ function formatPrice(value: number | null): string {
   if (Math.abs(value) >= 1000) return value.toLocaleString(undefined, { maximumFractionDigits: 2 })
   return value.toFixed(4)
 }
+
+// ---------------------------------------------------------------------------
+// SyncStatusPanel — Data Synchronization tab
+// ---------------------------------------------------------------------------
+
+type SyncLatestItem = {
+  source: string
+  interface_key: string
+  status: string
+  rows_synced: number
+  error_message: string | null
+  retry_count: number
+  started_at: string | null
+  finished_at: string | null
+}
+
+type SyncSummary = {
+  days: number
+  overall: Record<string, number>
+  by_date: Record<string, Record<string, Record<string, number>>>
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const cls: Record<string, string> = {
+    success: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400',
+    error: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400',
+    pending: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400',
+    running: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400',
+    partial: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400',
+  }
+  const icon: Record<string, React.ReactNode> = {
+    success: <CheckCircle2 size={12} />,
+    error: <XCircle size={12} />,
+    running: <Loader2 size={12} className="animate-spin" />,
+  }
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${cls[status] || 'bg-muted text-muted-foreground'}`}>
+      {icon[status]}
+      {status}
+    </span>
+  )
+}
+
+function SyncStatusPanel() {
+  const { t } = useTranslation('market')
+
+  const { data: latestData, isLoading: latestLoading, refetch: refetchLatest, error: latestError } = useQuery<{
+    latest_date: string | null
+    items: SyncLatestItem[]
+  }>({
+    queryKey: ['datasync', 'latest'],
+    queryFn: () => datasyncAPI.latest().then((r) => r.data),
+    refetchInterval: 30000,
+  })
+
+  const { data: summaryData, isLoading: summaryLoading } = useQuery<SyncSummary>({
+    queryKey: ['datasync', 'summary'],
+    queryFn: () => datasyncAPI.summary(7).then((r) => r.data),
+    refetchInterval: 60000,
+  })
+
+  const triggerMutation = useMutation({
+    mutationFn: () => datasyncAPI.trigger(),
+    onSuccess: () => {
+      showToast(t('page.sync.triggered'), 'success')
+      void refetchLatest()
+    },
+    onError: () => showToast(t('page.sync.triggerFailed'), 'error'),
+  })
+
+  const handleTrigger = () => {
+    if (window.confirm(t('page.sync.triggerConfirm'))) {
+      triggerMutation.mutate()
+    }
+  }
+
+  if (latestLoading && summaryLoading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="animate-spin text-muted-foreground" size={24} />
+      </div>
+    )
+  }
+
+  if (latestError) {
+    return <p className="py-8 text-center text-destructive">{t('page.sync.loadFailed')}</p>
+  }
+
+  const items = latestData?.items ?? []
+  const overall = summaryData?.overall ?? {}
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-foreground">{t('page.sync.title')}</h2>
+          <p className="text-sm text-muted-foreground">{t('page.sync.subtitle')}</p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm hover:bg-muted"
+            onClick={() => void refetchLatest()}
+          >
+            <RefreshCw size={14} />
+          </button>
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm text-white hover:opacity-90 disabled:opacity-50"
+            onClick={handleTrigger}
+            disabled={triggerMutation.isPending}
+          >
+            {triggerMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
+            {t('page.sync.triggerSync')}
+          </button>
+        </div>
+      </div>
+
+      {/* Summary cards */}
+      <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-5">
+        <div className="rounded-lg border border-border bg-card p-3">
+          <div className="text-xs text-muted-foreground">{t('page.sync.latestDate')}</div>
+          <div className="mt-1 text-lg font-semibold text-foreground">{latestData?.latest_date ?? '--'}</div>
+        </div>
+        {(['success', 'error', 'pending', 'running'] as const).map((s) => (
+          <div key={s} className="rounded-lg border border-border bg-card p-3">
+            <div className="text-xs text-muted-foreground">{t(`page.sync.${s}`)}</div>
+            <div className="mt-1 text-lg font-semibold text-foreground">{overall[s] ?? 0}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Latest sync table */}
+      {items.length === 0 ? (
+        <p className="py-8 text-center text-muted-foreground">{t('page.sync.noRecords')}</p>
+      ) : (
+        <div className="overflow-auto rounded-lg border border-border">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50 text-left text-xs text-muted-foreground">
+              <tr>
+                <th className="px-3 py-2">{t('page.sync.source')}</th>
+                <th className="px-3 py-2">{t('page.sync.interface')}</th>
+                <th className="px-3 py-2">{t('common:status')}</th>
+                <th className="px-3 py-2 text-right">{t('page.sync.rows')}</th>
+                <th className="px-3 py-2 text-right">{t('page.sync.retries')}</th>
+                <th className="px-3 py-2">{t('page.sync.finishedAt')}</th>
+                <th className="px-3 py-2">{t('page.sync.errorMessage')}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {items.map((item) => (
+                <tr key={`${item.source}/${item.interface_key}`} className="hover:bg-muted/30">
+                  <td className="px-3 py-2 font-medium">{item.source}</td>
+                  <td className="px-3 py-2">{item.interface_key}</td>
+                  <td className="px-3 py-2"><StatusBadge status={item.status} /></td>
+                  <td className="px-3 py-2 text-right tabular-nums">{item.rows_synced.toLocaleString()}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{item.retry_count}</td>
+                  <td className="px-3 py-2 text-xs text-muted-foreground">
+                    {item.finished_at ? new Date(item.finished_at).toLocaleString() : '--'}
+                  </td>
+                  <td className="max-w-[200px] truncate px-3 py-2 text-xs text-destructive" title={item.error_message ?? ''}>
+                    {item.error_message ?? ''}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}
+
+
+// ---------------------------------------------------------------------------
+// Main MarketData page
+// ---------------------------------------------------------------------------
 
 export default function MarketData() {
   const { t, i18n } = useTranslation(['market', 'common'])
@@ -610,9 +793,7 @@ export default function MarketData() {
           </div>
         )}
 
-        {activeTab === 'sync' && (
-          <p className="py-8 text-center text-muted-foreground">{t('page.empty.sync')}</p>
-        )}
+        {activeTab === 'sync' && <SyncStatusPanel />}
 
         {activeTab === 'calendar' && (
           <p className="py-8 text-center text-muted-foreground">{t('page.empty.calendar')}</p>

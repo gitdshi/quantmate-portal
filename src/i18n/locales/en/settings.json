@@ -45,7 +45,10 @@
       "akshareTitle": "AkShare",
       "akshareDesc": "Index and macroeconomic data",
       "index": "Index Data",
-      "macro": "Macro Data"
+      "macro": "Macro Data",
+      "testBtn": "Test Connection",
+      "testOk": "Connection successful",
+      "testFail": "Connection failed"
     },
     "trading": {
       "title": "Trading Parameters",
