@@ -8,7 +8,7 @@ import DataTable, { type Column } from '../components/ui/DataTable'
 import Modal from '../components/ui/Modal'
 import TabPanel from '../components/ui/TabPanel'
 import ToggleSwitch from '../components/ui/ToggleSwitch'
-import { showToast } from '../components/ui/Toast'
+import { showToast } from '../components/ui/toast-service'
 import { accountSecurityAPI } from '../lib/api'
 
 interface APIKey {

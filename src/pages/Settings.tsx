@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 
 import TabPanel from '../components/ui/TabPanel'
 import ToggleSwitch from '../components/ui/ToggleSwitch'
-import { showToast } from '../components/ui/Toast'
+import { showToast } from '../components/ui/toast-service'
 import { systemAPI } from '../lib/api'
 
 export default function Settings() {

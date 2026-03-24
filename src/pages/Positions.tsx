@@ -6,7 +6,7 @@ import Badge from '../components/ui/Badge'
 import DataTable, { type Column } from '../components/ui/DataTable'
 import FilterBar from '../components/ui/FilterBar'
 import StatCard from '../components/ui/StatCard'
-import { showConfirm, showToast } from '../components/ui/Toast'
+import { showConfirm, showToast } from '../components/ui/toast-service'
 import { portfolioAPI } from '../lib/api'
 import type { Position } from '../types'
 

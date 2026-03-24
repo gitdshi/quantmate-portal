@@ -14,7 +14,7 @@ import DataTable, { type Column } from '../components/ui/DataTable'
 import FilterBar from '../components/ui/FilterBar'
 import Modal from '../components/ui/Modal'
 import TabPanel from '../components/ui/TabPanel'
-import { showToast } from '../components/ui/Toast'
+import { showToast } from '../components/ui/toast-service'
 import { factorAPI } from '../lib/api'
 
 interface Factor {

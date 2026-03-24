@@ -14,7 +14,7 @@ import Badge from '../components/ui/Badge'
 import DataTable, { type Column } from '../components/ui/DataTable'
 import Modal from '../components/ui/Modal'
 import TabPanel from '../components/ui/TabPanel'
-import { showToast } from '../components/ui/Toast'
+import { showToast } from '../components/ui/toast-service'
 import { reportsAPI } from '../lib/api'
 import type { Report } from '../types'
 

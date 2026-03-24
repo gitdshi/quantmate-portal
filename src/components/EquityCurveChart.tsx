@@ -130,14 +130,6 @@ export default function EquityCurveChart({
     })
   }, [annualReturn, benchmarkData, data, initialCapital, stockPriceData])
 
-  if (chartData.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-64 bg-muted/30 rounded-lg">
-        <p className="text-muted-foreground">{t('results.noEquityData')}</p>
-      </div>
-    )
-  }
-
   const minBalance = Math.min(
     ...chartData.map(d => d.balance),
     ...chartData.map(d => d.benchmark || Infinity).filter(v => v !== Infinity),
@@ -355,6 +347,14 @@ export default function EquityCurveChart({
         : []),
     ],
   }), [benchmarkSymbol, chartData, hasAnnualTrend, hasBenchmark, hasStockPrice, initialCapital, maxBalance, minBalance, padding, stockMax, stockMin, stockPadding, stockSymbol, t, useStockCandlestick])
+
+  if (chartData.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64 bg-muted/30 rounded-lg">
+        <p className="text-muted-foreground">{t('results.noEquityData')}</p>
+      </div>
+    )
+  }
 
   return (
     <div className="w-full h-80">

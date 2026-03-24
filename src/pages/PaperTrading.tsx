@@ -18,7 +18,7 @@ import FilterBar from '../components/ui/FilterBar'
 import Modal from '../components/ui/Modal'
 import StatCard from '../components/ui/StatCard'
 import TabPanel from '../components/ui/TabPanel'
-import { showToast } from '../components/ui/Toast'
+import { showToast } from '../components/ui/toast-service'
 import { paperTradingAPI, strategiesAPI } from '../lib/api'
 
 interface Deployment {

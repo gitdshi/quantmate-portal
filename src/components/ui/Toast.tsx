@@ -1,33 +1,19 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
-import { CheckCircle, XCircle, Info, X } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { CheckCircle, Info, X, XCircle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-
-export interface ToastItem {
-  id: number
-  message: string
-  type: 'success' | 'error' | 'info'
-}
-
-let toastId = 0
-let listeners: Array<(items: ToastItem[]) => void> = []
-let items: ToastItem[] = []
-
-function emit() { listeners.forEach((l) => l([...items])) }
-
-export function showToast(message: string, type: ToastItem['type'] = 'info') {
-  const id = ++toastId
-  items = [...items, { id, message, type }]
-  emit()
-  setTimeout(() => { items = items.filter((t) => t.id !== id); emit() }, 3500)
-}
+import {
+  closeConfirm,
+  dismissToast,
+  getConfirmState,
+  subscribeToConfirm,
+  subscribeToToasts,
+  type ToastItem,
+} from './toast-service'
 
 export function ToastContainer() {
   const [toasts, setToasts] = useState<ToastItem[]>([])
 
-  useEffect(() => {
-    listeners.push(setToasts)
-    return () => { listeners = listeners.filter((l) => l !== setToasts) }
-  }, [])
+  useEffect(() => subscribeToToasts(setToasts), [])
 
   if (toasts.length === 0) return null
 
@@ -40,13 +26,13 @@ export function ToastContainer() {
 
   return (
     <div className="fixed top-4 right-4 z-[100] flex flex-col gap-2 max-w-sm">
-      {toasts.map((t) => {
-        const Icon = iconMap[t.type]
+      {toasts.map((toast) => {
+        const Icon = iconMap[toast.type]
         return (
-          <div key={t.id} className={`flex items-center gap-2 px-4 py-3 rounded-lg border-l-4 shadow-lg text-sm ${colorMap[t.type]}`}>
+          <div key={toast.id} className={`flex items-center gap-2 px-4 py-3 rounded-lg border-l-4 shadow-lg text-sm ${colorMap[toast.type]}`}>
             <Icon size={16} />
-            <span className="flex-1">{t.message}</span>
-            <button onClick={() => { items = items.filter((x) => x.id !== t.id); emit() }} className="p-0.5 hover:opacity-70">
+            <span className="flex-1">{toast.message}</span>
+            <button onClick={() => dismissToast(toast.id)} className="p-0.5 hover:opacity-70">
               <X size={14} />
             </button>
           </div>
@@ -56,52 +42,23 @@ export function ToastContainer() {
   )
 }
 
-// Confirm dialog
-interface ConfirmState {
-  open: boolean
-  title: string
-  message: string
-  resolve: ((ok: boolean) => void) | null
-}
-
-let confirmState: ConfirmState = { open: false, title: '', message: '', resolve: null }
-let confirmListeners: Array<(s: ConfirmState) => void> = []
-
-function emitConfirm() { confirmListeners.forEach((l) => l({ ...confirmState })) }
-
-export function showConfirm(title: string, message: string): Promise<boolean> {
-  return new Promise((resolve) => {
-    confirmState = { open: true, title, message, resolve }
-    emitConfirm()
-  })
-}
-
 export function ConfirmDialog() {
   const { t } = useTranslation('common')
-  const [state, setState] = useState<ConfirmState>(confirmState)
+  const [state, setState] = useState(getConfirmState())
 
-  useEffect(() => {
-    confirmListeners.push(setState)
-    return () => { confirmListeners = confirmListeners.filter((l) => l !== setState) }
-  }, [])
-
-  const handleClose = useCallback((ok: boolean) => {
-    state.resolve?.(ok)
-    confirmState = { open: false, title: '', message: '', resolve: null }
-    emitConfirm()
-  }, [state.resolve])
+  useEffect(() => subscribeToConfirm(setState), [])
 
   if (!state.open) return null
 
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/50" onClick={() => handleClose(false)} />
+      <div className="absolute inset-0 bg-black/50" onClick={() => closeConfirm(false)} />
       <div className="relative max-w-sm w-full mx-4 rounded-lg border border-border bg-card shadow-lg p-6">
         <h3 className="text-lg font-semibold mb-2">{state.title}</h3>
         <p className="text-sm text-muted-foreground mb-6">{state.message}</p>
         <div className="flex justify-end gap-3">
-          <button onClick={() => handleClose(false)} className="px-4 py-2 text-sm rounded-md border border-border hover:bg-muted">{t('cancel')}</button>
-          <button onClick={() => handleClose(true)} className="px-4 py-2 text-sm rounded-md bg-destructive text-white hover:opacity-90">{t('confirm')}</button>
+          <button onClick={() => closeConfirm(false)} className="px-4 py-2 text-sm rounded-md border border-border hover:bg-muted">{t('cancel')}</button>
+          <button onClick={() => closeConfirm(true)} className="px-4 py-2 text-sm rounded-md bg-destructive text-white hover:opacity-90">{t('confirm')}</button>
         </div>
       </div>
     </div>

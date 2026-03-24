@@ -10,7 +10,7 @@ import Modal from '../components/ui/Modal'
 import StatCard from '../components/ui/StatCard'
 import TabPanel from '../components/ui/TabPanel'
 import ToggleSwitch from '../components/ui/ToggleSwitch'
-import { showToast } from '../components/ui/Toast'
+import { showToast } from '../components/ui/toast-service'
 import { alertsAPI } from '../lib/api'
 
 interface Alert {

@@ -126,14 +126,6 @@ export default function TradingChart({
     return { chartData: data, tradeMarkers: markers }
   }, [stockPriceData, benchmarkData, trades, longDirectionLabel, openOffsetLabel])
 
-  if (chartData.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-64 bg-muted/30 rounded-lg">
-        <p className="text-muted-foreground">{t('chart.noData')}</p>
-      </div>
-    )
-  }
-
   const hasBenchmark = chartData.some(d => d.benchmarkPrice !== undefined)
 
   const priceValues = chartData.flatMap((point) => [point.open, point.high, point.low, point.close])
@@ -312,6 +304,14 @@ export default function TradingChart({
       buildScatterSeries(t('chart.shortExit'), shortExits, '#10b981', 'diamond'),
     ],
   }), [benchmarkSymbol, benchMax, benchMin, benchPadding, chartData, hasBenchmark, longEntries, longExits, shortEntries, shortExits, stockMax, stockMin, stockPadding, stockSymbol, t, zoomRange.end, zoomRange.start])
+
+  if (chartData.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64 bg-muted/30 rounded-lg">
+        <p className="text-muted-foreground">{t('chart.noData')}</p>
+      </div>
+    )
+  }
 
   return (
     <div className="w-full">
