@@ -21,8 +21,10 @@ import {
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { systemAPI } from '../lib/api'
 import { useAuthStore } from '../stores/auth'
 
 type NavSection = { sectionKey: string }
@@ -47,6 +49,31 @@ export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [sidebarPinned, setSidebarPinned] = useState(true)
   const [showHeader] = useState(false)
+
+  const runtimeConfig = ((window as any).__RUNTIME_CONFIG__ ?? {}) as {
+    PORTAL_VERSION?: string
+    PORTAL_BUILD_TIME?: string
+  }
+
+  const portalVersion = runtimeConfig.PORTAL_VERSION || import.meta.env.VITE_PORTAL_VERSION || '0.0.0'
+  const portalBuildTime = runtimeConfig.PORTAL_BUILD_TIME || import.meta.env.VITE_PORTAL_BUILD_TIME || 'unknown'
+
+  const { data: apiVersionData } = useQuery<{ version?: string; build_time?: string }>({
+    queryKey: ['system', 'version'],
+    queryFn: async () => {
+      const resp = await systemAPI.versionInfo()
+      return resp.data ?? {}
+    },
+    retry: 1,
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const formatBuildTime = (value?: string) => {
+    if (!value || value === 'unknown') return 'unknown'
+    const dt = new Date(value)
+    if (Number.isNaN(dt.getTime())) return value
+    return dt.toLocaleString()
+  }
 
   const handleLogout = () => {
     logout()
@@ -121,21 +148,29 @@ export default function Layout() {
           sidebarOpen ? 'translate-x-0 w-64' : '-translate-x-full w-0 overflow-hidden'
         }`}
       >
-        <div className="flex h-16 shrink-0 items-center justify-between px-6 border-b border-border">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => {
-                const newPinned = !sidebarPinned
-                setSidebarPinned(newPinned)
-                setSidebarOpen(newPinned)
-              }}
-              className="p-2 rounded-md hover:bg-accent"
-              aria-label={t('toggleSidebar')}
-              aria-pressed={sidebarPinned}
-            >
-              <Menu className="h-5 w-5" />
-            </button>
-            <img src="/logo.svg" alt="QuantMate" className="h-8 w-auto" />
+        <div className="shrink-0 px-4 py-3 border-b border-border">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  const newPinned = !sidebarPinned
+                  setSidebarPinned(newPinned)
+                  setSidebarOpen(newPinned)
+                }}
+                className="p-2 rounded-md hover:bg-accent"
+                aria-label={t('toggleSidebar')}
+                aria-pressed={sidebarPinned}
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+              <img src="/logo.svg" alt="QuantMate" className="h-8 w-auto" />
+            </div>
+            <div className="mt-2 w-full text-[11px] text-muted-foreground leading-4 break-all">
+              <p>Portal Version: v{portalVersion}</p>
+              <p>Portal Build: {formatBuildTime(portalBuildTime)}</p>
+              <p>API Version: v{apiVersionData?.version || '-'}</p>
+              <p>API Build: {formatBuildTime(apiVersionData?.build_time)}</p>
+            </div>
           </div>
         </div>
 

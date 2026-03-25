@@ -328,6 +328,7 @@ export const analyticsAPI = {
 // System API
 export const systemAPI = {
   syncStatus: () => api.get('/system/sync-status'),
+  versionInfo: () => api.get('/system/version'),
   listConfigs: (category?: string) => api.get('/system/configs', { params: { category } }),
   upsertConfig: (data: {
     config_key: string

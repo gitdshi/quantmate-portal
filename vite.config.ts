@@ -1,5 +1,11 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
+import { readFileSync } from 'node:fs'
+
+const pkgJson = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8')) as {
+  version?: string
+}
+const buildTime = new Date().toISOString()
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
@@ -11,6 +17,10 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
+    define: {
+      'import.meta.env.VITE_PORTAL_VERSION': JSON.stringify(pkgJson.version || '0.0.0'),
+      'import.meta.env.VITE_PORTAL_BUILD_TIME': JSON.stringify(buildTime),
+    },
     build: {
       chunkSizeWarningLimit: 600,
       rollupOptions: {

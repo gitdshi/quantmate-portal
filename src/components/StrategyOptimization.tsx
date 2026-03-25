@@ -32,10 +32,10 @@ const OBJECTIVE_OPTIONS: Array<{ value: ObjectiveMetric; label: string }> = [
   { value: 'calmar_ratio', label: 'Calmar Ratio' },
 ]
 
-const SEARCH_METHOD_OPTIONS: Array<{ value: SearchMethod; label: string }> = [
-  { value: 'grid', label: 'Grid Search' },
-  { value: 'random', label: 'Random Search' },
-  { value: 'bayesian', label: 'Bayesian Search' },
+const SEARCH_METHOD_OPTIONS: Array<{ value: SearchMethod; labelKey: string; fallback: string }> = [
+  { value: 'grid', labelKey: 'optimization.searchMethodGrid', fallback: 'Grid Search — exhaustive evaluation of all parameter combinations' },
+  { value: 'random', labelKey: 'optimization.searchMethodRandom', fallback: 'Random Search — uniform random sampling from the parameter space' },
+  { value: 'bayesian', labelKey: 'optimization.searchMethodBayesian', fallback: 'Bayesian (TPE) — adaptive search guided by past evaluations via Optuna' },
 ]
 
 function toStrategies(value: unknown): Strategy[] {
@@ -354,7 +354,7 @@ export default function StrategyOptimization({ selectedStrategy, onCreated }: St
                 >
                   {SEARCH_METHOD_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
-                      {option.label}
+                      {t(option.labelKey, { defaultValue: option.fallback })}
                     </option>
                   ))}
                 </select>

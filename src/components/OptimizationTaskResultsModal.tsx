@@ -77,7 +77,7 @@ function methodLabel(method?: string): string {
   if (!method) return '--'
   if (method === 'grid') return 'Grid Search'
   if (method === 'random') return 'Random Search'
-  if (method === 'bayesian') return 'Bayesian Search'
+  if (method === 'bayesian') return 'Bayesian (TPE)'
   return method
 }
 
