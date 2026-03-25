@@ -101,7 +101,8 @@
       "library": "Factor Library",
       "icir": "IC/IR Analysis",
       "combine": "Factor Combine",
-      "backtest": "Factor Backtest"
+      "backtest": "Factor Backtest",
+      "mining": "Factor Mining"
     },
     "title": "Factor Lab",
     "subtitle": "Factor library, IC/IR analysis, factor combination, and factor backtest",
@@ -115,7 +116,14 @@
       "icir": "ICIR",
       "turnover": "Turnover",
       "coverage": "Coverage",
-      "status": "Status"
+      "status": "Status",
+      "icStd": "IC Std",
+      "longRet": "Long Return",
+      "shortRet": "Short Return",
+      "longShortRet": "L/S Return",
+      "rank": "Rank",
+      "factorSet": "Factor Set",
+      "expression": "Expression"
     },
     "search": "Search factors",
     "total": "{{count}} factors",
@@ -123,7 +131,8 @@
       "library": "No factors available",
       "icir": "Select a factor to view IC/IR analysis. No evaluation data yet.",
       "combine": "No factor combination data available",
-      "backtest": "No factor backtest data available"
+      "backtest": "No factor backtest data available",
+      "mining": "Run factor mining to discover high-quality factors from Qlib Alpha158."
     },
     "status": {
       "active": "Active",
@@ -149,6 +158,47 @@
       "weekly": "Weekly",
       "monthly": "Monthly",
       "raw": "Raw"
+    },
+    "evaluation": {
+      "title": "Evaluation Results",
+      "run": "Run Evaluation",
+      "running": "Evaluating...",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "noEvaluations": "No evaluations yet. Run one to see IC/IR metrics.",
+      "deleteFailed": "Failed to delete evaluation"
+    },
+    "mining": {
+      "title": "Factor Mining",
+      "description": "Discover high-quality factors from Qlib Alpha158 dataset",
+      "factorSet": "Factor Set",
+      "instruments": "Instruments",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "icThreshold": "IC Threshold",
+      "corrThreshold": "Corr Threshold",
+      "topN": "Top N",
+      "run": "Start Mining",
+      "running": "Mining...",
+      "results": "Mining Results",
+      "resultCount": "{{count}} factors found",
+      "saveLabel": "Save Label",
+      "history": "Mining History",
+      "noHistory": "No mining runs yet."
+    },
+    "combine": {
+      "title": "Factor Combination",
+      "description": "Select factors and weights to create a multi-factor strategy",
+      "addFactor": "Add Factor",
+      "weight": "Weight",
+      "direction": "Direction",
+      "long": "Long",
+      "short": "Short",
+      "generateCode": "Preview Code",
+      "createStrategy": "Create Strategy",
+      "strategyName": "Strategy Name",
+      "className": "Class Name",
+      "noFactors": "Add factors from the library to start combining."
     }
   },
   "visualExplorer": {

@@ -130,6 +130,59 @@ export const strategiesAPI = {
   delete: (id: number) => api.delete(`/strategies/${id}`),
   
   listBuiltin: () => api.get('/strategies/builtin/list'),
+
+  // Multi-factor strategy endpoints
+  getFactors: (strategyId: number) => api.get(`/strategies/${strategyId}/factors`),
+
+  generateMultiFactorCode: (data: {
+    name: string
+    class_name: string
+    factors: Array<{
+      factor_id?: number
+      factor_name: string
+      expression?: string
+      weight?: number
+      direction?: number
+      factor_set?: string
+    }>
+    lookback_window?: number
+    rebalance_interval?: number
+    fixed_size?: number
+    signal_threshold?: number
+  }) => api.post('/strategies/multi-factor/generate-code', data),
+
+  createMultiFactor: (data: {
+    name: string
+    class_name: string
+    description?: string
+    factors: Array<{
+      factor_id?: number
+      factor_name: string
+      expression?: string
+      weight?: number
+      direction?: number
+      factor_set?: string
+    }>
+    lookback_window?: number
+    rebalance_interval?: number
+    fixed_size?: number
+    signal_threshold?: number
+  }) => api.post('/strategies/multi-factor/create', data),
+
+  generateQlibConfig: (data: {
+    factors: Array<{
+      factor_name: string
+      expression?: string
+      weight?: number
+      direction?: number
+    }>
+    universe?: string
+    start_date: string
+    end_date: string
+    strategy_type?: string
+    topk?: number
+    n_drop?: number
+  }) => api.post('/strategies/multi-factor/qlib-config', data),
 }
 
 // Backtest API
@@ -562,6 +615,28 @@ export const factorAPI = {
     api.post(`/factors/${factorId}/evaluations`, data),
   deleteEvaluation: (factorId: number, evalId: number) =>
     api.delete(`/factors/${factorId}/evaluations/${evalId}`),
+  // Screening & Mining
+  runScreening: (data: {
+    expressions: string[]
+    start_date: string
+    end_date: string
+    instruments?: string[]
+    ic_threshold?: number
+    corr_threshold?: number
+    save_label?: string
+  }) => api.post('/factors/screening/run', data),
+  runMining: (data: {
+    factor_set?: string
+    instruments?: string
+    start_date: string
+    end_date: string
+    ic_threshold?: number
+    corr_threshold?: number
+    top_n?: number
+    save_label?: string
+  }) => api.post('/factors/mining/run', data),
+  screeningHistory: () => api.get('/factors/screening/history'),
+  screeningDetails: (runId: number) => api.get(`/factors/screening/${runId}`),
 }
 
 // Strategy Template / Marketplace API

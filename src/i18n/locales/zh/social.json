@@ -101,7 +101,8 @@
       "library": "因子库",
       "icir": "IC/IR 分析",
       "combine": "因子合成",
-      "backtest": "因子回测"
+      "backtest": "因子回测",
+      "mining": "因子挖掘"
     },
     "title": "因子研究",
     "subtitle": "因子库、IC/IR 分析、因子合成与因子回测",
@@ -115,7 +116,14 @@
       "icir": "ICIR",
       "turnover": "换手率",
       "coverage": "覆盖率",
-      "status": "状态"
+      "status": "状态",
+      "icStd": "IC 标准差",
+      "longRet": "多头收益",
+      "shortRet": "空头收益",
+      "longShortRet": "多空收益",
+      "rank": "排名",
+      "factorSet": "因子集",
+      "expression": "表达式"
     },
     "search": "搜索因子",
     "total": "共 {{count}} 个因子",
@@ -123,7 +131,8 @@
       "library": "暂无因子",
       "icir": "选择因子后查看 IC/IR 分析结果，当前暂无评估数据。",
       "combine": "暂无因子合成数据",
-      "backtest": "暂无因子回测数据"
+      "backtest": "暂无因子回测数据",
+      "mining": "运行因子挖掘以从 Qlib Alpha158 中发现高质量因子。"
     },
     "status": {
       "active": "生效中",
@@ -149,6 +158,47 @@
       "weekly": "周频",
       "monthly": "月频",
       "raw": "原值"
+    },
+    "evaluation": {
+      "title": "评估结果",
+      "run": "运行评估",
+      "running": "评估中...",
+      "startDate": "开始日期",
+      "endDate": "结束日期",
+      "noEvaluations": "暂无评估记录。运行评估以查看 IC/IR 指标。",
+      "deleteFailed": "删除评估失败"
+    },
+    "mining": {
+      "title": "因子挖掘",
+      "description": "从 Qlib Alpha158 数据集中发现高质量因子",
+      "factorSet": "因子集",
+      "instruments": "股票池",
+      "startDate": "开始日期",
+      "endDate": "结束日期",
+      "icThreshold": "IC 阈值",
+      "corrThreshold": "相关性阈值",
+      "topN": "Top N",
+      "run": "开始挖掘",
+      "running": "挖掘中...",
+      "results": "挖掘结果",
+      "resultCount": "发现 {{count}} 个因子",
+      "saveLabel": "保存标签",
+      "history": "挖掘历史",
+      "noHistory": "暂无挖掘记录。"
+    },
+    "combine": {
+      "title": "因子合成",
+      "description": "选择因子和权重来创建多因子策略",
+      "addFactor": "添加因子",
+      "weight": "权重",
+      "direction": "方向",
+      "long": "做多",
+      "short": "做空",
+      "generateCode": "预览代码",
+      "createStrategy": "创建策略",
+      "strategyName": "策略名称",
+      "className": "类名",
+      "noFactors": "从因子库中添加因子以开始合成。"
     }
   },
   "visualExplorer": {
