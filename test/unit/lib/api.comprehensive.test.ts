@@ -508,10 +508,10 @@ describe('API Client - HTTP Calls', () => {
 
     it('createPaperOrder sends POST', () => {
       paperTradingAPI.createPaperOrder({
-        symbol: '000001.SZ', direction: 'buy', order_type: 'market', quantity: 100,
+        paper_account_id: 1, symbol: '000001.SZ', direction: 'buy', order_type: 'market', quantity: 100,
       })
       expect(mockPost).toHaveBeenCalledWith('/paper-trade/orders', {
-        symbol: '000001.SZ', direction: 'buy', order_type: 'market', quantity: 100,
+        paper_account_id: 1, symbol: '000001.SZ', direction: 'buy', order_type: 'market', quantity: 100,
       })
     })
 
