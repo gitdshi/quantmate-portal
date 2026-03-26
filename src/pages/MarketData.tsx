@@ -281,12 +281,6 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
-      {icon[status]}
-      {status}
-    </span>
-  )
-}
-
 // ── Calendar Panel ─────────────────────────────────────────────────────
 type CalendarEvent = { type: string; date: string; title: string; symbol?: string; detail?: string; time?: string; country?: string; importance?: string; price?: string }
 
