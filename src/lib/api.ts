@@ -489,19 +489,38 @@ export const tradingAPI = {
 // Paper Trading API (simulation environment)
 export const paperTradingAPI = {
   deployStrategy: (data: {
-    strategy_id: number; vt_symbol: string; parameters?: Record<string, unknown>
+    strategy_id: number; vt_symbol: string; parameters?: Record<string, unknown>;
+    paper_account_id?: number; execution_mode?: string
   }) => api.post('/paper-trade/deploy', data),
   listDeployments: () => api.get('/paper-trade/deployments'),
   stopDeployment: (id: number) => api.post(`/paper-trade/deployments/${id}/stop`),
   listPaperOrders: (params?: { status?: string; page?: number; page_size?: number }) =>
     api.get('/paper-trade/orders', { params }),
   createPaperOrder: (data: {
-    symbol: string; direction: string; order_type: string;
-    quantity: number; price?: number
+    paper_account_id: number; symbol: string; direction: string; order_type: string;
+    quantity: number; price?: number; stop_price?: number
   }) => api.post('/paper-trade/orders', data),
   cancelPaperOrder: (id: number) => api.post(`/paper-trade/orders/${id}/cancel`),
   getPaperPositions: () => api.get('/paper-trade/positions'),
   getPaperPerformance: () => api.get('/paper-trade/performance'),
+  // Signals (semi-auto mode)
+  listSignals: (params?: { status?: string; paper_account_id?: number }) =>
+    api.get('/paper-trade/signals', { params }),
+  confirmSignal: (id: number) => api.post(`/paper-trade/signals/${id}/confirm`),
+  rejectSignal: (id: number) => api.post(`/paper-trade/signals/${id}/reject`),
+}
+
+// Paper Account API (virtual capital accounts)
+export const paperAccountAPI = {
+  create: (data: { name: string; initial_capital?: number; market?: string }) =>
+    api.post('/paper-account', data),
+  list: (params?: { status?: string }) =>
+    api.get('/paper-account', { params }),
+  get: (id: number) => api.get(`/paper-account/${id}`),
+  getEquityCurve: (id: number, params?: { days?: number }) =>
+    api.get(`/paper-account/${id}/equity-curve`, { params }),
+  getAnalytics: (id: number) => api.get(`/paper-account/${id}/analytics`),
+  close: (id: number) => api.delete(`/paper-account/${id}`),
 }
 
 // Risk API

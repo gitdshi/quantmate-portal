@@ -97,6 +97,7 @@ export default function Layout() {
     { sectionKey: 'sections.tradingPortfolio' },
     { nameKey: 'items.portfolio', href: '/portfolio', icon: Briefcase },
     { nameKey: 'items.trading', href: '/trading', icon: ArrowLeftRight },
+    { nameKey: 'items.paperTrading', href: '/paper-trading', icon: Globe },
     { nameKey: 'items.analytics', href: '/analytics', icon: BarChart3 },
     { sectionKey: 'sections.opsAlerts' },
     { nameKey: 'items.alerts', href: '/monitoring', icon: Bell, badge: '3' },

@@ -92,12 +92,16 @@
     "title": "模拟交易",
     "subtitle": "模拟环境中的策略部署和交易",
     "tabs": {
+      "accounts": "账户",
       "deployments": "策略部署",
       "orders": "委托订单",
       "positions": "持仓",
+      "signals": "信号",
       "performance": "绩效"
     },
     "newSimulation": "新建模拟",
+    "newAccount": "新建账户",
+    "newOrder": "新建委托",
     "createSuccess": "模拟部署已创建",
     "createFailed": "创建失败",
     "stopSuccess": "已停止",
@@ -160,7 +164,39 @@
     "loadDeploymentsFailed": "加载部署失败",
     "loadOrdersFailed": "加载订单失败",
     "loadPositionsFailed": "加载持仓失败",
-    "loadPerformanceFailed": "加载绩效失败"
+    "loadPerformanceFailed": "加载绩效失败",
+    "loadSignalsFailed": "加载信号失败",
+    "confirmSuccess": "信号已确认",
+    "confirmFailed": "确认失败",
+    "rejectSuccess": "信号已拒绝",
+    "rejectFailed": "拒绝失败",
+    "accounts": {
+      "activeAccounts": "活跃账户",
+      "totalEquity": "总权益",
+      "totalPnl": "总盈亏",
+      "pendingSignals": "待处理信号",
+      "name": "账户名称",
+      "market": "市场",
+      "initialCapital": "初始资金",
+      "balance": "余额",
+      "marketValue": "市值",
+      "totalReturn": "总收益率",
+      "status": "状态",
+      "noAccounts": "暂无模拟账户"
+    },
+    "signals": {
+      "strategy": "策略",
+      "symbol": "代码",
+      "direction": "方向",
+      "quantity": "数量",
+      "suggestedPrice": "建议价",
+      "reason": "原因",
+      "status": "状态",
+      "actions": "操作",
+      "confirm": "确认",
+      "reject": "拒绝",
+      "noSignals": "暂无信号"
+    }
   },
   "positions": {
     "title": "持仓管理",

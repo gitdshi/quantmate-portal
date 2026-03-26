@@ -92,12 +92,16 @@
     "title": "Paper Trading",
     "subtitle": "Strategy deployment and trading in simulated environment",
     "tabs": {
+      "accounts": "Accounts",
       "deployments": "Deployments",
       "orders": "Orders",
       "positions": "Positions",
+      "signals": "Signals",
       "performance": "Performance"
     },
     "newSimulation": "New Paper Deployment",
+    "newAccount": "New Account",
+    "newOrder": "New Order",
     "createSuccess": "Paper deployment created",
     "createFailed": "Create failed",
     "stopSuccess": "Stopped",
@@ -160,7 +164,39 @@
     "loadDeploymentsFailed": "Failed to load deployments",
     "loadOrdersFailed": "Failed to load orders",
     "loadPositionsFailed": "Failed to load positions",
-    "loadPerformanceFailed": "Failed to load performance"
+    "loadPerformanceFailed": "Failed to load performance",
+    "loadSignalsFailed": "Failed to load signals",
+    "confirmSuccess": "Signal confirmed",
+    "confirmFailed": "Confirm failed",
+    "rejectSuccess": "Signal rejected",
+    "rejectFailed": "Reject failed",
+    "accounts": {
+      "activeAccounts": "Active Accounts",
+      "totalEquity": "Total Equity",
+      "totalPnl": "Total P&L",
+      "pendingSignals": "Pending Signals",
+      "name": "Account Name",
+      "market": "Market",
+      "initialCapital": "Initial Capital",
+      "balance": "Balance",
+      "marketValue": "Market Value",
+      "totalReturn": "Total Return",
+      "status": "Status",
+      "noAccounts": "No paper accounts"
+    },
+    "signals": {
+      "strategy": "Strategy",
+      "symbol": "Symbol",
+      "direction": "Direction",
+      "quantity": "Qty",
+      "suggestedPrice": "Suggested Price",
+      "reason": "Reason",
+      "status": "Status",
+      "actions": "Actions",
+      "confirm": "Confirm",
+      "reject": "Reject",
+      "noSignals": "No signals"
+    }
   },
   "positions": {
     "title": "Positions",

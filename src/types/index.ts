@@ -578,6 +578,8 @@ export interface PaperDeployment {
   vt_symbol: string
   status: 'running' | 'stopped' | 'error'
   parameters?: Record<string, unknown>
+  paper_account_id?: number
+  execution_mode?: 'auto' | 'semi_auto'
   created_at: string
 }
 
@@ -587,4 +589,38 @@ export interface PaperPerformance {
   max_drawdown: number
   total_trades: number
   winning_rate: number
+}
+
+// ── Paper Account ────────────────────────────────────────────────────
+
+export interface PaperAccount {
+  id: number
+  user_id: number
+  name: string
+  initial_capital: number
+  balance: number
+  frozen: number
+  market_value: number
+  total_pnl: number
+  total_equity: number
+  return_pct: number
+  currency: 'CNY' | 'HKD' | 'USD'
+  market: 'CN' | 'HK' | 'US'
+  status: 'active' | 'closed'
+  created_at: string
+  updated_at: string
+}
+
+export interface PaperSignal {
+  id: number
+  paper_account_id: number
+  deployment_id: number
+  symbol: string
+  direction: 'buy' | 'sell'
+  quantity: number
+  suggested_price?: number
+  reason?: string
+  status: 'pending' | 'confirmed' | 'rejected' | 'expired'
+  created_at: string
+  confirmed_at?: string
 }
