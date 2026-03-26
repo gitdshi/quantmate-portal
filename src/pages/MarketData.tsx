@@ -16,7 +16,7 @@ import { useTranslation } from 'react-i18next'
 import CandlestickChart from '../components/charts/CandlestickChart'
 import TabPanel from '../components/ui/TabPanel'
 import { showToast } from '../components/ui/toast-service'
-import { datasyncAPI, marketDataAPI } from '../lib/api'
+import { datasyncAPI, marketDataAPI, multiMarketAPI, calendarAPI, sentimentAPI } from '../lib/api'
 import type { MarketSymbol, OHLCBar } from '../types'
 
 type QuoteMarket = 'CN' | 'HK' | 'US' | 'CRYPTO' | 'FUTURES' | 'CN_INDEX'
@@ -169,7 +169,7 @@ function quoteFromSeriesFallback(
 
 async function fetchQuoteFast(params: { symbol: string; market: QuoteMarket }): Promise<Quote | null> {
   try {
-    const timeoutMs = params.market === 'CN' || params.market === 'CN_INDEX' ? 5000 : 3000
+    const timeoutMs = params.market === 'CN' || params.market === 'CN_INDEX' ? 8000 : 12000
     const response = await marketDataAPI.quote(params, { timeoutMs })
     const quote = parseQuotePayload(response.data)
     if (toNumber(quote.price) !== null) return quote
@@ -281,6 +281,204 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
+      {icon[status]}
+      {status}
+    </span>
+  )
+}
+
+// ── Calendar Panel ─────────────────────────────────────────────────────
+type CalendarEvent = { type: string; date: string; title: string; symbol?: string; detail?: string; time?: string; country?: string; importance?: string; price?: string }
+
+function CalendarPanel() {
+  const { t } = useTranslation('market')
+
+  const { data: tradeDays, isLoading: tdLoading } = useQuery<{ trade_days: string[]; exchange: string }>({
+    queryKey: ['calendar', 'trade-days'],
+    queryFn: () => calendarAPI.tradeDays().then((r) => r.data as { trade_days: string[]; exchange: string }),
+    staleTime: 300_000,
+  })
+
+  const { data: eventsData, isLoading: evLoading } = useQuery<{ events: CalendarEvent[] }>({
+    queryKey: ['calendar', 'events'],
+    queryFn: () => calendarAPI.events().then((r) => r.data as { events: CalendarEvent[] }),
+    staleTime: 300_000,
+  })
+
+  const events = eventsData?.events ?? []
+  const macros = events.filter((e) => e.type === 'macro')
+  const ipos = events.filter((e) => e.type === 'ipo')
+  const dividends = events.filter((e) => e.type === 'dividend')
+
+  if (tdLoading && evLoading) {
+    return <div className="flex items-center justify-center py-16"><Loader2 className="animate-spin text-muted-foreground" size={24} /></div>
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Trade days */}
+      <div>
+        <h3 className="mb-2 font-semibold">{t('calendar.tradeDays')}</h3>
+        {tradeDays && tradeDays.trade_days.length > 0 ? (
+          <div className="flex flex-wrap gap-1">
+            {tradeDays.trade_days.slice(-30).map((d) => (
+              <span key={d} className="rounded bg-green-100 px-1.5 py-0.5 text-xs text-green-800 dark:bg-green-900 dark:text-green-200">{d.slice(5)}</span>
+            ))}
+            <span className="text-xs text-muted-foreground ml-1">({tradeDays.trade_days.length} {t('calendar.totalDays')})</span>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">{t('calendar.noData')}</p>
+        )}
+      </div>
+
+      {/* Macro events */}
+      {macros.length > 0 && (
+        <div>
+          <h3 className="mb-2 font-semibold">{t('calendar.macroEvents')}</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead><tr className="border-b text-left text-muted-foreground"><th className="py-1 pr-2">{t('calendar.date')}</th><th className="py-1 pr-2">{t('calendar.country')}</th><th className="py-1">{t('calendar.event')}</th></tr></thead>
+              <tbody>
+                {macros.slice(0, 20).map((e, i) => (
+                  <tr key={i} className="border-b border-border/40"><td className="py-1 pr-2 whitespace-nowrap">{e.date} {e.time}</td><td className="py-1 pr-2">{e.country}</td><td className="py-1">{e.title}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* IPO events */}
+      {ipos.length > 0 && (
+        <div>
+          <h3 className="mb-2 font-semibold">{t('calendar.ipoEvents')}</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead><tr className="border-b text-left text-muted-foreground"><th className="py-1 pr-2">{t('calendar.date')}</th><th className="py-1 pr-2">{t('calendar.symbol')}</th><th className="py-1 pr-2">{t('calendar.name')}</th><th className="py-1">{t('calendar.price')}</th></tr></thead>
+              <tbody>
+                {ipos.map((e, i) => (
+                  <tr key={i} className="border-b border-border/40"><td className="py-1 pr-2">{e.date}</td><td className="py-1 pr-2">{e.symbol}</td><td className="py-1 pr-2">{e.title}</td><td className="py-1">{e.price}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Dividend events */}
+      {dividends.length > 0 && (
+        <div>
+          <h3 className="mb-2 font-semibold">{t('calendar.dividendEvents')}</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead><tr className="border-b text-left text-muted-foreground"><th className="py-1 pr-2">{t('calendar.date')}</th><th className="py-1 pr-2">{t('calendar.symbol')}</th><th className="py-1 pr-2">{t('calendar.name')}</th><th className="py-1">{t('calendar.detail')}</th></tr></thead>
+              <tbody>
+                {dividends.map((e, i) => (
+                  <tr key={i} className="border-b border-border/40"><td className="py-1 pr-2">{e.date}</td><td className="py-1 pr-2">{e.symbol}</td><td className="py-1 pr-2">{e.title}</td><td className="py-1">{e.detail}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {events.length === 0 && !evLoading && (
+        <p className="text-sm text-muted-foreground">{t('calendar.noEvents')}</p>
+      )}
+    </div>
+  )
+}
+
+// ── Sentiment Panel ────────────────────────────────────────────────────
+function SentimentPanel() {
+  const { t } = useTranslation('market')
+
+  const { data: overview, isLoading: ovLoading } = useQuery<{
+    advance_decline: { advance: number; decline: number; flat: number; total: number; ratio: number } | null
+    volume_trend: { today_amount: number; unit: string } | null
+    index_momentum: { name: string; price: number; change_pct: number } | null
+  }>({
+    queryKey: ['sentiment', 'overview'],
+    queryFn: () => sentimentAPI.overview().then((r) => r.data as ReturnType<typeof sentimentAPI.overview> extends Promise<{ data: infer D }> ? D : never),
+    staleTime: 60_000,
+  })
+
+  const { data: fearGreed, isLoading: fgLoading } = useQuery<{
+    score: number; label: string; components: Record<string, { score: number; [k: string]: unknown }>
+  }>({
+    queryKey: ['sentiment', 'fear-greed'],
+    queryFn: () => sentimentAPI.fearGreed().then((r) => r.data as { score: number; label: string; components: Record<string, { score: number }> }),
+    staleTime: 60_000,
+  })
+
+  if (ovLoading && fgLoading) {
+    return <div className="flex items-center justify-center py-16"><Loader2 className="animate-spin text-muted-foreground" size={24} /></div>
+  }
+
+  const fgColor = !fearGreed ? 'text-muted-foreground'
+    : fearGreed.score < 30 ? 'text-red-500' : fearGreed.score < 50 ? 'text-orange-500'
+      : fearGreed.score < 70 ? 'text-yellow-500' : 'text-green-500'
+
+  return (
+    <div className="space-y-6">
+      {/* Fear & Greed gauge */}
+      {fearGreed && (
+        <div className="rounded-lg border p-4">
+          <h3 className="mb-3 font-semibold">{t('sentiment.fearGreed')}</h3>
+          <div className="flex items-center gap-6">
+            <div className={`text-5xl font-bold ${fgColor}`}>{fearGreed.score}</div>
+            <div>
+              <div className={`text-lg font-medium ${fgColor}`}>{t(`sentiment.label.${fearGreed.label}`)}</div>
+              <div className="mt-1 h-3 w-48 rounded-full bg-gradient-to-r from-red-500 via-yellow-400 to-green-500 relative">
+                <div className="absolute top-0 h-3 w-1 bg-black rounded" style={{ left: `${fearGreed.score}%` }} />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Advance / Decline */}
+      {overview?.advance_decline && (
+        <div className="rounded-lg border p-4">
+          <h3 className="mb-2 font-semibold">{t('sentiment.advanceDecline')}</h3>
+          <div className="flex items-center gap-4 text-sm">
+            <span className="text-green-600">▲ {t('sentiment.advance')}: {overview.advance_decline.advance}</span>
+            <span className="text-red-500">▼ {t('sentiment.decline')}: {overview.advance_decline.decline}</span>
+            <span className="text-muted-foreground">— {t('sentiment.flat')}: {overview.advance_decline.flat}</span>
+            <span className="text-muted-foreground">({t('sentiment.ratio')}: {overview.advance_decline.ratio})</span>
+          </div>
+          <div className="mt-2 flex h-4 overflow-hidden rounded-full">
+            <div className="bg-green-500" style={{ width: `${(overview.advance_decline.advance / overview.advance_decline.total) * 100}%` }} />
+            <div className="bg-gray-300 dark:bg-gray-600" style={{ width: `${(overview.advance_decline.flat / overview.advance_decline.total) * 100}%` }} />
+            <div className="bg-red-500" style={{ width: `${(overview.advance_decline.decline / overview.advance_decline.total) * 100}%` }} />
+          </div>
+        </div>
+      )}
+
+      {/* Volume trend */}
+      {overview?.volume_trend && (
+        <div className="rounded-lg border p-4">
+          <h3 className="mb-1 font-semibold">{t('sentiment.volumeTrend')}</h3>
+          <p className="text-sm">{t('sentiment.todayAmount')}: <span className="font-medium">{overview.volume_trend.today_amount}</span> {overview.volume_trend.unit}</p>
+        </div>
+      )}
+
+      {/* Index momentum */}
+      {overview?.index_momentum && (
+        <div className="rounded-lg border p-4">
+          <h3 className="mb-1 font-semibold">{t('sentiment.indexMomentum')}</h3>
+          <p className="text-sm">
+            {overview.index_momentum.name}: <span className="font-medium">{overview.index_momentum.price}</span>{' '}
+            <span className={overview.index_momentum.change_pct >= 0 ? 'text-green-600' : 'text-red-500'}>
+              {overview.index_momentum.change_pct >= 0 ? '+' : ''}{overview.index_momentum.change_pct}%
+            </span>
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function SyncStatusPanel() {
   const { t } = useTranslation('market')
 
@@ -301,8 +499,13 @@ function SyncStatusPanel() {
 
   const triggerMutation = useMutation({
     mutationFn: () => datasyncAPI.trigger(),
-    onSuccess: () => {
-      showToast(t('page.sync.triggered'), 'success')
+    onSuccess: (response) => {
+      const jobId = (response.data as { job_id?: string })?.job_id
+      if (jobId) {
+        showToast(`${t('page.sync.triggered')} (Job: ${jobId.slice(0, 8)}...)`, 'success')
+      } else {
+        showToast(t('page.sync.triggered'), 'success')
+      }
       void refetchLatest()
     },
     onError: () => showToast(t('page.sync.triggerFailed'), 'error'),
@@ -488,7 +691,26 @@ export default function MarketData() {
       marketDataAPI.symbols(undefined, undefined, 500).then((response) => unwrapList<MarketSymbol>(response.data)),
   })
 
+  // Multi-market symbol search for HK / US
+  const { data: multiMarketSymbols = [] } = useQuery<Array<{ ts_code: string; name: string }>>({
+    queryKey: ['market', 'symbols', klineMarket, debouncedKlineSymbol],
+    enabled: activeTab === 'kline' && (klineMarket === 'HK' || klineMarket === 'US') && debouncedKlineSymbol.length >= 1,
+    queryFn: async () => {
+      const fetcher = klineMarket === 'HK' ? multiMarketAPI.hkStocks : multiMarketAPI.usStocks
+      const response = await fetcher({ keyword: debouncedKlineSymbol, limit: 30 })
+      return (response.data as Array<{ ts_code: string; name: string }>) ?? []
+    },
+    staleTime: 30_000,
+  })
+
   const klineSuggestions = useMemo(() => {
+    if (klineMarket === 'HK' || klineMarket === 'US') {
+      const dbItems = multiMarketSymbols.map((s) => s.ts_code)
+      const fallback = QUICK_SYMBOLS[klineMarket].filter((item) =>
+        item.toLowerCase().includes(klineSymbolInput.trim().toLowerCase())
+      )
+      return Array.from(new Set([...dbItems, ...fallback])).slice(0, 20)
+    }
     if (klineMarket !== 'CN') {
       return QUICK_SYMBOLS[klineMarket].filter((item) =>
         item.toLowerCase().includes(klineSymbolInput.trim().toLowerCase())
@@ -506,7 +728,7 @@ export default function MarketData() {
 
     const fallback = QUICK_SYMBOLS.CN.filter((item) => item.includes(q))
     return Array.from(new Set([...cnFromDb, ...fallback])).slice(0, 20)
-  }, [klineMarket, klineSymbolInput, symbols])
+  }, [klineMarket, klineSymbolInput, symbols, multiMarketSymbols])
 
   const {
     data: klineQuote,
@@ -528,12 +750,18 @@ export default function MarketData() {
     error: historyError,
     refetch: refetchHistory,
   } = useQuery<OHLCBar[]>({
-    queryKey: ['market', 'kline-history', cnVtSymbol, historyStartDate, today],
-    enabled: activeTab === 'kline' && !!cnVtSymbol,
-    queryFn: () =>
-      marketDataAPI
-        .history(cnVtSymbol as string, historyStartDate, today, { pageSize: 5000 })
-        .then((response) => unwrapList<OHLCBar>(response.data)),
+    queryKey: ['market', 'kline-history', klineMarket, debouncedKlineSymbol, cnVtSymbol, historyStartDate, today],
+    enabled: activeTab === 'kline' && (!!cnVtSymbol || (klineMarket !== 'CN' && debouncedKlineSymbol.length >= 1)),
+    queryFn: async () => {
+      if (klineMarket === 'CN' && cnVtSymbol) {
+        const response = await marketDataAPI.history(cnVtSymbol, historyStartDate, today, { pageSize: 5000 })
+        return unwrapList<OHLCBar>(response.data)
+      }
+      // Non-CN markets: use external history API
+      const response = await multiMarketAPI.historyExternal(klineMarket, debouncedKlineSymbol, historyStartDate, today)
+      const payload = response.data as { bars?: OHLCBar[] }
+      return payload?.bars ?? []
+    },
   })
 
   const mergedKlineBars = useMemo(
@@ -795,13 +1023,9 @@ export default function MarketData() {
 
         {activeTab === 'sync' && <SyncStatusPanel />}
 
-        {activeTab === 'calendar' && (
-          <p className="py-8 text-center text-muted-foreground">{t('page.empty.calendar')}</p>
-        )}
+        {activeTab === 'calendar' && <CalendarPanel />}
 
-        {activeTab === 'sentiment' && (
-          <p className="py-8 text-center text-muted-foreground">{t('page.empty.sentiment')}</p>
-        )}
+        {activeTab === 'sentiment' && <SentimentPanel />}
       </TabPanel>
     </div>
   )

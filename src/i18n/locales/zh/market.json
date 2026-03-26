@@ -188,5 +188,39 @@
     "shortExit": "做空离场",
     "resetZoom": "重置缩放",
     "noData": "暂无价格数据"
+  },
+  "calendar": {
+    "tradeDays": "交易日历",
+    "totalDays": "个交易日",
+    "noData": "暂无交易日数据",
+    "macroEvents": "宏观经济日历",
+    "ipoEvents": "新股日历",
+    "dividendEvents": "分红日历",
+    "date": "日期",
+    "country": "国家",
+    "event": "事件",
+    "symbol": "代码",
+    "name": "名称",
+    "price": "价格",
+    "detail": "详情",
+    "noEvents": "暂无近期事件"
+  },
+  "sentiment": {
+    "fearGreed": "恐惧与贪婪指数",
+    "advanceDecline": "涨跌家数",
+    "advance": "上涨",
+    "decline": "下跌",
+    "flat": "平盘",
+    "ratio": "涨跌比",
+    "volumeTrend": "成交量趋势",
+    "todayAmount": "今日成交额",
+    "indexMomentum": "指数动量",
+    "label": {
+      "extreme_fear": "极度恐惧",
+      "fear": "恐惧",
+      "neutral": "中性",
+      "greed": "贪婪",
+      "extreme_greed": "极度贪婪"
+    }
   }
 }

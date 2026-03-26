@@ -452,6 +452,37 @@ export const datasyncAPI = {
   latest: () => api.get('/datasync/status/latest'),
   trigger: (targetDate?: string) =>
     api.post('/datasync/trigger', { target_date: targetDate }),
+  jobStatus: (jobId: string) => api.get(`/datasync/job/${jobId}`),
+}
+
+// Multi-market API (HK / US / external history)
+export const multiMarketAPI = {
+  hkStocks: (params?: { limit?: number; keyword?: string }) =>
+    api.get('/market/hk/stocks', { params }),
+  hkDaily: (tsCode: string, startDate: string, endDate: string) =>
+    api.get('/market/hk/daily', { params: { ts_code: tsCode, start_date: startDate, end_date: endDate } }),
+  usStocks: (params?: { limit?: number; keyword?: string }) =>
+    api.get('/market/us/stocks', { params }),
+  usDaily: (tsCode: string, startDate: string, endDate: string) =>
+    api.get('/market/us/daily', { params: { ts_code: tsCode, start_date: startDate, end_date: endDate } }),
+  historyExternal: (market: string, symbol: string, startDate: string, endDate: string) =>
+    api.get(`/data/history-external/${encodeURIComponent(market)}/${encodeURIComponent(symbol)}`, {
+      params: { start_date: startDate, end_date: endDate },
+    }),
+}
+
+// Calendar API
+export const calendarAPI = {
+  tradeDays: (params?: { exchange?: string; start_date?: string; end_date?: string }) =>
+    api.get('/calendar/trade-days', { params }),
+  events: (params?: { start_date?: string; end_date?: string; event_type?: string }) =>
+    api.get('/calendar/events', { params }),
+}
+
+// Sentiment API
+export const sentimentAPI = {
+  overview: () => api.get('/sentiment/overview'),
+  fearGreed: () => api.get('/sentiment/fear-greed'),
 }
 
 // Trading API

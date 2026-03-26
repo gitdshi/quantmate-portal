@@ -188,5 +188,39 @@
     "shortExit": "Short Exit",
     "resetZoom": "Reset Zoom",
     "noData": "No price data available"
+  },
+  "calendar": {
+    "tradeDays": "Trade Days",
+    "totalDays": "days total",
+    "noData": "No trade day data available",
+    "macroEvents": "Macro Calendar",
+    "ipoEvents": "IPO Calendar",
+    "dividendEvents": "Dividend Calendar",
+    "date": "Date",
+    "country": "Country",
+    "event": "Event",
+    "symbol": "Symbol",
+    "name": "Name",
+    "price": "Price",
+    "detail": "Detail",
+    "noEvents": "No upcoming events"
+  },
+  "sentiment": {
+    "fearGreed": "Fear & Greed Index",
+    "advanceDecline": "Advance / Decline",
+    "advance": "Advance",
+    "decline": "Decline",
+    "flat": "Flat",
+    "ratio": "Ratio",
+    "volumeTrend": "Volume Trend",
+    "todayAmount": "Today's Amount",
+    "indexMomentum": "Index Momentum",
+    "label": {
+      "extreme_fear": "Extreme Fear",
+      "fear": "Fear",
+      "neutral": "Neutral",
+      "greed": "Greed",
+      "extreme_greed": "Extreme Greed"
+    }
   }
 }
