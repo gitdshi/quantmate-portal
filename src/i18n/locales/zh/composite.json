@@ -24,7 +24,8 @@
     "createFirst": "创建第一个策略组件开始使用",
     "loadFailed": "加载组件失败",
     "saveFailed": "保存组件失败",
-    "deleteFailed": "删除组件失败"
+    "deleteFailed": "删除组件失败",
+    "editInResearch": "在策略研究中编辑"
   },
   "layers": {
     "universe": "选股层",

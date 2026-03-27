@@ -26,10 +26,11 @@ import { useBeforeUnload, useNavigate } from 'react-router-dom'
 
 import Badge, { type BadgeVariant } from '../components/ui/Badge'
 import TabPanel from '../components/ui/TabPanel'
+import ComponentsTab from './ComponentsTab'
 import { strategiesAPI, strategyCodeAPI, templateAPI } from '../lib/api'
 import type { Strategy } from '../types'
 
-type MainTabKey = 'workspace' | 'templates'
+type MainTabKey = 'workspace' | 'components' | 'templates'
 type DetailTabKey = 'code' | 'profile' | 'parameters' | 'history'
 type StrategyCategoryKey = 'cta' | 'alpha' | 'statArb' | 'grid' | 'ai' | 'custom'
 
@@ -521,6 +522,7 @@ export default function Strategies() {
   const mainTabs = useMemo(
     () => [
       { key: 'workspace', label: t('page.tabs.workspace') },
+      { key: 'components', label: t('page.tabs.components', 'Components') },
       { key: 'templates', label: t('page.tabs.templates') },
     ],
     [t]
@@ -1285,7 +1287,7 @@ export default function Strategies() {
     if (nextTab === mainTab) return
     confirmUnsavedThen(
       () => setMainTab(nextTab),
-      { discardWorkspaceChanges: nextTab === 'templates' }
+      { discardWorkspaceChanges: nextTab === 'templates' || nextTab === 'components' }
     )
   }
 
@@ -1664,6 +1666,10 @@ export default function Strategies() {
               </section>
             </div>
           </div>
+        )}
+
+        {mainTab === 'components' && (
+          <ComponentsTab />
         )}
 
         {mainTab === 'templates' && (

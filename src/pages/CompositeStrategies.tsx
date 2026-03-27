@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  ArrowRight,
   BarChart3,
   Combine,
   Layers,
@@ -9,6 +10,7 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 
 import Badge, { type BadgeVariant } from '../components/ui/Badge'
 import DataTable, { type Column } from '../components/ui/DataTable'
@@ -27,16 +29,6 @@ import type {
   CompositeBacktestResult,
   CompositeBacktestStatus,
 } from '../types'
-
-type FormComponent = {
-  name: string
-  layer: ComponentLayer
-  sub_type: string
-  description: string
-  code: string
-  config: string
-  parameters: string
-}
 
 type FormComposite = {
   name: string
@@ -73,10 +65,6 @@ const BT_STATUS_VARIANTS: Record<CompositeBacktestStatus, BadgeVariant> = {
   failed: 'destructive',
 }
 
-const emptyComponentForm: FormComponent = {
-  name: '', layer: 'universe', sub_type: '', description: '', code: '', config: '', parameters: '',
-}
-
 const emptyCompositeForm: FormComposite = {
   name: '', description: '', execution_mode: 'backtest', portfolio_config: '', market_constraints: '',
 }
@@ -97,13 +85,6 @@ export default function CompositeStrategies() {
 
   const [activeTab, setActiveTab] = useState('components')
   const [layerFilter, setLayerFilter] = useState<ComponentLayer | ''>('')
-
-  // Component modals
-  const [compModal, setCompModal] = useState(false)
-  const [editCompId, setEditCompId] = useState<number | null>(null)
-  const [compForm, setCompForm] = useState<FormComponent>({ ...emptyComponentForm })
-  const [deleteCompId, setDeleteCompId] = useState<number | null>(null)
-  const [deleteCompName, setDeleteCompName] = useState('')
 
   // Composite modals
   const [compositeModal, setCompositeModal] = useState(false)
@@ -144,63 +125,6 @@ export default function CompositeStrategies() {
       const d = r.data
       return Array.isArray(d) ? d : d?.data ?? []
     }),
-  })
-
-  const createCompMutation = useMutation({
-    mutationFn: () => {
-      const payload: Record<string, unknown> = {
-        name: compForm.name,
-        layer: compForm.layer,
-        sub_type: compForm.sub_type,
-      }
-      if (compForm.description) payload.description = compForm.description
-      if (compForm.code) payload.code = compForm.code
-      const cfg = tryParseJson(compForm.config)
-      if (cfg) payload.config = cfg
-      const params = tryParseJson(compForm.parameters)
-      if (params) payload.parameters = params
-      return strategyComponentsAPI.create(payload as Parameters<typeof strategyComponentsAPI.create>[0])
-    },
-    onSuccess: () => {
-      showToast(tc('operationSuccess'), 'success')
-      setCompModal(false)
-      setCompForm({ ...emptyComponentForm })
-      queryClient.invalidateQueries({ queryKey: ['strategy-components'] })
-    },
-    onError: () => showToast(t('components.saveFailed'), 'error'),
-  })
-
-  const updateCompMutation = useMutation({
-    mutationFn: () => {
-      const payload: Record<string, unknown> = {}
-      if (compForm.name) payload.name = compForm.name
-      if (compForm.sub_type) payload.sub_type = compForm.sub_type
-      if (compForm.description !== undefined) payload.description = compForm.description || null
-      if (compForm.code !== undefined) payload.code = compForm.code || null
-      const cfg = tryParseJson(compForm.config)
-      if (cfg) payload.config = cfg
-      const params = tryParseJson(compForm.parameters)
-      if (params) payload.parameters = params
-      return strategyComponentsAPI.update(editCompId!, payload)
-    },
-    onSuccess: () => {
-      showToast(tc('operationSuccess'), 'success')
-      setCompModal(false)
-      setEditCompId(null)
-      setCompForm({ ...emptyComponentForm })
-      queryClient.invalidateQueries({ queryKey: ['strategy-components'] })
-    },
-    onError: () => showToast(t('components.saveFailed'), 'error'),
-  })
-
-  const deleteCompMutation = useMutation({
-    mutationFn: (id: number) => strategyComponentsAPI.delete(id),
-    onSuccess: () => {
-      showToast(tc('operationSuccess'), 'success')
-      setDeleteCompId(null)
-      queryClient.invalidateQueries({ queryKey: ['strategy-components'] })
-    },
-    onError: () => showToast(t('components.deleteFailed'), 'error'),
   })
 
   // ── Composites queries & mutations ─────────────────────
@@ -361,23 +285,6 @@ export default function CompositeStrategies() {
 
   // ── Handlers ───────────────────────────────────────────
 
-  const openEditComponent = (comp: StrategyComponentListItem) => {
-    strategyComponentsAPI.get(comp.id).then((r) => {
-      const c = r.data
-      setEditCompId(c.id)
-      setCompForm({
-        name: c.name,
-        layer: c.layer,
-        sub_type: c.sub_type,
-        description: c.description || '',
-        code: c.code || '',
-        config: c.config ? JSON.stringify(c.config, null, 2) : '',
-        parameters: c.parameters ? JSON.stringify(c.parameters, null, 2) : '',
-      })
-      setCompModal(true)
-    })
-  }
-
   const openEditComposite = (cs: CompositeStrategyListItem) => {
     compositeStrategiesAPI.get(cs.id).then((r) => {
       const c = r.data
@@ -423,27 +330,6 @@ export default function CompositeStrategies() {
   }
 
   // ── Column definitions ─────────────────────────────────
-
-  const componentCols: Column<StrategyComponentListItem>[] = [
-    { key: 'name', label: t('components.name'), sortable: true },
-    {
-      key: 'layer', label: t('components.layer'), sortable: true,
-      render: (c) => <Badge variant={LAYER_VARIANTS[c.layer]}>{t(`layers.${c.layer}`)}</Badge>,
-    },
-    { key: 'sub_type', label: t('components.subType'), sortable: true },
-    { key: 'description', label: t('components.description'), render: (c) => <span className="text-xs text-muted-foreground truncate max-w-[200px] inline-block">{c.description || '-'}</span> },
-    { key: 'version', label: t('components.version') },
-    { key: 'updated_at', label: tc('actions'), render: (c) => new Date(c.updated_at).toLocaleDateString() },
-    {
-      key: 'id', label: '', width: '120px',
-      render: (c) => (
-        <div className="flex gap-2">
-          <button onClick={(e) => { e.stopPropagation(); openEditComponent(c) }} className="text-xs text-primary hover:underline">{tc('edit')}</button>
-          <button onClick={(e) => { e.stopPropagation(); setDeleteCompId(c.id); setDeleteCompName(c.name) }} className="text-xs text-red-500 hover:underline">{tc('delete')}</button>
-        </div>
-      ),
-    },
-  ]
 
   const compositeCols: Column<CompositeStrategyListItem>[] = [
     { key: 'name', label: t('composites.name'), sortable: true },
@@ -502,11 +388,6 @@ export default function CompositeStrategies() {
           <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
         </div>
         <div className="flex gap-2">
-          {activeTab === 'components' && (
-            <button onClick={() => { setEditCompId(null); setCompForm({ ...emptyComponentForm }); setCompModal(true) }} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-primary text-white hover:opacity-90">
-              <Plus size={16} />{t('components.newComponent')}
-            </button>
-          )}
           {activeTab === 'composites' && (
             <button onClick={() => { setEditCompositeId(null); setCompositeForm({ ...emptyCompositeForm }); setCompositeModal(true) }} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-primary text-white hover:opacity-90">
               <Plus size={16} />{t('composites.newComposite')}
@@ -521,30 +402,58 @@ export default function CompositeStrategies() {
       </div>
 
       <TabPanel tabs={tabs} activeTab={activeTab} onChange={setActiveTab}>
-        {/* ── Components Tab ──────────────────────────────── */}
+        {/* ── Components Tab (read-only) ────────────────── */}
         {activeTab === 'components' && (
           <div className="space-y-4">
             {/* Layer filter */}
-            <div className="flex gap-2">
-              {(['', 'universe', 'trading', 'risk'] as const).map((layer) => (
-                <button
-                  key={layer || 'all'}
-                  onClick={() => setLayerFilter(layer as ComponentLayer | '')}
-                  className={`px-3 py-1 text-xs rounded-full border transition-colors ${
-                    layerFilter === layer
-                      ? 'border-primary bg-primary/10 text-primary'
-                      : 'border-border text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {layer ? t(`layers.${layer}`) : t('layers.all')}
-                </button>
-              ))}
+            <div className="flex items-center justify-between">
+              <div className="flex gap-2">
+                {(['', 'universe', 'trading', 'risk'] as const).map((layer) => (
+                  <button
+                    key={layer || 'all'}
+                    onClick={() => setLayerFilter(layer as ComponentLayer | '')}
+                    className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+                      layerFilter === layer
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {layer ? t(`layers.${layer}`) : t('layers.all')}
+                  </button>
+                ))}
+              </div>
+              <Link
+                to="/strategies"
+                className="flex items-center gap-1.5 text-sm text-primary hover:underline"
+              >
+                {t('components.editInResearch')} <ArrowRight size={14} />
+              </Link>
             </div>
-            <DataTable
-              columns={componentCols}
-              data={components}
-              emptyText={loadingComps ? tc('loading') : t('components.noComponents')}
-            />
+
+            {loadingComps ? (
+              <p className="text-center text-muted-foreground py-8">{tc('loading')}</p>
+            ) : components.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">{t('components.noComponents')}</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {components.map((c) => (
+                  <div key={c.id} className="rounded-lg border border-border bg-card p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-sm text-card-foreground">{c.name}</span>
+                      <Badge variant={LAYER_VARIANTS[c.layer]}>{t(`layers.${c.layer}`)}</Badge>
+                    </div>
+                    <div className="text-xs text-muted-foreground">{c.sub_type}</div>
+                    {c.description && (
+                      <p className="text-xs text-muted-foreground line-clamp-2">{c.description}</p>
+                    )}
+                    <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t border-border">
+                      <span>v{c.version}</span>
+                      <span>{new Date(c.updated_at).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -723,80 +632,6 @@ export default function CompositeStrategies() {
           </div>
         )}
       </TabPanel>
-
-      {/* ── Component Create/Edit Modal ───────────────────── */}
-      <Modal
-        open={compModal}
-        onClose={() => { setCompModal(false); setEditCompId(null) }}
-        title={editCompId ? t('components.editComponent') : t('components.newComponent')}
-        size="lg"
-        footer={
-          <>
-            <button onClick={() => { setCompModal(false); setEditCompId(null) }} className="px-4 py-2 text-sm rounded-md border border-border hover:bg-muted">{tc('cancel')}</button>
-            <button
-              onClick={() => editCompId ? updateCompMutation.mutate() : createCompMutation.mutate()}
-              disabled={!compForm.name || !compForm.sub_type}
-              className="px-4 py-2 text-sm rounded-md bg-primary text-white hover:opacity-90 disabled:opacity-50"
-            >
-              {editCompId ? tc('update') : tc('create')}
-            </button>
-          </>
-        }
-      >
-        <div className="flex flex-col gap-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">{t('components.name')}</label>
-              <input value={compForm.name} onChange={(e) => setCompForm({ ...compForm, name: e.target.value })} className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">{t('components.layer')}</label>
-              <select value={compForm.layer} onChange={(e) => setCompForm({ ...compForm, layer: e.target.value as ComponentLayer })} disabled={!!editCompId} className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background">
-                <option value="universe">{t('layers.universe')}</option>
-                <option value="trading">{t('layers.trading')}</option>
-                <option value="risk">{t('layers.risk')}</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">{t('components.subType')}</label>
-            <input value={compForm.sub_type} onChange={(e) => setCompForm({ ...compForm, sub_type: e.target.value })} placeholder="e.g. sector_filter, momentum_alpha, max_drawdown" className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">{t('components.description')}</label>
-            <textarea value={compForm.description} onChange={(e) => setCompForm({ ...compForm, description: e.target.value })} rows={2} className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background resize-none" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">{t('components.code')}</label>
-            <textarea value={compForm.code} onChange={(e) => setCompForm({ ...compForm, code: e.target.value })} rows={6} className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background font-mono resize-none" placeholder="# Python code for this component" />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">{t('components.config')} (JSON)</label>
-              <textarea value={compForm.config} onChange={(e) => setCompForm({ ...compForm, config: e.target.value })} rows={3} className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background font-mono resize-none" placeholder="{}" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">{t('components.parameters')} (JSON)</label>
-              <textarea value={compForm.parameters} onChange={(e) => setCompForm({ ...compForm, parameters: e.target.value })} rows={3} className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background font-mono resize-none" placeholder="{}" />
-            </div>
-          </div>
-        </div>
-      </Modal>
-
-      {/* ── Component Delete Confirm ──────────────────────── */}
-      <Modal
-        open={!!deleteCompId}
-        onClose={() => setDeleteCompId(null)}
-        title={t('components.deleteComponent')}
-        footer={
-          <>
-            <button onClick={() => setDeleteCompId(null)} className="px-4 py-2 text-sm rounded-md border border-border hover:bg-muted">{tc('cancel')}</button>
-            <button onClick={() => deleteCompMutation.mutate(deleteCompId!)} className="px-4 py-2 text-sm rounded-md bg-red-600 text-white hover:opacity-90">{tc('confirm')}</button>
-          </>
-        }
-      >
-        <p className="text-sm">{t('components.deleteConfirm', { name: deleteCompName })}</p>
-      </Modal>
 
       {/* ── Composite Create/Edit Modal ───────────────────── */}
       <Modal

@@ -1,10 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
-import { Download, Search, Star, TrendingUp } from 'lucide-react'
+import { Download, Layers, Search, Star, TrendingUp } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import Badge from '../components/ui/Badge'
 import { templateAPI } from '../lib/api'
+
+type TemplateType = 'standalone' | 'component' | 'composite'
 
 interface Template {
   id: string
@@ -12,6 +14,9 @@ interface Template {
   description: string
   author: string
   categoryKey: MarketplaceCategory
+  templateType: TemplateType
+  layer?: string
+  subType?: string
   rating: number
   downloads: number
   tags: string[]
@@ -29,6 +34,9 @@ type TemplateApiItem = {
   author?: string | null
   author_id?: number | string | null
   category?: string | null
+  template_type?: string | null
+  layer?: string | null
+  sub_type?: string | null
   rating?: number | string | null
   downloads?: number | string | null
   tags?: unknown
@@ -99,6 +107,9 @@ function mapTemplate(item: TemplateApiItem, index: number): Template {
     description,
     author,
     categoryKey: normalizeCategoryKey(item.category),
+    templateType: (item.template_type as TemplateType) || 'standalone',
+    layer: item.layer || undefined,
+    subType: item.sub_type || undefined,
     rating: toNumber(item.rating),
     downloads: toNumber(item.downloads),
     tags: normalizeTags(item.tags),
@@ -106,10 +117,26 @@ function mapTemplate(item: TemplateApiItem, index: number): Template {
   }
 }
 
+const TEMPLATE_TYPE_KEYS = ['all', 'standalone', 'component', 'composite'] as const
+type TemplateTypeFilter = (typeof TEMPLATE_TYPE_KEYS)[number]
+
+const TYPE_BADGE_STYLES: Record<TemplateType, string> = {
+  standalone: 'bg-blue-500/15 text-blue-400',
+  component: 'bg-purple-500/15 text-purple-400',
+  composite: 'bg-gradient-to-r from-primary/20 to-accent/20 text-primary',
+}
+
+const LAYER_BADGE_STYLES: Record<string, string> = {
+  universe: 'bg-cyan-500/15 text-cyan-400',
+  trading: 'bg-orange-500/15 text-orange-400',
+  risk: 'bg-red-500/15 text-red-400',
+}
+
 export default function Marketplace() {
   const { t } = useTranslation('social')
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState<CategoryKey>('all')
+  const [templateTypeFilter, setTemplateTypeFilter] = useState<TemplateTypeFilter>('all')
   const [page, setPage] = useState(1)
 
   const { data: templates = [] } = useQuery<Template[]>({
@@ -128,11 +155,12 @@ export default function Marketplace() {
       templates.filter(
         (item) =>
           (category === 'all' || item.categoryKey === category) &&
+          (templateTypeFilter === 'all' || item.templateType === templateTypeFilter) &&
           (!normalizedSearch ||
             item.name.toLowerCase().includes(normalizedSearch) ||
             item.description.toLowerCase().includes(normalizedSearch))
       ),
-    [category, normalizedSearch, templates]
+    [category, templateTypeFilter, normalizedSearch, templates]
   )
 
   const pageSize = 6
@@ -190,6 +218,22 @@ export default function Marketplace() {
         </div>
       </div>
 
+      <div className="flex items-center gap-2">
+        <Layers size={14} className="text-muted-foreground" />
+        {TEMPLATE_TYPE_KEYS.map((key) => (
+          <button
+            key={key}
+            onClick={() => {
+              setTemplateTypeFilter(key)
+              setPage(1)
+            }}
+            className={`px-3 py-1 text-xs rounded-full border ${templateTypeFilter === key ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:bg-muted'}`}
+          >
+            {key === 'all' ? t('marketplace.templateTypes.all') : t(`marketplace.templateTypes.${key}`)}
+          </button>
+        ))}
+      </div>
+
       {featured && category === 'all' && !search && (
         <div className="rounded-lg border border-primary/30 bg-gradient-to-r from-primary/5 to-card p-6 flex items-center gap-6">
           <div className="w-20 h-20 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -222,7 +266,17 @@ export default function Marketplace() {
         {paged.map((item) => (
           <div key={item.id} className="rounded-lg border border-border bg-card p-5 hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between mb-2">
-              <Badge variant="primary">{t(`marketplace.categories.${item.categoryKey}`)}</Badge>
+              <div className="flex items-center gap-1.5">
+                <Badge variant="primary">{t(`marketplace.categories.${item.categoryKey}`)}</Badge>
+                <span className={`px-2 py-0.5 text-[10px] rounded-full font-medium ${TYPE_BADGE_STYLES[item.templateType]}`}>
+                  {item.templateType}
+                </span>
+                {item.layer && (
+                  <span className={`px-2 py-0.5 text-[10px] rounded-full font-medium ${LAYER_BADGE_STYLES[item.layer] || ''}`}>
+                    {item.layer}
+                  </span>
+                )}
+              </div>
               {renderStars(item.rating)}
             </div>
             <h3 className="font-semibold text-card-foreground mb-1">{item.name}</h3>

@@ -692,8 +692,12 @@ export const factorAPI = {
 
 // Strategy Template / Marketplace API
 export const templateAPI = {
-  listMarketplace: (params?: { category?: string; page?: number; page_size?: number }) =>
-    api.get('/templates/marketplace', { params }),
+  listMarketplace: (params?: {
+    category?: string
+    template_type?: string
+    page?: number
+    page_size?: number
+  }) => api.get('/templates/marketplace', { params }),
   listMine: (params?: { page?: number; page_size?: number }) =>
     api.get('/templates/mine', { params }),
   get: (id: number) => api.get(`/templates/${id}`),
@@ -709,7 +713,8 @@ export const templateAPI = {
     api.post('/templates', data),
   update: (id: number, data: Record<string, unknown>) => api.put(`/templates/${id}`, data),
   delete: (id: number) => api.delete(`/templates/${id}`),
-  clone: (id: number) => api.post(`/templates/${id}/clone`),
+  clone: (id: number) =>
+    api.post<{ target_type: string; target_id: number }>(`/templates/${id}/clone`),
   listComments: (id: number) => api.get(`/templates/${id}/comments`),
   addComment: (id: number, data: { content: string; parent_id?: number }) =>
     api.post(`/templates/${id}/comments`, data),
@@ -718,6 +723,12 @@ export const templateAPI = {
   getRatings: (id: number) => api.get(`/templates/${id}/ratings`),
   rate: (id: number, data: { rating: number; review?: string }) =>
     api.post(`/templates/${id}/ratings`, data),
+}
+
+// Component-level backtest
+export const componentBacktestAPI = {
+  run: (componentId: number, data?: { config_override?: Record<string, unknown>; params_override?: Record<string, unknown> }) =>
+    api.post(`/strategy-components/${componentId}/backtest`, data ?? {}),
 }
 
 // Team Workspace API

@@ -24,7 +24,8 @@
     "createFirst": "Create your first strategy component to get started",
     "loadFailed": "Failed to load components",
     "saveFailed": "Failed to save component",
-    "deleteFailed": "Failed to delete component"
+    "deleteFailed": "Failed to delete component",
+    "editInResearch": "Edit in Strategy Research"
   },
   "layers": {
     "universe": "Universe",

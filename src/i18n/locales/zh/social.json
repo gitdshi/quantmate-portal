@@ -16,6 +16,12 @@
       "arbitrage": "套利",
       "hft": "高频",
       "ml": "机器学习"
+    },
+    "templateTypes": {
+      "all": "全部类型",
+      "standalone": "独立策略",
+      "component": "策略组件",
+      "composite": "组合策略"
     }
   },
   "teamSpace": {

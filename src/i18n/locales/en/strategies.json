@@ -235,6 +235,7 @@
     "subtitle": "Refactor, validate, and version trading strategies with real backend data.",
     "tabs": {
       "workspace": "Workspace",
+      "components": "Components",
       "templates": "Templates"
     },
     "actions": {
@@ -376,6 +377,29 @@
       "previewTitle": "Template Preview",
       "previewDescription": "Select a template card to inspect the starter code and create a new draft.",
       "fallbackDescription": "Starter template ready for customization."
+    },
+    "components": {
+      "title": "Components",
+      "new": "New",
+      "search": "Search components...",
+      "empty": "No components",
+      "selectPrompt": "Select a component to edit",
+      "tabs": {
+        "code": "Code",
+        "config": "Config",
+        "parameters": "Parameters"
+      },
+      "backtest": "Component Backtest",
+      "runBacktest": "Run Backtest",
+      "created": "Component created",
+      "deleted": "Component deleted",
+      "backtestDone": "Backtest complete",
+      "createTitle": "New Component",
+      "form": {
+        "name": "Name",
+        "layer": "Layer",
+        "subType": "Sub Type"
+      }
     },
     "modals": {
       "createTitle": "Create Strategy Draft",

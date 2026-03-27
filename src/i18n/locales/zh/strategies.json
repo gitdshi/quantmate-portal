@@ -235,6 +235,7 @@
     "subtitle": "基于真实后端数据完成策略编辑、校验与版本管理。",
     "tabs": {
       "workspace": "工作台",
+      "components": "策略组件",
       "templates": "模板库"
     },
     "actions": {
@@ -376,8 +377,29 @@
       "visibilityPublic": "公开",
       "deleteTitle": "删除模板",
       "deleteMessage": "确认删除模板“{{name}}”？"
-    },
-    "modals": {
+    },    "components": {
+      "title": "策略组件",
+      "new": "新建",
+      "search": "搜索组件...",
+      "empty": "暂无组件",
+      "selectPrompt": "选择一个组件进行编辑",
+      "tabs": {
+        "code": "代码",
+        "config": "配置",
+        "parameters": "参数"
+      },
+      "backtest": "组件回测",
+      "runBacktest": "运行回测",
+      "created": "组件已创建",
+      "deleted": "组件已删除",
+      "backtestDone": "回测完成",
+      "createTitle": "新建组件",
+      "form": {
+        "name": "名称",
+        "layer": "层级",
+        "subType": "子类型"
+      }
+    },    "modals": {
       "createTitle": "创建策略草稿",
       "createSubtitle": "可从空白开始，也可选用模板，然后保存到真实策略接口中。",
       "name": "策略名称",

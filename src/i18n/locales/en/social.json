@@ -16,6 +16,12 @@
       "arbitrage": "Arbitrage",
       "hft": "High Frequency",
       "ml": "Machine Learning"
+    },
+    "templateTypes": {
+      "all": "All Types",
+      "standalone": "Standalone",
+      "component": "Component",
+      "composite": "Composite"
     }
   },
   "teamSpace": {
