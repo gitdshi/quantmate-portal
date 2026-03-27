@@ -624,3 +624,134 @@ export interface PaperSignal {
   created_at: string
   confirmed_at?: string
 }
+
+// ── Composite Strategy types ─────────────────────────────────────────
+
+export type ComponentLayer = 'universe' | 'trading' | 'risk'
+export type ExecutionMode = 'backtest' | 'paper' | 'live'
+
+export interface StrategyComponent {
+  id: number
+  name: string
+  layer: ComponentLayer
+  sub_type: string
+  description?: string
+  code?: string
+  config?: Record<string, unknown>
+  parameters?: Record<string, unknown>
+  user_id: number
+  version: number
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface StrategyComponentListItem {
+  id: number
+  name: string
+  layer: ComponentLayer
+  sub_type: string
+  description?: string
+  version: number
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface ComponentBinding {
+  id: number
+  component_id: number
+  layer: ComponentLayer
+  ordinal: number
+  weight: number
+  config_override?: Record<string, unknown>
+  component_name?: string
+  component_sub_type?: string
+}
+
+export interface CompositeStrategy {
+  id: number
+  name: string
+  description?: string
+  portfolio_config?: Record<string, unknown>
+  market_constraints?: Record<string, unknown>
+  execution_mode: ExecutionMode
+  user_id: number
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface CompositeStrategyDetail extends CompositeStrategy {
+  bindings: ComponentBinding[]
+}
+
+export interface CompositeStrategyListItem {
+  id: number
+  name: string
+  description?: string
+  execution_mode: ExecutionMode
+  is_active: boolean
+  created_at: string
+  updated_at: string
+  component_count: number
+}
+
+// ── Composite Backtest Types ─────────────────────────────────────────
+
+export type CompositeBacktestStatus = 'queued' | 'running' | 'completed' | 'failed'
+
+export interface CompositeBacktestSubmit {
+  composite_strategy_id: number
+  start_date: string
+  end_date: string
+  initial_capital?: number
+  benchmark?: string
+}
+
+export interface CompositeBacktestListItem {
+  id: number
+  job_id: string
+  composite_strategy_id: number
+  start_date: string
+  end_date: string
+  initial_capital: number
+  benchmark: string
+  status: CompositeBacktestStatus
+  error_message?: string
+  started_at?: string
+  completed_at?: string
+  created_at: string
+}
+
+export interface CompositeBacktestResult extends CompositeBacktestListItem {
+  result?: {
+    equity_curve: Array<{ date: string; equity: number }>
+    trade_log: Array<{
+      date: string
+      symbol: string
+      direction: string
+      quantity: number
+      price: number
+      amount: number
+      commission: number
+      reason: string
+    }>
+    metrics: {
+      total_return: number
+      annual_return: number
+      max_drawdown: number
+      sharpe_ratio: number
+      winning_rate: number
+      total_trades: number
+      alpha?: number
+      beta?: number
+    }
+    position_history: Array<Record<string, unknown>>
+  }
+  attribution?: {
+    universe: Record<string, unknown>
+    trading: Record<string, unknown>
+    risk: Record<string, unknown>
+  }
+}

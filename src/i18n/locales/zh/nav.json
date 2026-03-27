@@ -13,6 +13,7 @@
     "backtesting": "回测评估",
     "marketData": "行情数据",
     "factorLab": "因子研究",
+    "compositeStrategies": "组合策略",
     "portfolio": "组合管理",
     "trading": "交易执行",
     "paperTrading": "模拟交易",

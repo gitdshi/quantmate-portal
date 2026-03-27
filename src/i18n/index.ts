@@ -15,6 +15,7 @@ import zhPortfolio from './locales/zh/portfolio.json'
 import zhMonitoring from './locales/zh/monitoring.json'
 import zhSettings from './locales/zh/settings.json'
 import zhSocial from './locales/zh/social.json'
+import zhComposite from './locales/zh/composite.json'
 
 import enCommon from './locales/en/common.json'
 import enNav from './locales/en/nav.json'
@@ -29,6 +30,7 @@ import enPortfolio from './locales/en/portfolio.json'
 import enMonitoring from './locales/en/monitoring.json'
 import enSettings from './locales/en/settings.json'
 import enSocial from './locales/en/social.json'
+import enComposite from './locales/en/composite.json'
 
 i18n
   .use(LanguageDetector)
@@ -49,6 +51,7 @@ i18n
         monitoring: zhMonitoring,
         settings: zhSettings,
         social: zhSocial,
+        composite: zhComposite,
       },
       en: {
         common: enCommon,
@@ -64,6 +67,7 @@ i18n
         monitoring: enMonitoring,
         settings: enSettings,
         social: enSocial,
+        composite: enComposite,
       },
     },
     supportedLngs: ['zh', 'en'],
@@ -73,7 +77,7 @@ i18n
     defaultNS: 'common',
     ns: [
       'common', 'nav', 'auth', 'dashboard', 'analytics', 'strategies', 'backtest',
-      'market', 'trading', 'portfolio', 'monitoring', 'settings', 'social',
+      'market', 'trading', 'portfolio', 'monitoring', 'settings', 'social', 'composite',
     ],
     interpolation: {
       escapeValue: false,

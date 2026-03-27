@@ -26,6 +26,7 @@ const FactorLab = lazy(() => import('./pages/FactorLab'))
 const Marketplace = lazy(() => import('./pages/Marketplace'))
 const TeamSpace = lazy(() => import('./pages/TeamSpace'))
 const VisualExplorer = lazy(() => import('./pages/VisualExplorer'))
+const CompositeStrategies = lazy(() => import('./pages/CompositeStrategies'))
 
 function RouteFallback() {
   const { t } = useTranslation('common')
@@ -150,6 +151,7 @@ function App() {
           <Route path="account-security" element={<AccountSecurity />} />
           <Route path="ai-assistant" element={<AIAssistant />} />
           <Route path="factor-lab" element={<FactorLab />} />
+          <Route path="composite-strategies" element={<CompositeStrategies />} />
           <Route path="marketplace" element={<Marketplace />} />
           <Route path="team-space" element={<TeamSpace />} />
           <Route path="visual-explorer" element={<VisualExplorer />} />

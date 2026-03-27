@@ -773,3 +773,67 @@ export const qlibAPI = {
     start_date?: string; end_date?: string
   }) => api.post('/factors/qlib/compute', data),
 }
+
+// Strategy Components API
+export const strategyComponentsAPI = {
+  list: (params?: { layer?: string; page?: number; page_size?: number }) =>
+    api.get('/strategy-components', { params }),
+  get: (id: number) => api.get(`/strategy-components/${id}`),
+  create: (data: {
+    name: string
+    layer: string
+    sub_type: string
+    description?: string
+    code?: string
+    config?: Record<string, unknown>
+    parameters?: Record<string, unknown>
+  }) => api.post('/strategy-components', data),
+  update: (id: number, data: Record<string, unknown>) =>
+    api.put(`/strategy-components/${id}`, data),
+  delete: (id: number) => api.delete(`/strategy-components/${id}`),
+}
+
+// Composite Strategies API
+export const compositeStrategiesAPI = {
+  list: (params?: { page?: number; page_size?: number }) =>
+    api.get('/composite-strategies', { params }),
+  get: (id: number) => api.get(`/composite-strategies/${id}`),
+  create: (data: {
+    name: string
+    description?: string
+    portfolio_config?: Record<string, unknown>
+    market_constraints?: Record<string, unknown>
+    execution_mode?: string
+    bindings?: Array<{
+      component_id: number
+      layer: string
+      ordinal?: number
+      weight?: number
+      config_override?: Record<string, unknown>
+    }>
+  }) => api.post('/composite-strategies', data),
+  update: (id: number, data: Record<string, unknown>) =>
+    api.put(`/composite-strategies/${id}`, data),
+  delete: (id: number) => api.delete(`/composite-strategies/${id}`),
+  replaceBindings: (id: number, bindings: Array<{
+    component_id: number
+    layer: string
+    ordinal?: number
+    weight?: number
+    config_override?: Record<string, unknown>
+  }>) => api.put(`/composite-strategies/${id}/bindings`, bindings),
+}
+
+export const compositeBacktestAPI = {
+  submit: (data: {
+    composite_strategy_id: number
+    start_date: string
+    end_date: string
+    initial_capital?: number
+    benchmark?: string
+  }) => api.post('/composite-backtests', data),
+  list: (params?: { composite_strategy_id?: number }) =>
+    api.get('/composite-backtests', { params }),
+  get: (jobId: string) => api.get(`/composite-backtests/${jobId}`),
+  delete: (jobId: string) => api.delete(`/composite-backtests/${jobId}`),
+}
