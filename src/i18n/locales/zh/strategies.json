@@ -236,7 +236,8 @@
     "tabs": {
       "workspace": "工作台",
       "components": "策略组件",
-      "templates": "模板库"
+      "templates": "模板库",
+      "templateLibrary": "模板库"
     },
     "actions": {
       "import": "导入策略",
@@ -376,7 +377,14 @@
       "visibilityTeam": "团队",
       "visibilityPublic": "公开",
       "deleteTitle": "删除模板",
-      "deleteMessage": "确认删除模板“{{name}}”？"
+      "deleteMessage": "确认删除模板“{{name}}”？"    },
+    "templateLibrary": {
+      "title": "模板库",
+      "subtitle": "浏览模板市场和个人收藏中的独立策略模板",
+      "searchPlaceholder": "搜索模板...",
+      "sourceAll": "全部",
+      "originMarketplace": "来自市场",
+      "originPersonal": "自建"
     },    "components": {
       "title": "策略组件",
       "new": "新建",

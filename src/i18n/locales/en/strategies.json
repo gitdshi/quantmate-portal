@@ -236,7 +236,8 @@
     "tabs": {
       "workspace": "Workspace",
       "components": "Components",
-      "templates": "Templates"
+      "templates": "Templates",
+      "templateLibrary": "Template Library"
     },
     "actions": {
       "import": "Import Strategy",
@@ -377,6 +378,14 @@
       "previewTitle": "Template Preview",
       "previewDescription": "Select a template card to inspect the starter code and create a new draft.",
       "fallbackDescription": "Starter template ready for customization."
+    },
+    "templateLibrary": {
+      "title": "Template Library",
+      "subtitle": "Browse standalone strategy templates from marketplace and your collection",
+      "searchPlaceholder": "Search templates...",
+      "sourceAll": "All",
+      "originMarketplace": "From Marketplace",
+      "originPersonal": "User Created"
     },
     "components": {
       "title": "Components",

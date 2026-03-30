@@ -1,9 +1,11 @@
-import { useQuery } from '@tanstack/react-query'
-import { Download, Layers, Search, Star, TrendingUp } from 'lucide-react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { Download, Eye, Layers, Search, Star, TrendingUp } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import Badge from '../components/ui/Badge'
+import { showToast } from '../components/ui/toast-service'
+import TemplatePreviewDrawer, { type PreviewTemplate } from '../components/TemplatePreviewDrawer'
 import { templateAPI } from '../lib/api'
 
 type TemplateType = 'standalone' | 'component' | 'composite'
@@ -21,6 +23,8 @@ interface Template {
   downloads: number
   tags: string[]
   featured?: boolean
+  code?: string | null
+  defaultParameters?: Record<string, unknown> | null
 }
 
 const CATEGORY_KEYS = ['all', 'trend', 'meanReversion', 'multiFactor', 'arbitrage', 'hft', 'ml'] as const
@@ -41,6 +45,8 @@ type TemplateApiItem = {
   downloads?: number | string | null
   tags?: unknown
   featured?: boolean | null
+  source_template_id?: number | null
+  source?: 'marketplace' | 'personal' | null
 }
 
 function unwrapTemplateRows(value: unknown): TemplateApiItem[] {
@@ -134,10 +140,14 @@ const LAYER_BADGE_STYLES: Record<string, string> = {
 
 export default function Marketplace() {
   const { t } = useTranslation('social')
+  const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState<CategoryKey>('all')
   const [templateTypeFilter, setTemplateTypeFilter] = useState<TemplateTypeFilter>('all')
   const [page, setPage] = useState(1)
+  const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null)
+  const [previewCodeLoading, setPreviewCodeLoading] = useState(false)
+  const [addToLibraryLoading, setAddToLibraryLoading] = useState(false)
 
   const { data: templates = [] } = useQuery<Template[]>({
     queryKey: ['marketplace-templates'],
@@ -147,6 +157,19 @@ export default function Marketplace() {
         return items.map((item, index) => mapTemplate(item, index))
       }),
   })
+
+  // Track which marketplace templates the user has cloned (by source_template_id)
+  const { data: libraryIdList = [] } = useQuery<string[]>({
+    queryKey: ['my-template-ids'],
+    queryFn: () =>
+      templateAPI.listMine({ page: 1, page_size: 100 }).then((r) => {
+        const items = unwrapTemplateRows(r.data)
+        return items
+          .map((item) => String(item.source_template_id ?? ''))
+          .filter(Boolean)
+      }),
+  })
+  const libraryIds = useMemo(() => new Set(libraryIdList), [libraryIdList])
 
   const featured = templates.find((item) => item.featured) || templates[0]
   const normalizedSearch = search.trim().toLowerCase()
@@ -166,6 +189,63 @@ export default function Marketplace() {
   const pageSize = 6
   const totalPages = Math.ceil(filtered.length / pageSize)
   const paged = filtered.slice((page - 1) * pageSize, page * pageSize)
+
+  const handlePreview = async (item: Template) => {
+    setPreviewTemplate(item)
+    if (!item.code) {
+      try {
+        setPreviewCodeLoading(true)
+        const response = await templateAPI.get(Number(item.id))
+        const detail = response.data as Record<string, unknown>
+        const code = (detail?.code ?? (detail?.data as Record<string, unknown>)?.code) as string | null
+        const rawParams = detail?.default_params ?? (detail?.data as Record<string, unknown>)?.default_params
+        let defaultParams: Record<string, unknown> | null = null
+        if (rawParams) {
+          if (typeof rawParams === 'string') {
+            try { defaultParams = JSON.parse(rawParams) as Record<string, unknown> } catch { /* ignore */ }
+          } else {
+            defaultParams = rawParams as Record<string, unknown>
+          }
+        }
+        setPreviewTemplate((prev) =>
+          prev && prev.id === item.id ? { ...prev, code: code || null, defaultParameters: defaultParams || null } : prev
+        )
+      } catch {
+        // code not available — preview will show placeholder
+      } finally {
+        setPreviewCodeLoading(false)
+      }
+    }
+  }
+
+  const handleAddToLibrary = async (tmpl: PreviewTemplate) => {
+    try {
+      setAddToLibraryLoading(true)
+      await templateAPI.clone(Number(tmpl.id))
+      void queryClient.invalidateQueries({ queryKey: ['my-template-ids'] })
+      showToast(t('marketplace.addToLibrary') + ' ✓', 'success')
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { detail?: string } } }
+      showToast(err.response?.data?.detail || 'Failed to add to library', 'error')
+    } finally {
+      setAddToLibraryLoading(false)
+    }
+  }
+
+  const toPreviewTemplate = (item: Template): PreviewTemplate => ({
+    id: item.id,
+    name: item.name,
+    description: item.description,
+    author: item.author,
+    categoryLabel: t(`marketplace.categories.${item.categoryKey}`),
+    templateType: item.templateType,
+    layer: item.layer,
+    rating: item.rating,
+    downloads: item.downloads,
+    tags: item.tags,
+    code: item.code || null,
+    defaultParameters: item.defaultParameters || null,
+  })
 
   const renderStars = (rating: number) => (
     <div className="flex items-center gap-0.5">
@@ -256,15 +336,29 @@ export default function Marketplace() {
               </span>
             </div>
           </div>
-          <button className="px-4 py-2 text-sm rounded-md bg-primary text-white hover:opacity-90 whitespace-nowrap">
-            {t('marketplace.useTemplate')}
+          <button
+            className={`px-4 py-2 text-sm rounded-md whitespace-nowrap ${
+              libraryIds.has(featured.id)
+                ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                : 'bg-primary text-white hover:opacity-90'
+            }`}
+            disabled={libraryIds.has(featured.id) || addToLibraryLoading}
+            onClick={() => void handleAddToLibrary(toPreviewTemplate(featured))}
+          >
+            {libraryIds.has(featured.id)
+              ? t('marketplace.alreadyInLibrary')
+              : t('marketplace.addToLibrary')}
           </button>
         </div>
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {paged.map((item) => (
-          <div key={item.id} className="rounded-lg border border-border bg-card p-5 hover:shadow-md transition-shadow">
+          <div
+            key={item.id}
+            className="rounded-lg border border-border bg-card p-5 hover:shadow-md transition-shadow cursor-pointer"
+            onClick={() => void handlePreview(item)}
+          >
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-1.5">
                 <Badge variant="primary">{t(`marketplace.categories.${item.categoryKey}`)}</Badge>
@@ -299,9 +393,34 @@ export default function Marketplace() {
                 {item.downloads.toLocaleString()}
               </span>
             </div>
-            <button className="w-full mt-3 px-3 py-1.5 text-sm rounded-md border border-primary text-primary hover:bg-primary/10">
-              {t('marketplace.useTemplate')}
-            </button>
+            <div className="flex gap-2 mt-3">
+              <button
+                className="flex items-center justify-center gap-1 px-3 py-1.5 text-sm rounded-md border border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  void handlePreview(item)
+                }}
+              >
+                <Eye size={14} />
+                {t('marketplace.previewBtn', 'Preview')}
+              </button>
+              <button
+                className={`flex-1 px-3 py-1.5 text-sm rounded-md border ${
+                  libraryIds.has(item.id)
+                    ? 'border-border bg-muted text-muted-foreground cursor-not-allowed'
+                    : 'border-primary text-primary hover:bg-primary/10'
+                }`}
+                disabled={libraryIds.has(item.id) || addToLibraryLoading}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  void handleAddToLibrary(toPreviewTemplate(item))
+                }}
+              >
+                {libraryIds.has(item.id)
+                  ? t('marketplace.alreadyInLibrary')
+                  : t('marketplace.addToLibrary')}
+              </button>
+            </div>
           </div>
         ))}
       </div>
@@ -321,6 +440,16 @@ export default function Marketplace() {
           ))}
         </div>
       )}
+
+      <TemplatePreviewDrawer
+        template={previewTemplate ? toPreviewTemplate(previewTemplate) : null}
+        isOpen={!!previewTemplate}
+        onClose={() => setPreviewTemplate(null)}
+        isInLibrary={previewTemplate ? libraryIds.has(previewTemplate.id) : false}
+        onAddToLibrary={handleAddToLibrary}
+        addToLibraryLoading={addToLibraryLoading}
+        codeLoading={previewCodeLoading}
+      />
     </div>
   )
 }

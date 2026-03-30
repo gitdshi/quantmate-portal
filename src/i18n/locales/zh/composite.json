@@ -4,6 +4,7 @@
   "tabs": {
     "components": "策略组件",
     "composites": "组合策略",
+    "templateLibrary": "模板库",
     "backtests": "组合回测"
   },
   "components": {
@@ -26,6 +27,22 @@
     "saveFailed": "保存组件失败",
     "deleteFailed": "删除组件失败",
     "editInResearch": "在策略研究中编辑"
+  },
+  "templateLibrary": {
+    "title": "模板库",
+    "subtitle": "浏览市场和个人收藏中的组件和组合策略模板",
+    "searchPlaceholder": "搜索模板...",
+    "sourceAll": "全部",
+    "sourceMarketplace": "模板市场",
+    "sourceMine": "我的模板",
+    "typeAll": "全部类型",
+    "typeComponent": "组件",
+    "typeComposite": "组合",
+    "empty": "未找到模板",
+    "preview": "预览",
+    "addToLibrary": "添加到库",
+    "inLibrary": "已在库中",
+    "cloneFailed": "添加到库失败"
   },
   "layers": {
     "universe": "选股层",

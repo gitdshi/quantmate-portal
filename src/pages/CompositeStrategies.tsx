@@ -1,27 +1,28 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  ArrowRight,
   BarChart3,
+  BookOpen,
   Combine,
+  Eye,
   Layers,
   Play,
   Plus,
+  Search,
   Trash2,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
 
 import Badge, { type BadgeVariant } from '../components/ui/Badge'
 import DataTable, { type Column } from '../components/ui/DataTable'
 import Modal from '../components/ui/Modal'
 import TabPanel from '../components/ui/TabPanel'
 import { showToast } from '../components/ui/toast-service'
-import { strategyComponentsAPI, compositeStrategiesAPI, compositeBacktestAPI } from '../lib/api'
+import { compositeStrategiesAPI, compositeBacktestAPI, templateAPI } from '../lib/api'
+import ComponentsTab from './ComponentsTab'
 import type {
   ComponentLayer,
   ExecutionMode,
-  StrategyComponentListItem,
   CompositeStrategyListItem,
   CompositeStrategyDetail,
   ComponentBinding,
@@ -29,6 +30,23 @@ import type {
   CompositeBacktestResult,
   CompositeBacktestStatus,
 } from '../types'
+
+type TemplateItem = {
+  id: number
+  name: string
+  description: string
+  category: string
+  template_type?: string | null
+  code?: string
+  params_schema?: Record<string, unknown>
+  default_params?: Record<string, unknown>
+  visibility: string
+  downloads: number
+  avg_rating: number
+  source: 'marketplace' | 'mine'
+  source_template_id?: number | null
+  origin?: 'marketplace' | 'personal' | null
+}
 
 type FormComposite = {
   name: string
@@ -84,7 +102,15 @@ export default function CompositeStrategies() {
   const queryClient = useQueryClient()
 
   const [activeTab, setActiveTab] = useState('components')
-  const [layerFilter, setLayerFilter] = useState<ComponentLayer | ''>('')
+
+  // Template Library state
+  const [tplSearch, setTplSearch] = useState('')
+  const [tplSourceFilter, setTplSourceFilter] = useState<'all' | 'marketplace' | 'personal'>('all')
+  const [tplTypeFilter, setTplTypeFilter] = useState<'all' | 'component' | 'composite'>('all')
+  const [previewTemplate, setPreviewTemplate] = useState<TemplateItem | null>(null)
+  const [selectedTplId, setSelectedTplId] = useState<number | null>(null)
+  const [selectedTplCodeLoading, setSelectedTplCodeLoading] = useState(false)
+  const [templateAsideTab, setTemplateAsideTab] = useState<'description' | 'code' | 'params'>('description')
 
   // Composite modals
   const [compositeModal, setCompositeModal] = useState(false)
@@ -114,18 +140,89 @@ export default function CompositeStrategies() {
   const tabs = [
     { key: 'components', label: t('tabs.components'), icon: <Layers size={16} /> },
     { key: 'composites', label: t('tabs.composites'), icon: <Combine size={16} /> },
+    { key: 'templateLibrary', label: t('tabs.templateLibrary', 'Template Library'), icon: <BookOpen size={16} /> },
     { key: 'backtests', label: t('backtest.title'), icon: <BarChart3 size={16} /> },
   ]
 
-  // ── Components queries & mutations ─────────────────────
+  // ── Template Library queries ────────────────────────────
 
-  const { data: components = [], isLoading: loadingComps } = useQuery<StrategyComponentListItem[]>({
-    queryKey: ['strategy-components', layerFilter],
-    queryFn: () => strategyComponentsAPI.list(layerFilter ? { layer: layerFilter } : undefined).then((r) => {
-      const d = r.data
-      return Array.isArray(d) ? d : d?.data ?? []
-    }),
+  function unwrapTemplateArray(data: unknown): Record<string, unknown>[] {
+    if (Array.isArray(data)) return data as Record<string, unknown>[]
+    if (data && typeof data === 'object') {
+      const c = data as Record<string, unknown>
+      const d = c.data ?? c.items ?? c.results
+      if (Array.isArray(d)) return d as Record<string, unknown>[]
+    }
+    return []
+  }
+
+  const { data: myTemplates = [] } = useQuery<TemplateItem[]>({
+    queryKey: ['composite-tpl-mine'],
+    queryFn: () => templateAPI.listMine().then((r) =>
+      unwrapTemplateArray(r.data).map((item) => ({
+        ...item,
+        source: 'mine' as const,
+        origin: (item.source as 'marketplace' | 'personal' | undefined) ?? null,
+        source_template_id: (item.source_template_id as number | undefined) ?? null,
+      } as TemplateItem))
+    ),
+    enabled: activeTab === 'templateLibrary',
   })
+
+  const librarySet = useMemo(
+    () => new Set(myTemplates.filter((t) => t.source_template_id).map((t) => t.source_template_id as number)),
+    [myTemplates]
+  )
+
+  const filteredTpl = useMemo(() => {
+    const query = tplSearch.trim().toLowerCase()
+    return myTemplates.filter((item) => {
+      const ttype = item.template_type || 'standalone'
+      if (ttype === 'standalone') return false // exclude standalone
+      if (tplTypeFilter !== 'all' && ttype !== tplTypeFilter) return false
+      if (tplSourceFilter !== 'all' && item.origin !== tplSourceFilter) return false
+      if (query && !item.name.toLowerCase().includes(query) && !(item.description || '').toLowerCase().includes(query)) return false
+      return true
+    })
+  }, [myTemplates, tplSearch, tplSourceFilter, tplTypeFilter])
+
+  const selectedTpl = useMemo(
+    () => myTemplates.find((t) => t.id === selectedTplId) ?? null,
+    [selectedTplId, myTemplates]
+  )
+
+  const handlePreviewTemplate = (tpl: TemplateItem) => {
+    if (!tpl.code) {
+      setSelectedTplCodeLoading(true)
+      templateAPI.get(tpl.id).then((r) => {
+        const detail = r.data as Record<string, unknown>
+        const full = { ...tpl, code: (detail.code as string) || '', params_schema: detail.params_schema as Record<string, unknown> | undefined, default_params: detail.default_params as Record<string, unknown> | undefined }
+        setPreviewTemplate(full)
+      }).finally(() => setSelectedTplCodeLoading(false))
+    } else {
+      setPreviewTemplate(tpl)
+    }
+  }
+
+  useEffect(() => {
+    setPreviewTemplate(null)
+    setTemplateAsideTab('description')
+    if (selectedTplId !== null) {
+      const tpl = myTemplates.find((t) => t.id === selectedTplId)
+      if (tpl) handlePreviewTemplate(tpl)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTplId])
+
+  const handleAddToLibrary = async (tpl: TemplateItem) => {
+    try {
+      await templateAPI.clone(tpl.id)
+      void queryClient.invalidateQueries({ queryKey: ['composite-tpl-mine'] })
+      showToast(tc('operationSuccess'), 'success')
+    } catch {
+      showToast(t('templateLibrary.cloneFailed', 'Failed to add to library'), 'error')
+    }
+  }
 
   // ── Composites queries & mutations ─────────────────────
 
@@ -402,58 +499,167 @@ export default function CompositeStrategies() {
       </div>
 
       <TabPanel tabs={tabs} activeTab={activeTab} onChange={setActiveTab}>
-        {/* ── Components Tab (read-only) ────────────────── */}
-        {activeTab === 'components' && (
-          <div className="space-y-4">
-            {/* Layer filter */}
-            <div className="flex items-center justify-between">
-              <div className="flex gap-2">
-                {(['', 'universe', 'trading', 'risk'] as const).map((layer) => (
-                  <button
-                    key={layer || 'all'}
-                    onClick={() => setLayerFilter(layer as ComponentLayer | '')}
-                    className={`px-3 py-1 text-xs rounded-full border transition-colors ${
-                      layerFilter === layer
-                        ? 'border-primary bg-primary/10 text-primary'
-                        : 'border-border text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    {layer ? t(`layers.${layer}`) : t('layers.all')}
-                  </button>
-                ))}
-              </div>
-              <Link
-                to="/strategies"
-                className="flex items-center gap-1.5 text-sm text-primary hover:underline"
-              >
-                {t('components.editInResearch')} <ArrowRight size={14} />
-              </Link>
-            </div>
+        {/* ── Components Tab (full CRUD) ────────────────── */}
+        {activeTab === 'components' && <ComponentsTab />}
 
-            {loadingComps ? (
-              <p className="text-center text-muted-foreground py-8">{tc('loading')}</p>
-            ) : components.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">{t('components.noComponents')}</p>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {components.map((c) => (
-                  <div key={c.id} className="rounded-lg border border-border bg-card p-4 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-sm text-card-foreground">{c.name}</span>
-                      <Badge variant={LAYER_VARIANTS[c.layer]}>{t(`layers.${c.layer}`)}</Badge>
-                    </div>
-                    <div className="text-xs text-muted-foreground">{c.sub_type}</div>
-                    {c.description && (
-                      <p className="text-xs text-muted-foreground line-clamp-2">{c.description}</p>
-                    )}
-                    <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t border-border">
-                      <span>v{c.version}</span>
-                      <span>{new Date(c.updated_at).toLocaleDateString()}</span>
+        {/* ── Template Library Tab ────────────────────────── */}
+        {activeTab === 'templateLibrary' && (
+          <div className="grid gap-4 xl:grid-cols-2">
+            <section className="rounded-2xl border border-border bg-card shadow-sm p-5">
+              <div className="mb-4">
+                <h2 className="text-lg font-semibold text-card-foreground">{t('templateLibrary.title', 'Template Library')}</h2>
+                <p className="mt-1 text-sm text-muted-foreground">{t('templateLibrary.subtitle', 'Browse component and composite strategy templates')}</p>
+              </div>
+
+              <div className="mb-4 flex flex-wrap items-center gap-3">
+                <div className="relative min-w-0 flex-1">
+                  <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    type="text"
+                    className="h-9 w-full rounded-lg border border-border bg-background pl-9 pr-3 text-sm outline-none focus:border-ring"
+                    placeholder={t('templateLibrary.searchPlaceholder', 'Search templates...')}
+                    value={tplSearch}
+                    onChange={(e) => setTplSearch(e.target.value)}
+                  />
+                </div>
+                <select
+                  className="h-9 rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-ring"
+                  value={tplSourceFilter}
+                  onChange={(e) => setTplSourceFilter(e.target.value as 'all' | 'marketplace' | 'personal')}
+                >
+                  <option value="all">{t('templateLibrary.sourceAll', 'All Sources')}</option>
+                  <option value="marketplace">{t('templateLibrary.originMarketplace', 'From Marketplace')}</option>
+                  <option value="personal">{t('templateLibrary.originPersonal', 'User Created')}</option>
+                </select>
+                <select
+                  className="h-9 rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-ring"
+                  value={tplTypeFilter}
+                  onChange={(e) => setTplTypeFilter(e.target.value as 'all' | 'component' | 'composite')}
+                >
+                  <option value="all">{t('templateLibrary.typeAll', 'All Types')}</option>
+                  <option value="component">{t('templateLibrary.typeComponent', 'Component')}</option>
+                  <option value="composite">{t('templateLibrary.typeComposite', 'Composite')}</option>
+                </select>
+              </div>
+
+              {filteredTpl.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
+                  {t('templateLibrary.empty', 'No templates found')}
+                </div>
+              ) : (
+                <div className="grid gap-3">
+                  {filteredTpl.map((tpl) => (
+                    <article
+                      key={tpl.id}
+                      className={`rounded-lg border bg-background p-4 space-y-2 cursor-pointer transition-colors ${
+                        selectedTplId === tpl.id ? 'border-ring' : 'border-border hover:border-ring/50'
+                      }`}
+                      onClick={() => setSelectedTplId(tpl.id)}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="font-medium text-sm text-card-foreground truncate">{tpl.name}</span>
+                        <Badge variant={tpl.template_type === 'composite' ? 'warning' : 'primary'}>
+                          {tpl.template_type === 'composite' ? t('templateLibrary.typeComposite', 'Composite') : t('templateLibrary.typeComponent', 'Component')}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground line-clamp-2">{tpl.description || '-'}</p>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Badge variant={tpl.origin === 'marketplace' ? 'success' : 'muted'}>
+                          {tpl.origin === 'marketplace' ? t('templateLibrary.originMarketplace', 'From Marketplace') : t('templateLibrary.originPersonal', 'User Created')}
+                        </Badge>
+                        <span>{tpl.downloads} downloads</span>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <aside className="rounded-2xl border border-border bg-card shadow-sm p-5">
+              {selectedTpl ? (
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-card-foreground">{selectedTpl.name}</h3>
+                    <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{selectedTpl.description || '-'}</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Badge variant={selectedTpl.template_type === 'composite' ? 'warning' : 'primary'}>
+                        {selectedTpl.template_type === 'composite' ? t('templateLibrary.typeComposite', 'Composite') : t('templateLibrary.typeComponent', 'Component')}
+                      </Badge>
+                      <Badge variant={selectedTpl.origin === 'marketplace' ? 'success' : 'muted'}>
+                        {selectedTpl.origin === 'marketplace' ? t('templateLibrary.originMarketplace', 'From Marketplace') : t('templateLibrary.originPersonal', 'User Created')}
+                      </Badge>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
+                  <TabPanel
+                    tabs={[
+                      { key: 'description', label: t('templateLibrary.tabs.description', 'Description') },
+                      { key: 'code', label: t('templateLibrary.tabs.code', 'Code') },
+                      { key: 'params', label: t('templateLibrary.tabs.params', 'Parameters') },
+                    ]}
+                    activeTab={templateAsideTab}
+                    onChange={(k) => setTemplateAsideTab(k as 'description' | 'code' | 'params')}
+                  >
+                    {templateAsideTab === 'description' && (
+                      <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                        {selectedTpl.description || '-'}
+                      </p>
+                    )}
+                    {templateAsideTab === 'code' && (
+                      <div>
+                        {selectedTplCodeLoading ? (
+                          <div className="rounded-lg border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">
+                            {t('templateLibrary.tabs.loadingCode', 'Loading code...')}
+                          </div>
+                        ) : previewTemplate?.code ? (
+                          <pre className="max-h-[40vh] overflow-auto rounded-lg border border-border bg-muted/20 p-4 text-xs font-mono leading-6 text-foreground whitespace-pre-wrap">
+                            {previewTemplate.code}
+                          </pre>
+                        ) : (
+                          <div className="rounded-lg border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">
+                            {t('templateLibrary.tabs.noCode', 'Code not available.')}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {templateAsideTab === 'params' && (
+                      <div>
+                        {selectedTplCodeLoading ? (
+                          <div className="rounded-lg border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">
+                            {t('templateLibrary.tabs.loadingCode', 'Loading...')}
+                          </div>
+                        ) : (() => {
+                          const raw = previewTemplate?.default_params
+                          if (!raw) return (
+                            <div className="rounded-lg border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">
+                              {t('templateLibrary.tabs.noParams', 'No parameters defined.')}
+                            </div>
+                          )
+                          const parsed: Record<string, unknown> | null = typeof raw === 'string'
+                            ? (() => { try { return JSON.parse(raw) as Record<string, unknown> } catch { return null } })()
+                            : raw as Record<string, unknown>
+                          if (!parsed || Object.keys(parsed).length === 0) return (
+                            <div className="rounded-lg border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">
+                              {t('templateLibrary.tabs.noParams', 'No parameters defined.')}
+                            </div>
+                          )
+                          return (
+                            <pre className="max-h-[40vh] overflow-auto rounded-lg border border-border bg-muted/20 p-4 text-xs font-mono leading-6 text-foreground whitespace-pre-wrap">
+                              {JSON.stringify(parsed, null, 2)}
+                            </pre>
+                          )
+                        })()}
+                      </div>
+                    )}
+                  </TabPanel>
+                </div>
+              ) : (
+                <div className="flex min-h-[320px] flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-muted/20 px-6 text-center">
+                  <Eye size={24} className="text-muted-foreground" />
+                  <div className="mt-4 text-base font-semibold text-foreground">{t('templateLibrary.previewTitle', 'Select a Template')}</div>
+                  <p className="mt-2 text-sm text-muted-foreground">{t('templateLibrary.previewDescription', 'Click a template card to see its details')}</p>
+                </div>
+              )}
+            </aside>
           </div>
         )}
 
@@ -811,6 +1017,8 @@ export default function CompositeStrategies() {
       >
         <p className="text-sm">{t('backtest.deleteConfirm')}</p>
       </Modal>
+
+      {/* ── Template Preview Drawer ───────────────────────── */}
     </div>
   )
 }

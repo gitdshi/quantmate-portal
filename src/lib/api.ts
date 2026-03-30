@@ -698,7 +698,7 @@ export const templateAPI = {
     page?: number
     page_size?: number
   }) => api.get('/templates/marketplace', { params }),
-  listMine: (params?: { page?: number; page_size?: number }) =>
+  listMine: (params?: { page?: number; page_size?: number; source?: string }) =>
     api.get('/templates/mine', { params }),
   get: (id: number) => api.get(`/templates/${id}`),
   create: (data: {
@@ -715,6 +715,8 @@ export const templateAPI = {
   delete: (id: number) => api.delete(`/templates/${id}`),
   clone: (id: number) =>
     api.post<{ target_type: string; target_id: number }>(`/templates/${id}/clone`),
+  publish: (id: number) =>
+    api.post(`/templates/${id}/publish`),
   listComments: (id: number) => api.get(`/templates/${id}/comments`),
   addComment: (id: number, data: { content: string; parent_id?: number }) =>
     api.post(`/templates/${id}/comments`, data),

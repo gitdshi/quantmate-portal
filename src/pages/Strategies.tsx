@@ -26,11 +26,10 @@ import { useBeforeUnload, useNavigate } from 'react-router-dom'
 
 import Badge, { type BadgeVariant } from '../components/ui/Badge'
 import TabPanel from '../components/ui/TabPanel'
-import ComponentsTab from './ComponentsTab'
 import { strategiesAPI, strategyCodeAPI, templateAPI } from '../lib/api'
 import type { Strategy } from '../types'
 
-type MainTabKey = 'workspace' | 'components' | 'templates'
+type MainTabKey = 'workspace' | 'templateLibrary'
 type DetailTabKey = 'code' | 'profile' | 'parameters' | 'history'
 type StrategyCategoryKey = 'cta' | 'alpha' | 'statArb' | 'grid' | 'ai' | 'custom'
 
@@ -73,11 +72,14 @@ type TemplateApiItem = {
   code?: string | null
   params_schema?: unknown
   default_params?: unknown
+  template_type?: string | null
   version?: string | null
   visibility?: string | null
   downloads?: number | null
   created_at?: string | null
   updated_at?: string | null
+  source_template_id?: number | null
+  source?: 'marketplace' | 'personal' | null
 }
 
 type TemplateCard = {
@@ -89,9 +91,11 @@ type TemplateCard = {
   description: string
   code: string | null
   defaultParameters: Record<string, unknown>
+  templateType: string
   visibility: string
   downloads: number
   updatedAt?: string | null
+  origin?: 'marketplace' | 'personal' | null
 }
 
 type ToastState = {
@@ -341,9 +345,11 @@ function mapTemplateCard(item: TemplateApiItem, source: TemplateScope): Template
     description: item.description || '',
     code: item.code || null,
     defaultParameters: safeParseTemplateObject(item.default_params),
+    templateType: item.template_type || 'standalone',
     visibility: item.visibility || (source === 'marketplace' ? 'public' : 'private'),
     downloads: Number(item.downloads || 0),
     updatedAt: item.updated_at,
+    origin: item.source ?? null,
   }
 }
 
@@ -430,6 +436,8 @@ export default function Strategies() {
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [templateSearch, setTemplateSearch] = useState('')
+  const [templateSourceFilter, setTemplateSourceFilter] = useState<'all' | 'marketplace' | 'personal'>('all')
   const [loadingList, setLoadingList] = useState(false)
   const [loadingDetail, setLoadingDetail] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -441,6 +449,7 @@ export default function Strategies() {
   const [createModalOpen, setCreateModalOpen] = useState(false)
   const [importModalOpen, setImportModalOpen] = useState(false)
   const [selectedTemplateKey, setSelectedTemplateKey] = useState<string | null>(null)
+  const [templateAsideTab, setTemplateAsideTab] = useState<'description' | 'code' | 'params'>('description')
   const [historyPreview, setHistoryPreview] = useState<HistoryPreviewState>(null)
   const [confirmState, setConfirmState] = useState<ConfirmState>(null)
   const [createForm, setCreateForm] = useState<CreateFormState>(DEFAULT_CREATE_FORM)
@@ -449,15 +458,18 @@ export default function Strategies() {
   const importInputRef = useRef<HTMLInputElement | null>(null)
   const templates = templateCatalog[templateScope]
   const allTemplates = useMemo(() => {
-    const byId = new Map<number, TemplateCard>()
-    for (const item of templateCatalog.marketplace) {
-      byId.set(item.id, item)
-    }
-    for (const item of templateCatalog.mine) {
-      byId.set(item.id, item)
-    }
-    return Array.from(byId.values())
-  }, [templateCatalog.marketplace, templateCatalog.mine])
+    return [...templateCatalog.mine]
+  }, [templateCatalog.mine])
+
+  const filteredTemplates = useMemo(() => {
+    const query = templateSearch.trim().toLowerCase()
+    return allTemplates.filter((item) => {
+      if (item.templateType !== 'standalone') return false
+      if (templateSourceFilter !== 'all' && item.origin !== templateSourceFilter) return false
+      if (query && !item.name.toLowerCase().includes(query) && !item.description.toLowerCase().includes(query)) return false
+      return true
+    })
+  }, [allTemplates, templateSearch, templateSourceFilter])
 
   const unsavedDraftItem = useMemo<StrategyListItem | null>(() => {
     if (!draft || draft.id) return null
@@ -522,8 +534,7 @@ export default function Strategies() {
   const mainTabs = useMemo(
     () => [
       { key: 'workspace', label: t('page.tabs.workspace') },
-      { key: 'components', label: t('page.tabs.components', 'Components') },
-      { key: 'templates', label: t('page.tabs.templates') },
+      { key: 'templateLibrary', label: t('page.tabs.templateLibrary', 'Template Library') },
     ],
     [t]
   )
@@ -565,8 +576,8 @@ export default function Strategies() {
   )
 
   const selectedTemplate = useMemo(
-    () => templates.find((item) => item.key === selectedTemplateKey) || null,
-    [selectedTemplateKey, templates]
+    () => allTemplates.find((item) => item.key === selectedTemplateKey) || null,
+    [selectedTemplateKey, allTemplates]
   )
 
   const selectedTemplateInMine = useMemo(
@@ -799,7 +810,6 @@ export default function Strategies() {
   useEffect(() => {
     void refreshStrategies()
     void refreshBuiltinStrategies()
-    void refreshTemplates('marketplace')
     void refreshTemplates('mine')
   }, [])
 
@@ -1136,7 +1146,7 @@ export default function Strategies() {
   const submitTemplateFeedback = async () => {
     if (!selectedTemplate) return
     const comment = commentDraft.trim()
-    const canRate = selectedTemplate.source === 'marketplace'
+    const canRate = selectedTemplate.origin === 'marketplace'
     const hasRating = canRate && ratingValue !== null
     if (!comment && !hasRating) {
       showToast(t('page.templates.feedbackRequired'), 'error')
@@ -1287,7 +1297,7 @@ export default function Strategies() {
     if (nextTab === mainTab) return
     confirmUnsavedThen(
       () => setMainTab(nextTab),
-      { discardWorkspaceChanges: nextTab === 'templates' || nextTab === 'components' }
+      { discardWorkspaceChanges: nextTab === 'templateLibrary' }
     )
   }
 
@@ -1313,6 +1323,7 @@ export default function Strategies() {
 
   const handleTemplatePreview = async (template: TemplateCard) => {
     setSelectedTemplateKey(template.key)
+    setTemplateAsideTab('description')
     if (template.code) return
     try {
       setSelectedTemplateLoading(true)
@@ -1668,48 +1679,57 @@ export default function Strategies() {
           </div>
         )}
 
-        {mainTab === 'components' && (
-          <ComponentsTab />
-        )}
-
-        {mainTab === 'templates' && (
+        {mainTab === 'templateLibrary' && (
           <div className="grid gap-4 xl:grid-cols-2">
             <section className={`${shellCardClass} p-5`}>
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-lg font-semibold text-card-foreground">{t('page.templates.title')}</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">{t('page.templates.subtitle')}</p>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    className={templateScope === 'marketplace' ? buttonPrimaryClass : buttonSecondaryClass}
-                    onClick={() => handleTemplateScopeChange('marketplace')}
-                  >
-                    {t('page.templates.scopeMarketplace')}
-                  </button>
-                  <button
-                    type="button"
-                    className={templateScope === 'mine' ? buttonPrimaryClass : buttonSecondaryClass}
-                    onClick={() => handleTemplateScopeChange('mine')}
-                  >
-                    {t('page.templates.scopeMine')}
-                  </button>
+                  <h2 className="text-lg font-semibold text-card-foreground">{t('page.templateLibrary.title', 'Template Library')}</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">{t('page.templateLibrary.subtitle', 'Browse standalone strategy templates')}</p>
                 </div>
               </div>
 
-              {loadingTemplates && templates.length === 0 ? (
+              <div className="mb-4 flex flex-wrap items-center gap-3">
+                <div className="relative min-w-0 flex-1">
+                  <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    type="text"
+                    className="h-9 w-full rounded-lg border border-border bg-background pl-9 pr-3 text-sm outline-none focus:border-ring"
+                    placeholder={t('page.templateLibrary.searchPlaceholder', 'Search templates...')}
+                    value={templateSearch}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setTemplateSearch(e.target.value)}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  {(['all', 'marketplace', 'personal'] as const).map((src) => (
+                    <button
+                      key={src}
+                      type="button"
+                      className={templateSourceFilter === src ? buttonPrimaryClass : buttonSecondaryClass}
+                      onClick={() => setTemplateSourceFilter(src)}
+                    >
+                      {src === 'all'
+                        ? t('page.templateLibrary.sourceAll', 'All')
+                        : src === 'marketplace'
+                          ? t('page.templateLibrary.originMarketplace', 'From Marketplace')
+                          : t('page.templateLibrary.originPersonal', 'User Created')}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {loadingTemplates && filteredTemplates.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
                   {t('page.table.loading')}
                 </div>
-              ) : templates.length === 0 ? (
+              ) : filteredTemplates.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
                   {t('page.templates.empty')}
                 </div>
               ) : (
                 <div className="grid gap-4 md:grid-cols-2" data-testid="strategy-templates-grid">
-                  {templates.map((template) => (
-                    <article key={template.key} className="min-w-0 rounded-2xl border border-border bg-background p-4" data-testid={`template-card-${template.key}`}>
+                  {filteredTemplates.map((template) => (
+                    <article key={template.key} className="min-w-0 rounded-2xl border border-border bg-background p-4 cursor-pointer hover:border-ring/50 transition-colors" data-testid={`template-card-${template.key}`} onClick={() => void handleTemplatePreview(template)}>
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0 flex-1">
                           <div className="truncate text-base font-semibold text-foreground">{template.name}</div>
@@ -1718,8 +1738,8 @@ export default function Strategies() {
                         <Badge variant={getCategoryVariant(template.category)}>{translateCategory(template.category)}</Badge>
                       </div>
                       <div className="mt-4 flex flex-wrap gap-2">
-                        <Badge variant={template.source === 'marketplace' ? 'success' : 'muted'}>
-                          {template.source === 'marketplace' ? t('page.templates.sourceMarketplace') : t('page.templates.sourceMine')}
+                        <Badge variant={template.origin === 'marketplace' ? 'success' : 'muted'}>
+                          {template.origin === 'marketplace' ? t('page.templateLibrary.originMarketplace', 'From Marketplace') : t('page.templateLibrary.originPersonal', 'User Created')}
                         </Badge>
                         <Badge variant="muted">{template.visibility}</Badge>
                       </div>
@@ -1753,40 +1773,17 @@ export default function Strategies() {
                 <div className="space-y-4">
                   <div>
                     <h3 className="text-lg font-semibold text-card-foreground">{selectedTemplate.name}</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">{selectedTemplate.description || t('page.templates.fallbackDescription')}</p>
                     <div className="mt-3 flex flex-wrap gap-2">
-                      <Badge variant={selectedTemplate.source === 'marketplace' ? 'success' : 'muted'}>
-                        {selectedTemplate.source === 'marketplace' ? t('page.templates.sourceMarketplace') : t('page.templates.sourceMine')}
+                      <Badge variant={selectedTemplate.origin === 'marketplace' ? 'success' : 'muted'}>
+                        {selectedTemplate.origin === 'marketplace' ? t('page.templateLibrary.originMarketplace', 'From Marketplace') : t('page.templateLibrary.originPersonal', 'User Created')}
                       </Badge>
                       <Badge variant="muted">{selectedTemplate.visibility}</Badge>
                     </div>
                   </div>
-                  {selectedTemplateLoading ? (
-                    <div className="rounded-xl border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
-                      {t('page.table.loading')}
-                    </div>
-                  ) : selectedTemplate.code ? (
-                    <pre className="max-h-[440px] overflow-auto rounded-xl border border-border bg-muted/20 p-4 text-xs leading-6 text-foreground">{selectedTemplate.code}</pre>
-                  ) : (
-                    <div className="rounded-xl border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
-                      {t('page.templates.loadCodeHint')}
-                    </div>
-                  )}
                   <div className="flex flex-wrap gap-2">
-                    {!selectedTemplate.code && (
-                      <button type="button" className={buttonSecondaryClass} onClick={() => void handleTemplatePreview(selectedTemplate)} disabled={selectedTemplateLoading}>
-                        {t('page.templates.loadCode')}
-                      </button>
-                    )}
                     <button type="button" className={`${buttonPrimaryClass} flex-1`} onClick={() => void createDraftFromTemplate(selectedTemplate)} disabled={selectedTemplateLoading}>
                       {t('page.actions.useTemplate')}
                     </button>
-                    {selectedTemplate.source === 'marketplace' && (
-                      <button type="button" className={buttonSecondaryClass} onClick={() => void cloneTemplateToMine(selectedTemplate)} disabled={templateActionLoading}>
-                        <Copy size={14} />
-                        {t('page.templates.cloneToMine')}
-                      </button>
-                    )}
                     {selectedTemplateInMine && (
                       <>
                         <button type="button" className={buttonSecondaryClass} onClick={() => void openTemplateEditorForEdit(selectedTemplateInMine)} disabled={templateActionLoading}>
@@ -1804,6 +1801,52 @@ export default function Strategies() {
                       </>
                     )}
                   </div>
+
+                  <TabPanel
+                    tabs={[
+                      { key: 'description', label: t('page.templates.tabs.description', 'Description') },
+                      { key: 'code', label: t('page.templates.tabs.code', 'Code') },
+                      { key: 'params', label: t('page.templates.tabs.params', 'Parameters') },
+                    ]}
+                    activeTab={templateAsideTab}
+                    onChange={(k) => setTemplateAsideTab(k as 'description' | 'code' | 'params')}
+                  >
+                    {templateAsideTab === 'description' && (
+                      <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                        {selectedTemplate.description || t('page.templates.fallbackDescription')}
+                      </p>
+                    )}
+                    {templateAsideTab === 'code' && (
+                      <div>
+                        {selectedTemplateLoading ? (
+                          <div className="rounded-lg border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">
+                            {t('page.templates.loadingCode', 'Loading code...')}
+                          </div>
+                        ) : selectedTemplate.code ? (
+                          <pre className="max-h-[40vh] overflow-auto rounded-lg border border-border bg-muted/20 p-4 text-xs font-mono leading-6 text-foreground whitespace-pre-wrap">
+                            {selectedTemplate.code}
+                          </pre>
+                        ) : (
+                          <div className="rounded-lg border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">
+                            {t('page.templates.noCode', 'Code not available.')}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {templateAsideTab === 'params' && (
+                      <div>
+                        {selectedTemplate.defaultParameters && Object.keys(selectedTemplate.defaultParameters).length > 0 ? (
+                          <pre className="max-h-[40vh] overflow-auto rounded-lg border border-border bg-muted/20 p-4 text-xs font-mono leading-6 text-foreground whitespace-pre-wrap">
+                            {JSON.stringify(selectedTemplate.defaultParameters, null, 2)}
+                          </pre>
+                        ) : (
+                          <div className="rounded-lg border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">
+                            {t('page.templates.noParams', 'No parameters defined.')}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </TabPanel>
 
                   <div className="rounded-xl border border-border bg-background p-4">
                     <div className="mb-3 flex items-center justify-between">
@@ -1831,7 +1874,7 @@ export default function Strategies() {
                       <div className="text-sm font-medium text-card-foreground">{t('page.templates.commentsTitle')}</div>
                       <MessageSquare size={14} className="text-muted-foreground" />
                     </div>
-                    {selectedTemplate.source === 'marketplace' ? (
+                    {selectedTemplate.origin === 'marketplace' ? (
                       <div className="mb-3">
                         <label className="mb-1 block text-xs font-medium text-muted-foreground">{t('page.templates.ratingOptional')}</label>
                         <select
@@ -1875,7 +1918,7 @@ export default function Strategies() {
                       type="button"
                       className={`${buttonPrimaryClass} mt-2`}
                       onClick={() => void submitTemplateFeedback()}
-                      disabled={templateActionLoading || loadingTemplateFeedback || (!commentDraft.trim() && !(selectedTemplate.source === 'marketplace' && ratingValue !== null))}
+                      disabled={templateActionLoading || loadingTemplateFeedback || (!commentDraft.trim() && !(selectedTemplate.origin === 'marketplace' && ratingValue !== null))}
                     >
                       {t('page.templates.submitFeedback')}
                     </button>

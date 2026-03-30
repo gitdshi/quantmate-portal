@@ -10,22 +10,18 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ChevronDown,
   ChevronRight,
-  FlaskConical,
   Layers,
-  Loader2,
   Plus,
-  Save,
   Search,
-  Trash2,
 } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import ComponentEditor from '../components/ComponentEditor'
 import Badge, { type BadgeVariant } from '../components/ui/Badge'
 import Modal from '../components/ui/Modal'
-import TabPanel from '../components/ui/TabPanel'
 import { showToast } from '../components/ui/toast-service'
-import { strategyComponentsAPI, componentBacktestAPI } from '../lib/api'
+import { strategyComponentsAPI, templateAPI } from '../lib/api'
 import type { ComponentLayer, StrategyComponent, StrategyComponentListItem } from '../types'
 
 // ── helpers ──────────────────────────────────────────────────────────────
@@ -48,8 +44,6 @@ function unwrapRows(value: unknown): StrategyComponentListItem[] {
   return []
 }
 
-type EditorSubTab = 'code' | 'config' | 'parameters'
-
 // ── main component ───────────────────────────────────────────────────────
 
 export default function ComponentsTab() {
@@ -60,14 +54,16 @@ export default function ComponentsTab() {
   const [search, setSearch] = useState('')
   const [collapsedLayers, setCollapsedLayers] = useState<Set<ComponentLayer>>(new Set())
   const [selectedId, setSelectedId] = useState<number | null>(null)
-  const [editorTab, setEditorTab] = useState<EditorSubTab>('code')
-  const [showBacktest, setShowBacktest] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
 
   // form state for new component
   const [formName, setFormName] = useState('')
   const [formLayer, setFormLayer] = useState<ComponentLayer>('trading')
   const [formSubType, setFormSubType] = useState('')
+  const [formTemplateId, setFormTemplateId] = useState<number | null>(null)
+  const [formTemplateCode, setFormTemplateCode] = useState<string | null>(null)
+  const [formTemplateParams, setFormTemplateParams] = useState<Record<string, unknown> | null>(null)
+  const [loadingTemplate, setLoadingTemplate] = useState(false)
 
   // queries
   const { data: components = [] } = useQuery<StrategyComponentListItem[]>({
@@ -81,9 +77,44 @@ export default function ComponentsTab() {
     enabled: selectedId != null,
   })
 
+  interface TemplateListItem { id: number; name: string; template_type?: string; layer?: string }
+  const { data: myTemplates = [] } = useQuery<TemplateListItem[]>({
+    queryKey: ['component-create-templates'],
+    queryFn: () =>
+      templateAPI.listMine({ page_size: 200 }).then((r) => {
+        const raw = r.data as { data?: unknown; items?: unknown; results?: unknown }
+        const arr = (raw.data ?? raw.items ?? raw.results ?? r.data) as TemplateListItem[]
+        return Array.isArray(arr) ? arr : []
+      }),
+    enabled: createOpen,
+  })
+
+  const handleTemplateSelect = async (id: number | null) => {
+    setFormTemplateId(id)
+    if (!id) {
+      setFormTemplateCode(null)
+      setFormTemplateParams(null)
+      return
+    }
+    try {
+      setLoadingTemplate(true)
+      const res = await templateAPI.get(id)
+      const d = (res.data as Record<string, unknown>)?.data ?? res.data
+      const detail = d as Record<string, unknown>
+      setFormTemplateCode((detail.code as string) || null)
+      const params = detail.default_params as Record<string, unknown> | null
+      setFormTemplateParams(params || null)
+    } catch {
+      setFormTemplateCode(null)
+      setFormTemplateParams(null)
+    } finally {
+      setLoadingTemplate(false)
+    }
+  }
+
   // mutations
   const createMut = useMutation({
-    mutationFn: (data: { name: string; layer: string; sub_type: string }) =>
+    mutationFn: (data: { name: string; layer: string; sub_type: string; code?: string; parameters?: Record<string, unknown> }) =>
       strategyComponentsAPI.create(data),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['strategy-components'] })
@@ -99,11 +130,6 @@ export default function ComponentsTab() {
       if (selectedId != null) setSelectedId(null)
       showToast(t('page.components.deleted', 'Component deleted'), 'success')
     },
-  })
-
-  const backtestMut = useMutation({
-    mutationFn: (id: number) => componentBacktestAPI.run(id),
-    onSuccess: () => showToast(t('page.components.backtestDone', 'Backtest complete'), 'success'),
   })
 
   // derived
@@ -133,10 +159,14 @@ export default function ComponentsTab() {
 
   const handleCreate = () => {
     if (!formName.trim() || !formSubType.trim()) return
-    createMut.mutate({ name: formName.trim(), layer: formLayer, sub_type: formSubType.trim() })
+    createMut.mutate({
+      name: formName.trim(),
+      layer: formLayer,
+      sub_type: formSubType.trim(),
+      ...(formTemplateCode ? { code: formTemplateCode } : {}),
+      ...(formTemplateParams ? { parameters: formTemplateParams } : {}),
+    })
   }
-
-  const backtestResult = backtestMut.data?.data as Record<string, unknown> | undefined
 
   // ── JSX ────────────────────────────────────────────────────────────────
 
@@ -205,101 +235,35 @@ export default function ComponentsTab() {
 
       {/* Right: editor panel */}
       <section className="rounded-lg border border-border bg-card p-4">
-        {!detail ? (
-          <div className="flex items-center justify-center h-64 text-muted-foreground text-sm">
-            {t('page.components.selectPrompt', 'Select a component to edit')}
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {/* header */}
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold text-card-foreground">{detail.name}</h3>
-                <div className="flex items-center gap-2 mt-1">
-                  <Badge variant={LAYER_VARIANT[detail.layer]}>{detail.layer}</Badge>
-                  <span className="text-xs text-muted-foreground">{detail.sub_type}</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => deleteMut.mutate(detail.id)}
-                  className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                  title="Delete"
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            </div>
-
-            {/* sub-tabs */}
-            <TabPanel
-              tabs={[
-                { key: 'code', label: t('page.components.tabs.code', 'Code') },
-                { key: 'config', label: t('page.components.tabs.config', 'Config') },
-                { key: 'parameters', label: t('page.components.tabs.parameters', 'Parameters') },
-              ]}
-              activeTab={editorTab}
-              onChange={(k) => setEditorTab(k as EditorSubTab)}
-            >
-              <div className="min-h-[300px]">
-                {editorTab === 'code' && (
-                  <pre className="text-xs font-mono bg-muted/50 rounded-md p-3 overflow-auto max-h-[400px] whitespace-pre-wrap">
-                    {detail.code || '# No code yet'}
-                  </pre>
-                )}
-                {editorTab === 'config' && (
-                  <pre className="text-xs font-mono bg-muted/50 rounded-md p-3 overflow-auto max-h-[400px] whitespace-pre-wrap">
-                    {JSON.stringify(detail.config ?? {}, null, 2)}
-                  </pre>
-                )}
-                {editorTab === 'parameters' && (
-                  <pre className="text-xs font-mono bg-muted/50 rounded-md p-3 overflow-auto max-h-[400px] whitespace-pre-wrap">
-                    {JSON.stringify(detail.parameters ?? {}, null, 2)}
-                  </pre>
-                )}
-              </div>
-            </TabPanel>
-
-            {/* backtest drawer */}
-            <div className="border-t border-border pt-3">
-              <button
-                type="button"
-                onClick={() => setShowBacktest(!showBacktest)}
-                className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground"
-              >
-                {showBacktest ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                <FlaskConical size={14} />
-                {t('page.components.backtest', 'Component Backtest')}
-              </button>
-
-              {showBacktest && (
-                <div className="mt-3 space-y-3">
-                  <button
-                    type="button"
-                    onClick={() => backtestMut.mutate(detail.id)}
-                    disabled={backtestMut.isPending}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-primary text-white hover:opacity-90 disabled:opacity-50"
-                  >
-                    {backtestMut.isPending ? <Loader2 size={14} className="animate-spin" /> : <FlaskConical size={14} />}
-                    {t('page.components.runBacktest', 'Run Backtest')}
-                  </button>
-
-                  {backtestResult && (
-                    <pre className="text-xs font-mono bg-muted/50 rounded-md p-3 overflow-auto max-h-[300px] whitespace-pre-wrap">
-                      {JSON.stringify(backtestResult, null, 2)}
-                    </pre>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+        <ComponentEditor
+          detail={detail ?? null}
+          onDelete={(id) => deleteMut.mutate(id)}
+        />
       </section>
 
       {/* Create modal */}
-      <Modal open={createOpen} onClose={() => setCreateOpen(false)} title={t('page.components.createTitle', 'New Component')}>
+      <Modal open={createOpen} onClose={() => { setCreateOpen(false); setFormTemplateId(null); setFormTemplateCode(null); setFormTemplateParams(null) }} title={t('page.components.createTitle', 'New Component')}>
         <div className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">{t('page.components.form.template', 'From Template (optional)')}</label>
+            <select
+              value={formTemplateId ?? ''}
+              onChange={(e) => {
+                const val = e.target.value ? Number(e.target.value) : null
+                void handleTemplateSelect(val)
+              }}
+              disabled={loadingTemplate}
+              className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background"
+            >
+              <option value="">{t('page.components.form.noTemplate', '-- Blank --')}</option>
+              {myTemplates.map((tpl) => (
+                <option key={tpl.id} value={tpl.id}>{tpl.name}</option>
+              ))}
+            </select>
+            {loadingTemplate && (
+              <p className="text-xs text-muted-foreground mt-1">{t('page.table.loading', 'Loading...')}</p>
+            )}
+          </div>
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">{t('page.components.form.name', 'Name')}</label>
             <input

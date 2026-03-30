@@ -4,6 +4,7 @@
   "tabs": {
     "components": "Components",
     "composites": "Composites",
+    "templateLibrary": "Template Library",
     "backtests": "Backtests"
   },
   "components": {
@@ -26,6 +27,22 @@
     "saveFailed": "Failed to save component",
     "deleteFailed": "Failed to delete component",
     "editInResearch": "Edit in Strategy Research"
+  },
+  "templateLibrary": {
+    "title": "Template Library",
+    "subtitle": "Browse component and composite strategy templates from marketplace and your collection",
+    "searchPlaceholder": "Search templates...",
+    "sourceAll": "All",
+    "sourceMarketplace": "Marketplace",
+    "sourceMine": "My Templates",
+    "typeAll": "All Types",
+    "typeComponent": "Component",
+    "typeComposite": "Composite",
+    "empty": "No templates found",
+    "preview": "Preview",
+    "addToLibrary": "Add to Library",
+    "inLibrary": "In Library",
+    "cloneFailed": "Failed to add to library"
   },
   "layers": {
     "universe": "Universe",
