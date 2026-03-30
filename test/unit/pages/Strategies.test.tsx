@@ -158,8 +158,8 @@ describe('Strategies Page', () => {
       expect(strategiesAPI.get).toHaveBeenCalledWith(1)
       expect(strategyCodeAPI.listCodeHistory).toHaveBeenCalledWith(1)
       expect(strategiesAPI.listBuiltin).toHaveBeenCalledTimes(1)
-      expect(templateAPI.listMarketplace).toHaveBeenCalledTimes(1)
       expect(templateAPI.listMine).toHaveBeenCalledTimes(1)
+      expect(templateAPI.listMarketplace).toHaveBeenCalledTimes(1)
     })
 
     fireEvent.click(await screen.findByRole('button', { name: 'Basic Info' }))
@@ -202,7 +202,8 @@ describe('Strategies Page', () => {
   it('creates a draft from the template library and saves it as a new strategy', async () => {
     render(<Strategies />)
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Templates' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Template Library' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'From Marketplace' }))
 
     const grid = await screen.findByTestId('strategy-templates-grid')
     const firstCard = within(grid).getByTestId('template-card-marketplace-101')

@@ -349,7 +349,7 @@ function mapTemplateCard(item: TemplateApiItem, source: TemplateScope): Template
     visibility: item.visibility || (source === 'marketplace' ? 'public' : 'private'),
     downloads: Number(item.downloads || 0),
     updatedAt: item.updated_at,
-    origin: item.source ?? null,
+    origin: item.source ?? source,
   }
 }
 
@@ -458,8 +458,8 @@ export default function Strategies() {
   const importInputRef = useRef<HTMLInputElement | null>(null)
   const templates = templateCatalog[templateScope]
   const allTemplates = useMemo(() => {
-    return [...templateCatalog.mine]
-  }, [templateCatalog.mine])
+    return [...templateCatalog.mine, ...templateCatalog.marketplace]
+  }, [templateCatalog.mine, templateCatalog.marketplace])
 
   const filteredTemplates = useMemo(() => {
     const query = templateSearch.trim().toLowerCase()
@@ -811,6 +811,7 @@ export default function Strategies() {
     void refreshStrategies()
     void refreshBuiltinStrategies()
     void refreshTemplates('mine')
+    void refreshTemplates('marketplace')
   }, [])
 
   useEffect(() => {
