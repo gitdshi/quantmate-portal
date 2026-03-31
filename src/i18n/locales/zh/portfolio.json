@@ -110,7 +110,26 @@
       "techEtf": "科技 ETF"
     },
     "empty": {
-      "positions": "暂无持仓"
+      "positions": "还没有持仓。先创建一个模拟仓位，或导入已有持仓，让组合分析开始产生结果。"
+    },
+    "emptyStates": {
+      "exampleToast": "示例组合能力会在下一步接入。",
+      "importToast": "持仓导入流程会在下一步接上。",
+      "onlyCash": {
+        "title": "先建立第一版资产配置",
+        "explanation": "你已经有可用资金，但还没有任何持仓。先定义目标配置，或开一个模拟仓位，让风险和表现开始被跟踪。",
+        "helper": "当第一版配置落地后，回撤、暴露度和集中度指标就会开始填充。",
+        "primary": "配置目标组合",
+        "secondaryExample": "从示例组合开始"
+      },
+      "empty": {
+        "title": "你的组合还是空的",
+        "explanation": "开一笔模拟持仓，或导入现有持仓，让 QuantMate 开始跟踪暴露、净值和再平衡机会。",
+        "helper": "哪怕只有一笔起步仓位，也足够解锁资产分布、风险规则和收益贡献视图。",
+        "primary": "创建模拟持仓",
+        "secondaryImport": "导入持仓",
+        "secondaryExample": "查看示例组合"
+      }
     }
   },
   "analytics": {

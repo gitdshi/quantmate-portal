@@ -16,5 +16,25 @@
   "custom": {
     "inProgress": "Custom dashboard builder is in progress.",
     "supports": "Supports charts, tables, KPIs, and custom indicators."
+  },
+  "emptyStates": {
+    "tech": {
+      "title": "Choose a symbol to start analyzing",
+      "explanation": "Technical studies become useful after you pick a symbol in Market Data and load the latest candles.",
+      "helper": "Next step: choose a symbol, then come back to compare momentum, trend, and volatility.",
+      "primary": "Go to Market Data"
+    },
+    "fundamental": {
+      "title": "This symbol does not have analysis data yet",
+      "explanation": "When raw fields or derived metrics are missing, the safest next step is to check sync health and data-source coverage first.",
+      "helper": "Once the relevant source catches up, valuation, factor, and financial panels become more meaningful.",
+      "primary": "Check system status"
+    },
+    "quant": {
+      "title": "Run a backtest before reading analytics",
+      "explanation": "Quant metrics become far more useful once you have a first backtest result to benchmark against.",
+      "helper": "One completed backtest is enough to unlock win-rate, drawdown, and return-quality analysis.",
+      "primary": "Start first backtest"
+    }
   }
 }

@@ -1,6 +1,7 @@
 import Editor from '@monaco-editor/react'
 import {
   AlertCircle,
+  BookOpen,
   CheckCircle2,
   Copy,
   Eye,
@@ -533,8 +534,12 @@ export default function Strategies() {
 
   const mainTabs = useMemo(
     () => [
-      { key: 'workspace', label: t('page.tabs.workspace') },
-      { key: 'templateLibrary', label: t('page.tabs.templateLibrary', 'Template Library') },
+      { key: 'workspace', label: t('page.tabs.workspace'), icon: <FileCode2 size={16} /> },
+      {
+        key: 'templateLibrary',
+        label: t('page.tabs.templateLibrary', 'Template Library'),
+        icon: <BookOpen size={16} />,
+      },
     ],
     [t]
   )

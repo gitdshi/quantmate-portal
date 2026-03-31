@@ -27,6 +27,18 @@ describe('PermissionGuard', () => {
     expect(screen.getByText('Admin Panel')).toBeInTheDocument()
   })
 
+  it('shows children when primary_role is admin even if role is missing', () => {
+    mockUseAuthStore.mockImplementation((selector: any) =>
+      selector({ user: { id: 1, username: 'admin', primary_role: 'admin' } }),
+    )
+    render(
+      <PermissionGuard feature="admin.system-config">
+        <div>System Management</div>
+      </PermissionGuard>,
+    )
+    expect(screen.getByText('System Management')).toBeInTheDocument()
+  })
+
   it('hides children when viewer accesses admin feature', () => {
     mockUseAuthStore.mockImplementation((selector: any) =>
       selector({ user: { id: 2, username: 'viewer', role: 'viewer' } }),
@@ -88,5 +100,4 @@ describe('PermissionGuard', () => {
     expect(screen.queryByText('Allowed')).not.toBeInTheDocument()
   })
 })
-
 

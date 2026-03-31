@@ -30,5 +30,17 @@
   "toggleSidebar": "切换侧边栏",
   "logout": "退出登录",
   "language": "语言",
-  "switchLang": "切换语言"
+  "switchLang": "切换语言",
+  "badges": {
+    "beta": "Beta",
+    "preview": "Preview"
+  },
+  "environment": {
+    "development": "开发环境",
+    "testing": "测试环境",
+    "staging": "预发环境",
+    "developmentHint": "当前为开发环境，仅用于联调验证，请勿将结果视为生产结论。",
+    "testingHint": "当前为测试环境，数据可能不完整，交易行为不代表生产结果。",
+    "stagingHint": "当前为预发环境，请在发布前重点核对关键流程与权限配置。"
+  }
 }

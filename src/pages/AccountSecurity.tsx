@@ -9,7 +9,7 @@ import Modal from '../components/ui/Modal'
 import TabPanel from '../components/ui/TabPanel'
 import ToggleSwitch from '../components/ui/ToggleSwitch'
 import { showToast } from '../components/ui/toast-service'
-import { accountSecurityAPI } from '../lib/api'
+import { accountSecurityAPI, authAPI } from '../lib/api'
 
 interface APIKey {
   id: string
@@ -31,10 +31,15 @@ interface Session {
 }
 
 export default function AccountSecurity() {
-  const { t } = useTranslation('settings')
+  const { t } = useTranslation(['settings', 'auth'])
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState('profile')
   const [newKeyModal, setNewKeyModal] = useState(false)
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  })
 
   const tabs = [
     { key: 'profile', label: t('accountPage.tabs.profile'), icon: <User size={16} /> },
@@ -69,6 +74,23 @@ export default function AccountSecurity() {
     onSuccess: () => {
       showToast(t('accountPage.keyDeleted'), 'success')
       queryClient.invalidateQueries({ queryKey: ['api-keys'] })
+    },
+  })
+
+  const changePasswordMutation = useMutation({
+    mutationFn: (data: { currentPassword: string; newPassword: string }) =>
+      authAPI.changePassword(data.currentPassword, data.newPassword),
+    onSuccess: () => {
+      showToast(t('passwordUpdated', { ns: 'auth' }), 'success')
+      setPasswordForm({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      })
+    },
+    onError: (err: unknown) => {
+      const apiError = err as { response?: { data?: { detail?: string } } }
+      showToast(apiError.response?.data?.detail || t('failedToUpdate', { ns: 'auth' }), 'error')
     },
   })
 
@@ -141,6 +163,25 @@ export default function AccountSecurity() {
   const inputCls = 'w-full px-3 py-2 text-sm rounded-md border border-border bg-background'
   const labelCls = 'block text-sm font-medium mb-1'
 
+  const handlePasswordSubmit = (event: React.FormEvent) => {
+    event.preventDefault()
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      showToast(t('newPasswordMismatch', { ns: 'auth' }), 'error')
+      return
+    }
+
+    if (passwordForm.newPassword.length < 6) {
+      showToast(t('newPasswordTooShort', { ns: 'auth' }), 'error')
+      return
+    }
+
+    changePasswordMutation.mutate({
+      currentPassword: passwordForm.currentPassword,
+      newPassword: passwordForm.newPassword,
+    })
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -179,12 +220,65 @@ export default function AccountSecurity() {
           <div className="max-w-2xl space-y-4">
             <div className="rounded-lg border border-border bg-card p-6">
               <h3 className="font-semibold text-card-foreground mb-4">{t('accountPage.updatePassword')}</h3>
-              <div className="space-y-3">
-                <div><label className={labelCls}>{t('accountPage.fields.currentPassword')}</label><input type="password" className={inputCls} /></div>
-                <div><label className={labelCls}>{t('accountPage.fields.newPassword')}</label><input type="password" className={inputCls} /></div>
-                <div><label className={labelCls}>{t('accountPage.fields.confirmPassword')}</label><input type="password" className={inputCls} /></div>
-              </div>
-              <button className="mt-4 px-4 py-2 text-sm rounded-md bg-primary text-white hover:opacity-90">{t('accountPage.updatePassword')}</button>
+              <form className="space-y-3" onSubmit={handlePasswordSubmit}>
+                <div>
+                  <label htmlFor="current-password" className={labelCls}>
+                    {t('accountPage.fields.currentPassword')}
+                  </label>
+                  <input
+                    id="current-password"
+                    type="password"
+                    autoComplete="current-password"
+                    value={passwordForm.currentPassword}
+                    onChange={(event) =>
+                      setPasswordForm({ ...passwordForm, currentPassword: event.target.value })
+                    }
+                    className={inputCls}
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="new-password" className={labelCls}>
+                    {t('accountPage.fields.newPassword')}
+                  </label>
+                  <input
+                    id="new-password"
+                    type="password"
+                    autoComplete="new-password"
+                    value={passwordForm.newPassword}
+                    onChange={(event) =>
+                      setPasswordForm({ ...passwordForm, newPassword: event.target.value })
+                    }
+                    className={inputCls}
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="confirm-password" className={labelCls}>
+                    {t('accountPage.fields.confirmPassword')}
+                  </label>
+                  <input
+                    id="confirm-password"
+                    type="password"
+                    autoComplete="new-password"
+                    value={passwordForm.confirmPassword}
+                    onChange={(event) =>
+                      setPasswordForm({ ...passwordForm, confirmPassword: event.target.value })
+                    }
+                    className={inputCls}
+                    required
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={changePasswordMutation.isPending}
+                  className="mt-1 px-4 py-2 text-sm rounded-md bg-primary text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {changePasswordMutation.isPending
+                    ? t('updating', { ns: 'auth' })
+                    : t('accountPage.updatePassword')}
+                </button>
+              </form>
             </div>
 
             <div className="rounded-lg border border-border bg-card p-6">

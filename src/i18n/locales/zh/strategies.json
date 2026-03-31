@@ -285,8 +285,8 @@
       "title": "策略列表",
       "subtitle": "先选中策略，再进入代码、参数和历史版本进行精细化管理。",
       "count": "{{count}} 项",
-      "emptyTitle": "没有符合条件的策略",
-      "emptyDescription": "请调整筛选条件，或直接创建一个新的策略草稿。",
+      "emptyTitle": "当前筛选下还没有可用策略",
+      "emptyDescription": "可以先调整筛选条件，或直接从内置模板创建第一条策略草稿。",
       "noDescription": "暂无描述",
       "version": "v{{version}}",
       "unsavedDraftName": "未命名策略（未保存）",
@@ -294,8 +294,8 @@
     },
     "detail": {
       "loading": "正在加载最新策略数据...",
-      "emptyTitle": "尚未选择策略",
-      "emptyDescription": "从左侧选择一个已有策略，或从模板库新建草稿后开始编辑。",
+      "emptyTitle": "先选一条策略开始研究",
+      "emptyDescription": "从左侧打开已有策略，或从模板库创建一条新草稿后开始编辑、验证与版本管理。",
       "metaClass": "类名：{{className}}",
       "metaVersion": "版本：v{{version}}",
       "metaSource": "来源：{{source}}",
@@ -394,7 +394,8 @@
       "sourceAll": "全部",
       "originMarketplace": "来自市场",
       "originPersonal": "自建"
-    },    "components": {
+    },
+    "components": {
       "title": "策略组件",
       "new": "新建",
       "search": "搜索组件...",
@@ -416,7 +417,8 @@
         "layer": "层级",
         "subType": "子类型"
       }
-    },    "modals": {
+    },
+    "modals": {
       "createTitle": "创建策略草稿",
       "createSubtitle": "可从空白开始，也可选用模板，然后保存到真实策略接口中。",
       "name": "策略名称",

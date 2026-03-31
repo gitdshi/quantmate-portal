@@ -3,6 +3,9 @@ export interface User {
   username: string
   email: string
   created_at: string
+  role?: string
+  primary_role?: string
+  permissions?: string[]
 }
 
 // Generic paginated response matching backend format
@@ -553,6 +556,30 @@ export interface SystemHealth {
   uptime?: string
   disk_usage?: string
   memory_usage?: string
+}
+
+export interface SystemVersionInfo {
+  name: string
+  version: string
+  build_time: string
+  environment: string
+}
+
+export interface SyncStatusResponse {
+  daemon: {
+    status: 'running' | 'idle' | 'stale' | 'unknown'
+    running_jobs: number
+    last_run_at: string | null
+    next_run_local: string
+  }
+  sync: {
+    source_summary: Record<string, Record<string, number>>
+    lookback_days: number
+  }
+  consistency: {
+    missing_count: number
+    is_consistent: boolean
+  }
 }
 
 // ── User Profile ─────────────────────────────────────────────────────

@@ -3,7 +3,7 @@
   "subtitle": "管理数据源和系统配置",
   "page": {
     "title": "系统设置",
-    "subtitle": "常规、数据源、交易参数、通知、界面和系统信息",
+    "subtitle": "把个人偏好、交易默认项和系统管理收在一个更清晰的入口里。",
     "save": "保存设置",
     "saved": "设置已保存",
     "tabs": {
@@ -12,7 +12,10 @@
       "trading": "交易参数",
       "notification": "通知设置",
       "ui": "界面设置",
-      "system": "系统信息"
+      "system": "系统信息",
+      "personal": "个人设置",
+      "tradingPreferences": "交易偏好",
+      "systemManagement": "系统管理"
     },
     "general": {
       "language": "语言",
@@ -63,11 +66,26 @@
       "dailyLossLimit": "日亏损限额"
     },
     "notification": {
-      "strategyAlert": ["策略状态变更通知", "策略启停、异常等状态变化时发送通知"],
-      "tradeExec": ["交易执行通知", "委托成交、撤单等交易事件通知"],
-      "riskAlert": ["风控告警通知", "风控指标超限等告警通知"],
-      "systemAlert": ["系统告警通知", "系统异常、服务状态变化通知"],
-      "dailyReport": ["每日报告推送", "每日收盘后推送策略绩效报告"]
+      "strategyAlert": [
+        "策略状态变更通知",
+        "策略启停、异常等状态变化时发送通知"
+      ],
+      "tradeExec": [
+        "交易执行通知",
+        "委托成交、撤单等交易事件通知"
+      ],
+      "riskAlert": [
+        "风控告警通知",
+        "风控指标超限等告警通知"
+      ],
+      "systemAlert": [
+        "系统告警通知",
+        "系统异常、服务状态变化通知"
+      ],
+      "dailyReport": [
+        "每日报告推送",
+        "每日收盘后推送策略绩效报告"
+      ]
     },
     "ui": {
       "theme": "主题模式",
@@ -85,7 +103,15 @@
     },
     "system": {
       "title": "系统状态",
-      "empty": "暂无系统信息"
+      "empty": "暂时还没有系统状态信息可展示。"
+    },
+    "sections": {
+      "personalCore": "身份、语言与显示默认项",
+      "notifications": "通知偏好",
+      "display": "界面偏好"
+    },
+    "systemManagement": {
+      "datasourceHint": "只保留你真正信任的数据源，这样系统健康状态和同步覆盖范围才更容易解释。"
     }
   },
   "accountPage": {
@@ -131,9 +157,18 @@
       "twoFactorDesc": "增强账户安全性"
     },
     "methods": {
-      "totp": ["TOTP 验证器", "Google Authenticator / Authy"],
-      "sms": ["短信验证", "发送验证码到手机"],
-      "email": ["邮件验证", "发送验证码到邮箱"]
+      "totp": [
+        "TOTP 验证器",
+        "Google Authenticator / Authy"
+      ],
+      "sms": [
+        "短信验证",
+        "发送验证码到手机"
+      ],
+      "email": [
+        "邮件验证",
+        "发送验证码到邮箱"
+      ]
     },
     "status": {
       "active": "活跃",

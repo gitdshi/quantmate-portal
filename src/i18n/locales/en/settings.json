@@ -3,7 +3,7 @@
   "subtitle": "Manage data sources and system configuration",
   "page": {
     "title": "Settings",
-    "subtitle": "General, data source, trading, notifications, UI, and system information",
+    "subtitle": "Keep personal preferences, trading defaults, and system management in one clearer control surface.",
     "save": "Save Settings",
     "saved": "Settings saved",
     "tabs": {
@@ -12,7 +12,10 @@
       "trading": "Trading Parameters",
       "notification": "Notifications",
       "ui": "UI Settings",
-      "system": "System Info"
+      "system": "System Info",
+      "personal": "Personal Settings",
+      "tradingPreferences": "Trading Preferences",
+      "systemManagement": "System Management"
     },
     "general": {
       "language": "Language",
@@ -63,11 +66,26 @@
       "dailyLossLimit": "Daily Loss Limit"
     },
     "notification": {
-      "strategyAlert": ["Strategy Status Alerts", "Notify on strategy start, stop, and runtime issues"],
-      "tradeExec": ["Trade Execution Alerts", "Notify on fills, cancellations, and execution events"],
-      "riskAlert": ["Risk Alerts", "Notify when risk limits are breached"],
-      "systemAlert": ["System Alerts", "Notify on system failures and service changes"],
-      "dailyReport": ["Daily Reports", "Push a daily performance report after market close"]
+      "strategyAlert": [
+        "Strategy Status Alerts",
+        "Notify on strategy start, stop, and runtime issues"
+      ],
+      "tradeExec": [
+        "Trade Execution Alerts",
+        "Notify on fills, cancellations, and execution events"
+      ],
+      "riskAlert": [
+        "Risk Alerts",
+        "Notify when risk limits are breached"
+      ],
+      "systemAlert": [
+        "System Alerts",
+        "Notify on system failures and service changes"
+      ],
+      "dailyReport": [
+        "Daily Reports",
+        "Push a daily performance report after market close"
+      ]
     },
     "ui": {
       "theme": "Theme Mode",
@@ -84,8 +102,16 @@
       "sidebarCollapsed": "Collapse sidebar by default"
     },
     "system": {
-      "title": "System Status",
-      "empty": "No system information available"
+      "title": "System status",
+      "empty": "No system status information is available yet."
+    },
+    "sections": {
+      "personalCore": "Identity, locale, and display defaults",
+      "notifications": "Notification preferences",
+      "display": "Display preferences"
+    },
+    "systemManagement": {
+      "datasourceHint": "Only enable the feeds you trust, so sync coverage and system health remain explainable."
     }
   },
   "accountPage": {
@@ -131,9 +157,18 @@
       "twoFactorDesc": "Add an extra layer of account protection"
     },
     "methods": {
-      "totp": ["TOTP Authenticator", "Google Authenticator / Authy"],
-      "sms": ["SMS Verification", "Send verification codes to your phone"],
-      "email": ["Email Verification", "Send verification codes to your inbox"]
+      "totp": [
+        "TOTP Authenticator",
+        "Google Authenticator / Authy"
+      ],
+      "sms": [
+        "SMS Verification",
+        "Send verification codes to your phone"
+      ],
+      "email": [
+        "Email Verification",
+        "Send verification codes to your inbox"
+      ]
     },
     "status": {
       "active": "Active",

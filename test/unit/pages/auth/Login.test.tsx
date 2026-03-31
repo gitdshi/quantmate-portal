@@ -1,5 +1,6 @@
 import { userEvent } from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import i18n from '@/i18n'
 import * as authStore from '@/stores/auth'
 import { render, screen, waitFor } from '@test/support/utils'
 import Login from '@/pages/auth/Login'
@@ -31,8 +32,10 @@ vi.mock('react-router-dom', async () => {
 describe('Login Component', () => {
   const mockSetAuth = vi.fn()
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks()
+    localStorage.setItem('quantmate-lang', 'en')
+    await i18n.changeLanguage('en')
     ;(authStore.useAuthStore as any).mockReturnValue({
       setAuth: mockSetAuth,
       isAuthenticated: false,
@@ -112,5 +115,10 @@ describe('Login Component', () => {
     expect(registerLink).toBeInTheDocument()
     expect(registerLink.closest('a')).toHaveAttribute('href', '/register')
   })
-})
 
+  it('renders a language switcher on the login page', () => {
+    render(<Login />)
+
+    expect(screen.getByRole('button', { name: /english/i })).toBeInTheDocument()
+  })
+})

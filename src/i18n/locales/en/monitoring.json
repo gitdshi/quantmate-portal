@@ -75,10 +75,10 @@
       "createdAt": "Created At"
     },
     "empty": {
-      "perf": "No performance reports yet. Generate one first.",
-      "review": "No trade review data available",
-      "attribution": "No attribution data available",
-      "list": "No reports available"
+      "perf": "No performance reports yet. Finish a backtest or some paper-trading activity, then generate the first shareable summary.",
+      "review": "No trade review data yet. This becomes useful after orders, fills, and execution logs start to accumulate.",
+      "attribution": "No attribution analysis yet. Generate strategy results first, then come back to inspect what drove returns.",
+      "list": "No reports yet. Generate a performance, review, or attribution report to start building a reporting trail."
     },
     "modal": {
       "title": "Generate Report",
@@ -96,6 +96,26 @@
         "all": "All Strategies"
       },
       "defaultReportTitle": "Monthly Performance Report"
+    },
+    "emptyStates": {
+      "perf": {
+        "title": "Generate the first performance report",
+        "explanation": "Once you complete at least one backtest or some paper-trading activity, this area can turn it into a reusable performance summary.",
+        "helper": "A good first milestone is to finish one backtest, then come back and generate a monthly report.",
+        "primary": "Run a backtest"
+      },
+      "review": {
+        "title": "Build some trading history first",
+        "explanation": "Trade review becomes valuable when orders, fills, risk triggers, and execution decisions can be read on one timeline.",
+        "helper": "Start paper trading and this panel will begin telling you which decisions need attention.",
+        "primary": "Open paper trading"
+      },
+      "attribution": {
+        "title": "Get strategy results before doing attribution",
+        "explanation": "Attribution becomes useful after the system has enough return and exposure data to separate industry, style, and selection effects.",
+        "helper": "Complete one backtest, then come back to understand where returns are really coming from.",
+        "primary": "Start first backtest"
+      }
     }
   },
   "page": {
@@ -144,7 +164,10 @@
       "live": "No active alerts",
       "rules": "No alert rules",
       "history": "No alert history",
-      "channels": "No channels configured yet. Create a rule first."
+      "channels": "No channels configured yet. Create a rule first.",
+      "rulesTitle": "No alert rules yet",
+      "rulesExplanation": "Start with a price reminder or risk-control alert so QuantMate can proactively tell you when something needs attention.",
+      "rulesHelper": "A solid first rule is a drawdown threshold or a price reminder on a key symbol."
     },
     "search": "Search",
     "all": "All",

@@ -1,12 +1,14 @@
 {
   "title": "仪表盘",
-  "subtitle": "交易系统状态总览",
+  "subtitle": "把数据同步、策略执行和组合状态汇总到一个更可信的工作台。",
   "page": {
     "stats": {
       "totalAssets": "总资产",
       "dailyPnl": "今日盈亏",
       "activeStrategies": "活跃策略",
-      "unreadAlerts": "未处理告警"
+      "unreadAlerts": "未处理告警",
+      "strategySubtitle": "已配置 {{total}} 条策略",
+      "alertSubtitle": "最近跟踪到 {{count}} 条告警"
     },
     "navTitle": "净值走势",
     "navSeries": {
@@ -48,9 +50,15 @@
       "totalReturn": "累计收益"
     },
     "empty": {
-      "positions": "暂无持仓",
-      "orders": "暂无委托",
-      "alerts": "暂无告警"
+      "positions": "还没有持仓。先开一个模拟仓位，或部署策略，让这张表开始积累真实数据。",
+      "orders": "还没有最近订单。模拟或真实执行产生的委托会首先出现在这里。",
+      "alerts": "还没有告警命中。先创建价格提醒或风控告警，让监控真正开始工作。",
+      "navTitle": "还没有净值曲线",
+      "navExplanation": "至少完成一次回测，或让组合里出现第一笔持仓后，这里才会开始展示净值变化。",
+      "navPrimary": "运行第一次回测",
+      "allocationTitle": "出现第一笔持仓后，这里会显示资产分布",
+      "allocationExplanation": "一旦组合里有真实或模拟持仓，这块面板就会开始解释资金分配到了哪里。",
+      "allocationPrimary": "打开模拟组合"
     }
   },
   "activeJobs": "活跃任务",
@@ -70,5 +78,61 @@
   "missingDates": "缺失日期",
   "lastRun": "上次运行",
   "latestSync": "最近一次同步",
-  "noSyncHistory": "暂无同步记录"
+  "noSyncHistory": "暂无同步记录",
+  "environment": {
+    "development": "开发环境",
+    "testing": "测试环境",
+    "staging": "预发环境"
+  },
+  "health": {
+    "warningTitle": "数据同步存在缺口",
+    "warningDescription": "仍有 {{count}} 个交易日缺失，分析结果可能不完整。",
+    "okTitle": "数据同步状态良好",
+    "okDescription": "最近一次同步结果正常，可以继续查看策略与组合表现。",
+    "lastRun": "最近同步：{{time}} · 当前状态：{{status}}",
+    "noRunYet": "尚未同步",
+    "viewStatus": "查看系统状态",
+    "syncSettings": "前往同步设置"
+  },
+  "nextActions": {
+    "heading": "下一步建议",
+    "subheading": "这些步骤能最快把一个空工作区变成可观察、可验证的研究环境。",
+    "sync": {
+      "title": "同步第一批数据",
+      "description": "先确认数据覆盖范围，让策略信号、分析图表和健康状态都建立在可解释的数据基础上。"
+    },
+    "strategy": {
+      "title": "创建第一条策略",
+      "description": "从模板或一个简单规则开始，先让 QuantMate 产出第一份可追踪的研究结果。"
+    },
+    "backtest": {
+      "title": "运行第一次回测",
+      "description": "只要完成一次回测，收益、回撤和比较视图就会开始变得真正有参考价值。"
+    },
+    "paper": {
+      "title": "启动模拟交易",
+      "description": "把表现最好的想法放进模拟账户，验证执行、仓位暴露和监控规则是否匹配。"
+    }
+  },
+  "setup": {
+    "title": "先让 QuantMate 动起来",
+    "explanation": "当前仪表盘还在等待数据、第一条策略和第一次回测结果。把这三步补齐后，大多数 KPI 和图表就会开始变得有意义。",
+    "helper": "一个稳妥的起步路径是：同步数据、克隆模板、运行回测，再把最好的想法接到模拟交易。",
+    "primary": "创建第一条策略",
+    "secondary": "前往同步设置"
+  },
+  "activity": {
+    "heading": "最近动态",
+    "subheading": "订单和告警会最先出现在这里，帮助你判断当前工作区是在运转还是仍停留在准备阶段。",
+    "emptyTitle": "还没有最近动态",
+    "emptyExplanation": "当订单开始执行或告警开始触发后，这里会给你一个最快速的运行摘要。",
+    "primary": "运行一次回测",
+    "secondary": "查看监控页",
+    "alertBadge": "告警",
+    "orderBadge": "订单",
+    "alertFallback": "收到一条告警",
+    "orderTitle": "{{direction}} {{symbol}}",
+    "orderSubtitle": "状态：{{status}} · 数量：{{quantity}}",
+    "alertSubtitle": "级别：{{level}} · 状态：{{status}}"
+  }
 }

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@test/support/utils'
 import i18n from '@/i18n'
 import AccountSecurity from '@/pages/AccountSecurity'
+import { showToast } from '@/components/ui/toast-service'
 
 vi.mock('@/components/ui/toast-service', () => ({
   showToast: vi.fn(),
@@ -19,9 +20,12 @@ vi.mock('@/lib/api', () => ({
     listSessions: vi.fn(),
     revokeSession: vi.fn(),
   },
+  authAPI: {
+    changePassword: vi.fn(),
+  },
 }))
 
-import { accountSecurityAPI } from '@/lib/api'
+import { accountSecurityAPI, authAPI } from '@/lib/api'
 
 describe('AccountSecurity Page', () => {
   beforeEach(async () => {
@@ -33,6 +37,7 @@ describe('AccountSecurity Page', () => {
     vi.mocked(accountSecurityAPI.deleteApiKey).mockResolvedValue({ data: {} } as never)
     vi.mocked(accountSecurityAPI.listSessions).mockResolvedValue({ data: [] } as never)
     vi.mocked(accountSecurityAPI.revokeSession).mockResolvedValue({ data: {} } as never)
+    vi.mocked(authAPI.changePassword).mockResolvedValue({ data: { detail: 'Password changed successfully' } } as never)
   })
 
   it('renders heading', () => {
@@ -76,5 +81,34 @@ describe('AccountSecurity Page', () => {
     render(<AccountSecurity />)
     fireEvent.click(screen.getByRole('button', { name: 'Billing' }))
     expect(screen.getAllByText('Pro Plan').length).toBeGreaterThan(0)
+  })
+
+  it('submits password change from the security tab', () => {
+    render(<AccountSecurity />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Security' }))
+    fireEvent.change(screen.getByLabelText('Current Password'), { target: { value: 'old-pass-123' } })
+    fireEvent.change(screen.getByLabelText('New Password'), { target: { value: 'new-pass-123' } })
+    fireEvent.change(screen.getByLabelText('Confirm New Password'), {
+      target: { value: 'new-pass-123' },
+    })
+    fireEvent.click(screen.getAllByRole('button', { name: 'Update Password' })[0])
+
+    expect(authAPI.changePassword).toHaveBeenCalledWith('old-pass-123', 'new-pass-123')
+  })
+
+  it('prevents password change when confirmation does not match', () => {
+    render(<AccountSecurity />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Security' }))
+    fireEvent.change(screen.getByLabelText('Current Password'), { target: { value: 'old-pass-123' } })
+    fireEvent.change(screen.getByLabelText('New Password'), { target: { value: 'new-pass-123' } })
+    fireEvent.change(screen.getByLabelText('Confirm New Password'), {
+      target: { value: 'different-pass-123' },
+    })
+    fireEvent.click(screen.getAllByRole('button', { name: 'Update Password' })[0])
+
+    expect(authAPI.changePassword).not.toHaveBeenCalled()
+    expect(showToast).toHaveBeenCalledWith('New password and confirmation do not match', 'error')
   })
 })

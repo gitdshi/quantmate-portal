@@ -30,9 +30,9 @@
     "candlestickLegend": "K线",
     "volume": "成交量",
     "empty": {
-      "sync": "暂无数据同步任务信息",
-      "calendar": "暂无财经日历数据",
-      "sentiment": "暂无市场情绪数据"
+      "sync": "还没有数据同步记录。先完成一次同步，再回来确认数据覆盖范围。",
+      "calendar": "还没有财经日历数据。数据源同步完成后，这里会开始提示关键事件。",
+      "sentiment": "还没有市场情绪数据。等相关指标入库后，这里会补上情绪与广度信号。"
     },
     "sync": {
       "title": "数据同步状态",
@@ -83,7 +83,7 @@
     }
   },
   "symbolSearch": "标的搜索",
-  "selectSymbol": "从搜索中选择标的以查看行情数据",
+  "selectSymbol": "先从搜索中选一个标的，再查看行情、K 线和技术指标。",
   "clearSelection": "清除选择",
   "overview": {
     "title": "市场概览",
@@ -150,7 +150,7 @@
     "priceChart": "价格走势图",
     "last30Days": "最近30个交易日",
     "historicalData": "历史数据",
-    "noDataFor": "{{symbol}} 暂无数据"
+    "noDataFor": "{{symbol}} 目前还没有可用行情数据，请先检查同步状态。"
   },
   "search": {
     "placeholder": "搜索标的（如 000001、600519）...",

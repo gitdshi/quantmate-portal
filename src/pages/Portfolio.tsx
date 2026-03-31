@@ -9,6 +9,7 @@ import {
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import EmptyState from '../components/EmptyState'
 import LineChart from '../components/charts/LineChart'
 import Badge from '../components/ui/Badge'
 import DataTable, { type Column } from '../components/ui/DataTable'
@@ -54,6 +55,7 @@ export default function Portfolio() {
   const positionVale = positions.reduce((sum, p) => sum + p.market_value, 0)
   const cash = stats?.cash ?? totalValue - positionVale
   const positionRatio = totalValue > 0 ? ((positionVale / totalValue) * 100).toFixed(1) : '0'
+  const onlyCash = positions.length === 0 && cash > 0
 
   const navDates = (dashData?.performance_history ?? []).map((p) => p.date)
   const navValues = (dashData?.performance_history ?? []).map((p) => p.value)
@@ -135,6 +137,60 @@ export default function Portfolio() {
 
   const loading = dashLoading || posLoading
 
+  const emptyPortfolioState = onlyCash ? (
+    <EmptyState
+      type="setup"
+      icon={<Wallet size={24} />}
+      title={t('page.emptyStates.onlyCash.title', 'Build your first target allocation')}
+      explanation={t(
+        'page.emptyStates.onlyCash.explanation',
+        'You have cash available, but no positions yet. Define the first allocation or open a simulated position to start tracking risk and performance.'
+      )}
+      primaryCTA={{
+        label: t('page.emptyStates.onlyCash.primary', 'Configure target portfolio'),
+        href: '/paper-trading',
+      }}
+      secondaryCTAs={[
+        {
+          label: t('page.emptyStates.onlyCash.secondaryExample', 'Start from an example'),
+          onClick: () => showToast(t('page.emptyStates.exampleToast', 'Example portfolios are coming next.'), 'success'),
+        },
+      ]}
+      helperText={t(
+        'page.emptyStates.onlyCash.helper',
+        'Once the first allocation is in place, drawdown, exposure, and concentration metrics will start to populate.'
+      )}
+    />
+  ) : (
+    <EmptyState
+      type="activity"
+      icon={<Briefcase size={24} />}
+      title={t('page.emptyStates.empty.title', 'Your portfolio is still empty')}
+      explanation={t(
+        'page.emptyStates.empty.explanation',
+        'Open a paper position or import an existing holding to let QuantMate start tracking exposure, NAV, and rebalance opportunities.'
+      )}
+      primaryCTA={{
+        label: t('page.emptyStates.empty.primary', 'Create a paper position'),
+        href: '/paper-trading',
+      }}
+      secondaryCTAs={[
+        {
+          label: t('page.emptyStates.empty.secondaryImport', 'Import holdings'),
+          onClick: () => showToast(t('page.emptyStates.importToast', 'Import flow will be connected in the next step.'), 'success'),
+        },
+        {
+          label: t('page.emptyStates.empty.secondaryExample', 'View sample portfolio'),
+          onClick: () => showToast(t('page.emptyStates.exampleToast', 'Example portfolios are coming next.'), 'success'),
+        },
+      ]}
+      helperText={t(
+        'page.emptyStates.empty.helper',
+        'A single starter position is enough to unlock allocation, risk rules, and contribution views.'
+      )}
+    />
+  )
+
   // ── Render ─────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
@@ -152,6 +208,9 @@ export default function Portfolio() {
       <TabPanel tabs={tabs} activeTab={activeTab} onChange={setActiveTab}>
         {/* ── Overview ────────────────────────────────── */}
         {activeTab === 'overview' && (
+          positions.length === 0 ? (
+            emptyPortfolioState
+          ) : (
           <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <StatCard label={t('page.stats.totalValue')} value={`¥${totalValue.toLocaleString()}`} icon={Wallet} iconColor="text-blue-500" />
@@ -194,10 +253,14 @@ export default function Portfolio() {
               </div>
             </div>
           </div>
+          )
         )}
 
         {/* ── Positions ──────────────────────────────── */}
         {activeTab === 'positions' && (
+          positions.length === 0 ? (
+            emptyPortfolioState
+          ) : (
           <div className="space-y-4">
             <FilterBar
               searchValue={search}
@@ -222,10 +285,14 @@ export default function Portfolio() {
             />
             <DataTable columns={posColumns} data={filteredPositions} keyField="symbol" emptyText={t('page.empty.positions')} />
           </div>
+          )
         )}
 
         {/* ── Risk ────────────────────────────────────── */}
         {activeTab === 'risk' && (
+          positions.length === 0 ? (
+            emptyPortfolioState
+          ) : (
           <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <StatCard label={t('page.stats.varDay')} value={`¥${(riskData?.value_at_risk ?? 0).toLocaleString()}`} subtitle={`${t('risk.valueAtRisk')} ${totalValue > 0 ? ((riskData?.value_at_risk ?? 0) / totalValue * 100).toFixed(2) : '0'}%`} changeType="negative" />
@@ -257,10 +324,14 @@ export default function Portfolio() {
               </table>
             </div>
           </div>
+          )
         )}
 
         {/* ── Allocation ──────────────────────────────── */}
         {activeTab === 'allocation' && (
+          positions.length === 0 ? (
+            emptyPortfolioState
+          ) : (
           <div className="space-y-4">
             {/* TODO: Connect to real allocation/optimization API when available */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -308,6 +379,7 @@ export default function Portfolio() {
               </div>
             </div>
           </div>
+          )
         )}
       </TabPanel>
 

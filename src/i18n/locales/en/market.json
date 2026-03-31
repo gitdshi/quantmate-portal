@@ -30,9 +30,9 @@
     "candlestickLegend": "Candlestick",
     "volume": "Volume",
     "empty": {
-      "sync": "No data sync task information available",
-      "calendar": "No economic calendar data available",
-      "sentiment": "No market sentiment data available"
+      "sync": "No sync records yet. Run a data sync first, then come back to confirm coverage.",
+      "calendar": "No economic calendar data yet. This area will become useful after the relevant source finishes syncing.",
+      "sentiment": "No sentiment data yet. Breadth and mood signals will appear here once the related metrics land."
     },
     "sync": {
       "title": "Data Sync Status",
@@ -83,7 +83,7 @@
     }
   },
   "symbolSearch": "Symbol Search",
-  "selectSymbol": "Select a symbol from the search to view market data",
+  "selectSymbol": "Choose a symbol from search first, then inspect quotes, candles, and indicators.",
   "clearSelection": "Clear selection",
   "overview": {
     "title": "Market Overview",
@@ -150,7 +150,7 @@
     "priceChart": "Price Chart",
     "last30Days": "Last 30 trading days",
     "historicalData": "Historical Data",
-    "noDataFor": "No data available for {{symbol}}"
+    "noDataFor": "No market data is available for {{symbol}} yet. Check sync status first."
   },
   "search": {
     "placeholder": "Search symbols (e.g., AAPL, MSFT)...",

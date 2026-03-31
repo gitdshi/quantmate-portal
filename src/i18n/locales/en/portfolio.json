@@ -110,7 +110,26 @@
       "techEtf": "Tech ETF"
     },
     "empty": {
-      "positions": "No positions"
+      "positions": "No positions yet. Open a paper position or import holdings so portfolio analytics can start producing something useful."
+    },
+    "emptyStates": {
+      "exampleToast": "Example portfolios will be connected in the next step.",
+      "importToast": "The holdings import flow will be connected in the next step.",
+      "onlyCash": {
+        "title": "Build your first target allocation",
+        "explanation": "You have cash available, but no positions yet. Define a starting allocation or open a paper position so risk and performance can begin to populate.",
+        "helper": "Once the first allocation is in place, drawdown, exposure, and concentration metrics start to become useful.",
+        "primary": "Configure target portfolio",
+        "secondaryExample": "Start from an example"
+      },
+      "empty": {
+        "title": "Your portfolio is still empty",
+        "explanation": "Open a paper position or import an existing holding so QuantMate can start tracking exposure, NAV, and rebalance opportunities.",
+        "helper": "Even a single starter position is enough to unlock allocation, risk-rule, and contribution views.",
+        "primary": "Create a paper position",
+        "secondaryImport": "Import holdings",
+        "secondaryExample": "View sample portfolio"
+      }
     }
   },
   "analytics": {

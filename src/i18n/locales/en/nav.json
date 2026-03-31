@@ -30,5 +30,17 @@
   "toggleSidebar": "Toggle sidebar",
   "logout": "Logout",
   "language": "Language",
-  "switchLang": "Switch language"
+  "switchLang": "Switch language",
+  "badges": {
+    "beta": "Beta",
+    "preview": "Preview"
+  },
+  "environment": {
+    "development": "Development",
+    "testing": "Testing",
+    "staging": "Staging",
+    "developmentHint": "This workspace is for development validation only. Do not treat the output as production-grade.",
+    "testingHint": "This is a test environment. Data may be incomplete and trading behavior does not represent production.",
+    "stagingHint": "This workspace is for pre-release verification. Double-check critical workflows and permissions before launch."
+  }
 }

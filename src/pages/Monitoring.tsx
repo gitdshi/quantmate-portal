@@ -3,6 +3,7 @@ import { Bell, BellRing, History, Mail, Plus, Settings } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import EmptyState from '../components/EmptyState'
 import Badge from '../components/ui/Badge'
 import DataTable, { type Column } from '../components/ui/DataTable'
 import FilterBar from '../components/ui/FilterBar'
@@ -34,6 +35,37 @@ interface AlertRule {
   last_triggered?: string
 }
 
+function normalizeAlert(raw: Record<string, unknown>): Alert {
+  const level = String(raw.level ?? 'info')
+  const normalizedLevel = level === 'severe' ? 'critical' : (level as Alert['level'])
+  const status = String(raw.status ?? '')
+  return {
+    id: String(raw.id ?? ''),
+    title: String(raw.title ?? raw.name ?? 'Alert'),
+    message: String(raw.message ?? ''),
+    level: normalizedLevel,
+    source: String(raw.source ?? raw.metric ?? 'system'),
+    created_at: String(raw.created_at ?? raw.triggered_at ?? new Date().toISOString()),
+    acknowledged: Boolean(raw.acknowledged ?? (status === 'acknowledged' || status === 'read')),
+  }
+}
+
+function normalizeRule(raw: Record<string, unknown>): AlertRule {
+  const metric = String(raw.metric ?? raw.type ?? 'metric')
+  const comparator = String(raw.comparator ?? '>')
+  const threshold = raw.threshold != null ? String(raw.threshold) : ''
+  return {
+    id: String(raw.id ?? ''),
+    name: String(raw.name ?? 'Rule'),
+    type: String(raw.type ?? metric),
+    condition: String(raw.condition ?? `${metric} ${comparator} ${threshold}`.trim()),
+    level: String(raw.level ?? 'warning'),
+    enabled: Boolean(raw.enabled ?? raw.is_active ?? true),
+    channels: Array.isArray(raw.channels) ? (raw.channels as string[]) : [],
+    last_triggered: raw.last_triggered ? String(raw.last_triggered) : undefined,
+  }
+}
+
 const LEVEL_MAP: Record<string, { color: string; variant: 'destructive' | 'warning' | 'primary' }> = {
   critical: { color: 'border-red-500', variant: 'destructive' },
   warning: { color: 'border-yellow-500', variant: 'warning' },
@@ -62,7 +94,9 @@ export default function Monitoring() {
     queryFn: () =>
       alertsAPI.listHistory({ page: 1, page_size: 100 }).then((r) => {
         const d = r.data
-        const list: Alert[] = Array.isArray(d) ? d : d?.data ?? []
+        const list: Alert[] = (Array.isArray(d) ? d : d?.data ?? []).map((item) =>
+          normalizeAlert(item as Record<string, unknown>)
+        )
         return list.filter((a) => !a.acknowledged)
       }),
     refetchInterval: 5_000,
@@ -74,7 +108,9 @@ export default function Monitoring() {
     queryFn: () =>
       alertsAPI.listHistory().then((r) => {
         const d = r.data
-        return Array.isArray(d) ? d : d?.data ?? []
+        return (Array.isArray(d) ? d : d?.data ?? []).map((item) =>
+          normalizeAlert(item as Record<string, unknown>)
+        )
       }),
     enabled: activeTab === 'history',
   })
@@ -84,7 +120,9 @@ export default function Monitoring() {
     queryFn: () =>
       alertsAPI.listRules().then((r) => {
         const d = r.data
-        return Array.isArray(d) ? d : d?.data ?? []
+        return (Array.isArray(d) ? d : d?.rules ?? d?.data ?? []).map((item) =>
+          normalizeRule(item as Record<string, unknown>)
+        )
       }),
     enabled: activeTab === 'rules',
   })
@@ -96,7 +134,7 @@ export default function Monitoring() {
     queryFn: () =>
       alertsAPI.listChannels().then((r) => {
         const d = r.data
-        return Array.isArray(d) ? d : d?.data ?? []
+        return Array.isArray(d) ? d : d?.channels ?? d?.data ?? []
       }),
     enabled: activeTab === 'channels',
   })
@@ -121,7 +159,7 @@ export default function Monitoring() {
   })
 
   const toggleRule = useMutation({
-    mutationFn: (rule: AlertRule) => alertsAPI.updateRule(Number(rule.id), { enabled: !rule.enabled }),
+    mutationFn: (rule: AlertRule) => alertsAPI.updateRule(Number(rule.id), { is_active: !rule.enabled }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['alert-rules'] }),
   })
 
@@ -245,7 +283,30 @@ export default function Monitoring() {
         )}
 
         {activeTab === 'rules' && (
-          <DataTable columns={ruleCols} data={rules} emptyText={t('page.empty.rules')} />
+          rules.length > 0 ? (
+            <DataTable columns={ruleCols} data={rules} emptyText={t('page.empty.rules')} />
+          ) : (
+            <EmptyState
+              type="setup"
+              icon={<Settings size={24} />}
+              title={t(
+                'page.empty.rulesTitle',
+                'No alert rules yet'
+              )}
+              explanation={t(
+                'page.empty.rulesExplanation',
+                'Start with a price reminder or a risk-control alert so QuantMate can tell you when something needs attention.'
+              )}
+              primaryCTA={{
+                label: t('page.newRule', 'New Rule'),
+                onClick: () => setNewRuleModal(true),
+              }}
+              helperText={t(
+                'page.empty.rulesHelper',
+                'A good first rule is a drawdown threshold or a symbol price reminder.'
+              )}
+            />
+          )
         )}
 
         {activeTab === 'history' && (
@@ -316,7 +377,7 @@ export default function Monitoring() {
                 createRuleMutation.mutate({
                   name: t('page.modal.defaultName'),
                   metric: 'drawdown',
-                  comparator: '>',
+                  comparator: 'gt',
                   threshold: 5,
                   level: 'warning',
                 })

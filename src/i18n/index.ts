@@ -73,7 +73,8 @@ i18n
     supportedLngs: ['zh', 'en'],
     nonExplicitSupportedLngs: true,
     load: 'languageOnly',
-    fallbackLng: 'zh',
+    lng: localStorage.getItem('quantmate-lang') || 'zh',
+    fallbackLng: 'en',
     defaultNS: 'common',
     ns: [
       'common', 'nav', 'auth', 'dashboard', 'analytics', 'strategies', 'backtest',
@@ -84,7 +85,7 @@ i18n
     },
     initImmediate: false,
     detection: {
-      order: ['localStorage', 'navigator'],
+      order: ['localStorage'],
       lookupLocalStorage: 'quantmate-lang',
       caches: ['localStorage'],
     },

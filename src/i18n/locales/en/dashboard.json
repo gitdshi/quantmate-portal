@@ -1,12 +1,14 @@
 {
   "title": "Dashboard",
-  "subtitle": "Overview of your trading system status",
+  "subtitle": "A more trustworthy workspace for data sync, strategy execution, and portfolio state.",
   "page": {
     "stats": {
       "totalAssets": "Total Assets",
       "dailyPnl": "Daily P&L",
       "activeStrategies": "Active Strategies",
-      "unreadAlerts": "Unread Alerts"
+      "unreadAlerts": "Unread Alerts",
+      "strategySubtitle": "{{total}} strategies configured",
+      "alertSubtitle": "{{count}} recent alerts tracked"
     },
     "navTitle": "NAV Trend",
     "navSeries": {
@@ -48,9 +50,15 @@
       "totalReturn": "Total Return"
     },
     "empty": {
-      "positions": "No positions",
-      "orders": "No recent orders",
-      "alerts": "No alerts"
+      "positions": "No positions yet. Open a paper position or deploy a strategy so this table starts collecting real data.",
+      "orders": "No recent orders. Paper or live execution activity will show up here first.",
+      "alerts": "No alerts have fired yet. Create a price reminder or risk alert to start monitoring.",
+      "navTitle": "No NAV curve yet",
+      "navExplanation": "A NAV curve appears after you complete at least one backtest or start tracking the first position over time.",
+      "navPrimary": "Run first backtest",
+      "allocationTitle": "Allocation appears after the first position",
+      "allocationExplanation": "Once the portfolio contains live or simulated holdings, this panel will explain how capital is distributed.",
+      "allocationPrimary": "Open paper portfolio"
     }
   },
   "activeJobs": "Active Jobs",
@@ -70,5 +78,61 @@
   "missingDates": "Missing dates",
   "lastRun": "Last run",
   "latestSync": "Latest Sync",
-  "noSyncHistory": "No sync history available"
+  "noSyncHistory": "No sync history available",
+  "environment": {
+    "development": "Development",
+    "testing": "Testing",
+    "staging": "Staging"
+  },
+  "health": {
+    "warningTitle": "Data sync has gaps",
+    "warningDescription": "There are still {{count}} missing trading days, so analytics may be incomplete.",
+    "okTitle": "Data sync looks healthy",
+    "okDescription": "Recent sync activity looks normal, so strategy and portfolio analytics should be easier to trust.",
+    "lastRun": "Last sync: {{time}} · Status: {{status}}",
+    "noRunYet": "not available yet",
+    "viewStatus": "View system status",
+    "syncSettings": "Open sync settings"
+  },
+  "nextActions": {
+    "heading": "Next best actions",
+    "subheading": "These are the fastest steps to turn an empty workspace into something observable and trustworthy.",
+    "sync": {
+      "title": "Sync your first data batch",
+      "description": "Start by checking data coverage so signals, analytics, and system health all rest on something explainable."
+    },
+    "strategy": {
+      "title": "Create your first strategy",
+      "description": "Start with a template or a simple rule so QuantMate can produce the first piece of research output."
+    },
+    "backtest": {
+      "title": "Run the first backtest",
+      "description": "One completed backtest is enough to unlock much more useful return, drawdown, and comparison views."
+    },
+    "paper": {
+      "title": "Start paper trading",
+      "description": "Move the strongest idea into a simulated account to validate execution, exposure, and monitoring rules."
+    }
+  },
+  "setup": {
+    "title": "Wake QuantMate up with the first real workflow",
+    "explanation": "The dashboard is still waiting on data, a starter strategy, and the first backtest result. Once those arrive, the KPI cards and charts become much more informative.",
+    "helper": "A solid first milestone is: sync data, clone a template, run a backtest, then move the best idea into paper trading.",
+    "primary": "Create first strategy",
+    "secondary": "Go to sync settings"
+  },
+  "activity": {
+    "heading": "Recent activity",
+    "subheading": "Orders and alerts appear here first, so you can tell whether the workspace is moving or still waiting on setup.",
+    "emptyTitle": "No recent activity yet",
+    "emptyExplanation": "As soon as orders execute or alerts trigger, this timeline becomes the fastest operational summary on the page.",
+    "primary": "Run a backtest",
+    "secondary": "Review monitoring",
+    "alertBadge": "Alert",
+    "orderBadge": "Order",
+    "alertFallback": "Alert received",
+    "orderTitle": "{{direction}} {{symbol}}",
+    "orderSubtitle": "Status: {{status}} · Quantity: {{quantity}}",
+    "alertSubtitle": "Level: {{level}} · Status: {{status}}"
+  }
 }

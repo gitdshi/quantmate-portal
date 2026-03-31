@@ -5,11 +5,13 @@ import {
   List,
   Plus,
   PieChart as PieChartIcon,
+  Radar,
   TrendingUp,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import EmptyState from '../components/EmptyState'
 import Badge from '../components/ui/Badge'
 import DataTable, { type Column } from '../components/ui/DataTable'
 import Modal from '../components/ui/Modal'
@@ -66,6 +68,39 @@ export default function Reports() {
     },
   ]
 
+  const emptyStates = {
+    perf: (
+      <EmptyState
+        type="activity"
+        icon={<TrendingUp size={24} />}
+        title={t('reports.emptyStates.perf.title')}
+        explanation={t('reports.emptyStates.perf.explanation')}
+        primaryCTA={{ label: t('reports.emptyStates.perf.primary'), href: '/backtest' }}
+        helperText={t('reports.emptyStates.perf.helper')}
+      />
+    ),
+    review: (
+      <EmptyState
+        type="activity"
+        icon={<FileText size={24} />}
+        title={t('reports.emptyStates.review.title')}
+        explanation={t('reports.emptyStates.review.explanation')}
+        primaryCTA={{ label: t('reports.emptyStates.review.primary'), href: '/paper-trading' }}
+        helperText={t('reports.emptyStates.review.helper')}
+      />
+    ),
+    attribution: (
+      <EmptyState
+        type="setup"
+        icon={<Radar size={24} />}
+        title={t('reports.emptyStates.attribution.title')}
+        explanation={t('reports.emptyStates.attribution.explanation')}
+        primaryCTA={{ label: t('reports.emptyStates.attribution.primary'), href: '/backtest' }}
+        helperText={t('reports.emptyStates.attribution.helper')}
+      />
+    ),
+  } as const
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -89,15 +124,9 @@ export default function Reports() {
       </div>
 
       <TabPanel tabs={tabs} activeTab={activeTab} onChange={setActiveTab}>
-        {activeTab === 'perf' && (
-          <p className="text-center text-muted-foreground py-8">{t('reports.empty.perf')}</p>
-        )}
-        {activeTab === 'review' && (
-          <p className="text-center text-muted-foreground py-8">{t('reports.empty.review')}</p>
-        )}
-        {activeTab === 'attribution' && (
-          <p className="text-center text-muted-foreground py-8">{t('reports.empty.attribution')}</p>
-        )}
+        {activeTab === 'perf' && emptyStates.perf}
+        {activeTab === 'review' && emptyStates.review}
+        {activeTab === 'attribution' && emptyStates.attribution}
         {activeTab === 'list' && (
           <DataTable columns={reportColumns} data={reports} emptyText={t('reports.empty.list')} />
         )}
