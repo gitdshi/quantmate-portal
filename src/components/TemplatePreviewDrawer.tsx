@@ -73,10 +73,30 @@ export default function TemplatePreviewDrawer({
   const parsedParameters: Record<string, unknown> | null = (() => {
     const raw = template.defaultParameters
     if (!raw) return null
+    // If it's already an object, use it
+    if (typeof raw === 'object' && !Array.isArray(raw)) return raw as Record<string, unknown>
+
+    // If it's a string, it might be JSON or a JSON-encoded string (double-encoded).
     if (typeof raw === 'string') {
-      try { return JSON.parse(raw) as Record<string, unknown> } catch { return null }
+      try {
+        const first = JSON.parse(raw)
+        // If first parse yields an object, return it
+        if (first && typeof first === 'object' && !Array.isArray(first)) return first as Record<string, unknown>
+        // If first parse yields a string, try parsing again
+        if (typeof first === 'string') {
+          try {
+            const second = JSON.parse(first)
+            if (second && typeof second === 'object' && !Array.isArray(second)) return second as Record<string, unknown>
+          } catch {
+            // fallthrough
+          }
+        }
+      } catch {
+        // fallthrough
+      }
     }
-    return raw
+
+    return null
   })()
   const paramEntries = parsedParameters ? Object.entries(parsedParameters) : []
 
