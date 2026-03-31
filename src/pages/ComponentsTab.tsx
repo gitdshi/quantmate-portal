@@ -11,10 +11,9 @@ import {
   ChevronDown,
   ChevronRight,
   Layers,
-  Plus,
   Search,
 } from 'lucide-react'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import ComponentEditor from '../components/ComponentEditor'
@@ -46,7 +45,7 @@ function unwrapRows(value: unknown): StrategyComponentListItem[] {
 
 // ── main component ───────────────────────────────────────────────────────
 
-export default function ComponentsTab() {
+export default function ComponentsTab({ createOpen, setCreateOpen }: { createOpen: boolean; setCreateOpen: (v: boolean) => void }) {
   const { t } = useTranslation('strategies')
   const qc = useQueryClient()
 
@@ -54,7 +53,6 @@ export default function ComponentsTab() {
   const [search, setSearch] = useState('')
   const [collapsedLayers, setCollapsedLayers] = useState<Set<ComponentLayer>>(new Set())
   const [selectedId, setSelectedId] = useState<number | null>(null)
-  const [createOpen, setCreateOpen] = useState(false)
 
   // form state for new component
   const [formName, setFormName] = useState('')
@@ -81,13 +79,24 @@ export default function ComponentsTab() {
   const { data: myTemplates = [] } = useQuery<TemplateListItem[]>({
     queryKey: ['component-create-templates'],
     queryFn: () =>
-      templateAPI.listMine({ page_size: 200 }).then((r) => {
+      templateAPI.listMine({ page_size: 100 }).then((r) => {
         const raw = r.data as { data?: unknown; items?: unknown; results?: unknown }
         const arr = (raw.data ?? raw.items ?? raw.results ?? r.data) as TemplateListItem[]
         return Array.isArray(arr) ? arr : []
       }),
     enabled: createOpen,
   })
+
+  useEffect(() => {
+    if (createOpen) {
+      setFormName('')
+      setFormLayer('trading')
+      setFormSubType('')
+      setFormTemplateId(null)
+      setFormTemplateCode(null)
+      setFormTemplateParams(null)
+    }
+  }, [createOpen])
 
   const handleTemplateSelect = async (id: number | null) => {
     setFormTemplateId(id)
@@ -179,13 +188,6 @@ export default function ComponentsTab() {
             <Layers size={18} />
             {t('page.components.title', 'Components')}
           </h2>
-          <button
-            type="button"
-            onClick={() => setCreateOpen(true)}
-            className="flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-primary text-white hover:opacity-90"
-          >
-            <Plus size={12} /> {t('page.components.new', 'New')}
-          </button>
         </div>
 
         <div className="relative">
@@ -256,7 +258,7 @@ export default function ComponentsTab() {
               className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background"
             >
               <option value="">{t('page.components.form.noTemplate', '-- Blank --')}</option>
-              {myTemplates.map((tpl) => (
+              {myTemplates.filter((tpl) => (tpl.template_type ?? 'standalone') === 'component').map((tpl) => (
                 <option key={tpl.id} value={tpl.id}>{tpl.name}</option>
               ))}
             </select>

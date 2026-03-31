@@ -377,7 +377,16 @@
       "visibilityTeam": "团队",
       "visibilityPublic": "公开",
       "deleteTitle": "删除模板",
-      "deleteMessage": "确认删除模板“{{name}}”？"    },
+      "deleteMessage": "确认删除模板“{{name}}”？",
+      "tabs": {
+        "description": "描述",
+        "code": "代码",
+        "params": "参数"
+      },
+      "loadingCode": "代码加载中...",
+      "noCode": "暂无可用代码。",
+      "noParams": "暂未定义参数。"
+    },
     "templateLibrary": {
       "title": "模板库",
       "subtitle": "浏览模板市场和个人收藏中的独立策略模板",

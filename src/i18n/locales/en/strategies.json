@@ -377,7 +377,15 @@
       "localStarter": "Local starter",
       "previewTitle": "Template Preview",
       "previewDescription": "Select a template card to inspect the starter code and create a new draft.",
-      "fallbackDescription": "Starter template ready for customization."
+      "fallbackDescription": "Starter template ready for customization.",
+      "tabs": {
+        "description": "Description",
+        "code": "Code",
+        "params": "Parameters"
+      },
+      "loadingCode": "Loading code...",
+      "noCode": "Code not available.",
+      "noParams": "No parameters defined."
     },
     "templateLibrary": {
       "title": "Template Library",

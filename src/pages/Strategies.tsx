@@ -953,7 +953,7 @@ export default function Strategies() {
     template: TemplateCard | null,
     overrides?: Partial<CreateFormState>
   ) => {
-    const name = overrides?.name?.trim() || t('page.modals.defaultName')
+    const name = overrides?.name?.trim() || template?.name || t('page.modals.defaultName')
     let selectedTemplate = template
     if (selectedTemplate) {
       try {
@@ -970,10 +970,12 @@ export default function Strategies() {
     const description =
       overrides?.description?.trim() ||
       (selectedTemplate?.description?.trim() || t('page.modals.blankDescription'))
-    const className = sanitizeIdentifier(name)
-    const code = selectedTemplate?.code
-      ? replacePrimaryClassName(selectedTemplate.code, className)
-      : buildSkeletonCode(className, name, description)
+    // Prefer the class name already in the template code to avoid mangling non-ASCII names.
+    const templateClass = selectedTemplate?.code
+      ? (selectedTemplate.code.match(/class\s+([A-Za-z_]\w*)\s*[(:]/m)?.[1] ?? null)
+      : null
+    const className = templateClass ?? sanitizeIdentifier(name)
+    const code = selectedTemplate?.code ?? buildSkeletonCode(className, name, description)
 
     setSelectedId(UNSAVED_DRAFT_ID)
     setDraftBaseline(null)
@@ -1975,9 +1977,9 @@ export default function Strategies() {
                   <label className="mb-1 block text-sm font-medium">{t('page.modals.template')}</label>
                   <select className={inputClass} value={createForm.templateKey} onChange={(event) => setCreateForm((current) => ({ ...current, templateKey: event.target.value }))}>
                     <option value="blank">{t('page.modals.blankTemplate')}</option>
-                    {allTemplates.map((template) => (
+                    {allTemplates.filter((tpl) => tpl.templateType === 'standalone').map((template) => (
                       <option key={template.key} value={template.key}>
-                        {template.name} ({template.source === 'marketplace' ? t('page.templates.sourceMarketplace') : t('page.templates.sourceMine')})
+                        {template.name}
                       </option>
                     ))}
                   </select>

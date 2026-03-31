@@ -152,7 +152,7 @@ export default function Marketplace() {
   const { data: templates = [] } = useQuery<Template[]>({
     queryKey: ['marketplace-templates'],
     queryFn: () =>
-      templateAPI.listMarketplace().then((r) => {
+      templateAPI.listMarketplace({ page_size: 100 }).then((r) => {
         const items = unwrapTemplateRows(r.data)
         return items.map((item, index) => mapTemplate(item, index))
       }),

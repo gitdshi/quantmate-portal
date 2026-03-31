@@ -4,10 +4,14 @@ import {
   BookOpen,
   Combine,
   Eye,
+  Globe,
   Layers,
+  MessageSquare,
+  PencilLine,
   Play,
   Plus,
   Search,
+  Star,
   Trash2,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
@@ -46,6 +50,7 @@ type TemplateItem = {
   source: 'marketplace' | 'mine'
   source_template_id?: number | null
   origin?: 'marketplace' | 'personal' | null
+  updated_at?: string | null
 }
 
 type FormComposite = {
@@ -97,9 +102,11 @@ function tryParseJson(s: string): Record<string, unknown> | undefined {
 }
 
 export default function CompositeStrategies() {
-  const { t } = useTranslation('composite')
+  const { t, i18n } = useTranslation('composite')
   const { t: tc } = useTranslation('common')
   const queryClient = useQueryClient()
+
+  const currentLanguage = i18n.resolvedLanguage ?? i18n.language
 
   const [activeTab, setActiveTab] = useState('components')
 
@@ -111,6 +118,21 @@ export default function CompositeStrategies() {
   const [selectedTplId, setSelectedTplId] = useState<number | null>(null)
   const [selectedTplCodeLoading, setSelectedTplCodeLoading] = useState(false)
   const [templateAsideTab, setTemplateAsideTab] = useState<'description' | 'code' | 'params'>('description')
+  const [templateActionLoading, setTemplateActionLoading] = useState(false)
+  const [templateComments, setTemplateComments] = useState<{ id: number; content: string; created_at?: string | null }[]>([])
+  const [templateRatings, setTemplateRatings] = useState<{ avgRating: number; count: number }>({ avgRating: 0, count: 0 })
+  const [templateReviews, setTemplateReviews] = useState<{ id: number; rating: number; review?: string | null }[]>([])
+  const [commentDraft, setCommentDraft] = useState('')
+  const [ratingValue, setRatingValue] = useState<number | null>(null)
+  const [loadingTemplateFeedback, setLoadingTemplateFeedback] = useState(false)
+
+  // Template actions state
+  const [componentsCreateOpen, setComponentsCreateOpen] = useState(false)
+  const [deleteTplId, setDeleteTplId] = useState<number | null>(null)
+  const [deleteTplName, setDeleteTplName] = useState('')
+  const [editTplOpen, setEditTplOpen] = useState(false)
+  const [editTplId, setEditTplId] = useState<number | null>(null)
+  const [editTplForm, setEditTplForm] = useState({ name: '', description: '', visibility: 'private' })
 
   // Composite modals
   const [compositeModal, setCompositeModal] = useState(false)
@@ -164,6 +186,7 @@ export default function CompositeStrategies() {
         source: 'mine' as const,
         origin: (item.source as 'marketplace' | 'personal' | undefined) ?? null,
         source_template_id: (item.source_template_id as number | undefined) ?? null,
+        updated_at: (item.updated_at as string | undefined) ?? null,
       } as TemplateItem))
     ),
     enabled: activeTab === 'templateLibrary',
@@ -207,12 +230,70 @@ export default function CompositeStrategies() {
   useEffect(() => {
     setPreviewTemplate(null)
     setTemplateAsideTab('description')
+    setCommentDraft('')
+    setRatingValue(null)
     if (selectedTplId !== null) {
       const tpl = myTemplates.find((t) => t.id === selectedTplId)
       if (tpl) handlePreviewTemplate(tpl)
+      void loadTemplateFeedback(selectedTplId)
+    } else {
+      setTemplateRatings({ avgRating: 0, count: 0 })
+      setTemplateReviews([])
+      setTemplateComments([])
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTplId])
+
+  const loadTemplateFeedback = async (templateId: number) => {
+    setLoadingTemplateFeedback(true)
+    try {
+      const [ratingsRes, commentsRes] = await Promise.all([
+        templateAPI.getRatings(templateId),
+        templateAPI.listComments(templateId),
+      ])
+      const rp = ratingsRes.data as { summary?: { avg_rating?: number; count?: number }; reviews?: { id: number; rating: number; review?: string | null }[] }
+      setTemplateRatings({ avgRating: Number(rp.summary?.avg_rating || 0), count: Number(rp.summary?.count || 0) })
+      setTemplateReviews(Array.isArray(rp.reviews) ? rp.reviews : [])
+      const commArr = commentsRes.data as { id: number; content: string; created_at?: string | null }[] | { data?: unknown; items?: unknown; results?: unknown }
+      if (Array.isArray(commArr)) { setTemplateComments(commArr) }
+      else {
+        const d = (commArr as Record<string, unknown>).data ?? (commArr as Record<string, unknown>).items ?? (commArr as Record<string, unknown>).results
+        setTemplateComments(Array.isArray(d) ? d as { id: number; content: string; created_at?: string | null }[] : [])
+      }
+    } catch {
+      setTemplateRatings({ avgRating: 0, count: 0 })
+      setTemplateReviews([])
+      setTemplateComments([])
+    } finally {
+      setLoadingTemplateFeedback(false)
+    }
+  }
+
+  const submitTemplateFeedback = async () => {
+    if (!selectedTplId) return
+    const comment = commentDraft.trim()
+    const canRate = selectedTpl?.origin === 'marketplace'
+    const hasRating = canRate && ratingValue !== null
+    if (!comment && !hasRating) return
+    try {
+      setTemplateActionLoading(true)
+      if (hasRating) await templateAPI.rate(selectedTplId, { rating: ratingValue as number })
+      if (comment) await templateAPI.addComment(selectedTplId, { content: comment })
+      setCommentDraft('')
+      setRatingValue(null)
+      await loadTemplateFeedback(selectedTplId)
+      showToast(tc('operationSuccess'), 'success')
+    } catch {
+      showToast(t('templateLibrary.feedbackFailed', 'Failed to submit feedback'), 'error')
+    } finally {
+      setTemplateActionLoading(false)
+    }
+  }
+
+  function formatDateTime(value: string | null | undefined) {
+    if (!value) return '-'
+    try { return new Intl.DateTimeFormat(currentLanguage, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value)) } catch { return value }
+  }
 
   const handleAddToLibrary = async (tpl: TemplateItem) => {
     try {
@@ -485,6 +566,11 @@ export default function CompositeStrategies() {
           <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
         </div>
         <div className="flex gap-2">
+          {activeTab === 'components' && (
+            <button onClick={() => setComponentsCreateOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-primary text-white hover:opacity-90">
+              <Plus size={16} />{t('components.newComponent')}
+            </button>
+          )}
           {activeTab === 'composites' && (
             <button onClick={() => { setEditCompositeId(null); setCompositeForm({ ...emptyCompositeForm }); setCompositeModal(true) }} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-primary text-white hover:opacity-90">
               <Plus size={16} />{t('composites.newComposite')}
@@ -500,7 +586,7 @@ export default function CompositeStrategies() {
 
       <TabPanel tabs={tabs} activeTab={activeTab} onChange={setActiveTab}>
         {/* ── Components Tab (full CRUD) ────────────────── */}
-        {activeTab === 'components' && <ComponentsTab />}
+        {activeTab === 'components' && <ComponentsTab createOpen={componentsCreateOpen} setCreateOpen={setComponentsCreateOpen} />}
 
         {/* ── Template Library Tab ────────────────────────── */}
         {activeTab === 'templateLibrary' && (
@@ -547,27 +633,51 @@ export default function CompositeStrategies() {
                   {t('templateLibrary.empty', 'No templates found')}
                 </div>
               ) : (
-                <div className="grid gap-3">
+                <div className="grid gap-4 md:grid-cols-2">
                   {filteredTpl.map((tpl) => (
                     <article
                       key={tpl.id}
-                      className={`rounded-lg border bg-background p-4 space-y-2 cursor-pointer transition-colors ${
+                      className={`min-w-0 rounded-2xl border bg-background p-4 cursor-pointer transition-colors ${
                         selectedTplId === tpl.id ? 'border-ring' : 'border-border hover:border-ring/50'
                       }`}
                       onClick={() => setSelectedTplId(tpl.id)}
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <span className="font-medium text-sm text-card-foreground truncate">{tpl.name}</span>
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-base font-semibold text-foreground">{tpl.name}</div>
+                          <div className="mt-1 line-clamp-2 break-words text-sm text-muted-foreground">{tpl.description || '-'}</div>
+                        </div>
                         <Badge variant={tpl.template_type === 'composite' ? 'warning' : 'primary'}>
                           {tpl.template_type === 'composite' ? t('templateLibrary.typeComposite', 'Composite') : t('templateLibrary.typeComponent', 'Component')}
                         </Badge>
                       </div>
-                      <p className="text-xs text-muted-foreground line-clamp-2">{tpl.description || '-'}</p>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <div className="mt-4 flex flex-wrap gap-2">
                         <Badge variant={tpl.origin === 'marketplace' ? 'success' : 'muted'}>
                           {tpl.origin === 'marketplace' ? t('templateLibrary.originMarketplace', 'From Marketplace') : t('templateLibrary.originPersonal', 'User Created')}
                         </Badge>
-                        <span>{tpl.downloads} downloads</span>
+                        <Badge variant="muted">{tpl.visibility}</Badge>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                        <span>{tpl.downloads} {t('templateLibrary.downloads', 'downloads')}</span>
+                        <span>|</span>
+                        <span>{formatDateTime(tpl.updated_at)}</span>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-md border border-border bg-background hover:bg-muted"
+                          onClick={(e) => { e.stopPropagation(); setSelectedTplId(tpl.id) }}
+                        >
+                          <Eye size={12} />{t('templateLibrary.preview', 'Preview')}
+                        </button>
+                        <button
+                          type="button"
+                          className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1 text-xs rounded-md bg-primary text-white hover:opacity-90 disabled:opacity-50"
+                          onClick={(e) => { e.stopPropagation(); void handleUseTemplate(tpl) }}
+                          disabled={templateActionLoading}
+                        >
+                          {t('templateLibrary.useTemplate', 'Use Template')}
+                        </button>
                       </div>
                     </article>
                   ))}
@@ -580,7 +690,6 @@ export default function CompositeStrategies() {
                 <div className="space-y-4">
                   <div>
                     <h3 className="text-lg font-semibold text-card-foreground">{selectedTpl.name}</h3>
-                    <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{selectedTpl.description || '-'}</p>
                     <div className="mt-3 flex flex-wrap gap-2">
                       <Badge variant={selectedTpl.template_type === 'composite' ? 'warning' : 'primary'}>
                         {selectedTpl.template_type === 'composite' ? t('templateLibrary.typeComposite', 'Composite') : t('templateLibrary.typeComponent', 'Component')}
@@ -590,6 +699,31 @@ export default function CompositeStrategies() {
                       </Badge>
                     </div>
                   </div>
+
+                  {(() => {
+                    const btnPrimary = 'inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60'
+                    const btnSecondary = 'inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60'
+                    return (
+                      <div className="flex flex-wrap gap-2">
+                        <button type="button" className={`${btnPrimary} flex-1`} onClick={() => void handleUseTemplate(selectedTpl)} disabled={templateActionLoading}>
+                          {t('templateLibrary.useTemplate', 'Use Template')}
+                        </button>
+                        <button type="button" className={btnSecondary} onClick={() => openEditTpl(selectedTpl)} disabled={templateActionLoading}>
+                          <PencilLine size={14} />
+                          {tc('edit')}
+                        </button>
+                        <button type="button" className={btnSecondary} onClick={() => void toggleTplVisibility(selectedTpl)} disabled={templateActionLoading}>
+                          <Globe size={14} />
+                          {selectedTpl.visibility === 'public' ? t('templateLibrary.unpublish', 'Unpublish') : t('templateLibrary.publish', 'Publish')}
+                        </button>
+                        <button type="button" className={btnSecondary} onClick={() => { setDeleteTplId(selectedTpl.id); setDeleteTplName(selectedTpl.name) }} disabled={templateActionLoading}>
+                          <Trash2 size={14} />
+                          {tc('delete')}
+                        </button>
+                      </div>
+                    )
+                  })()}
+
                   <TabPanel
                     tabs={[
                       { key: 'description', label: t('templateLibrary.tabs.description', 'Description') },
@@ -651,6 +785,77 @@ export default function CompositeStrategies() {
                       </div>
                     )}
                   </TabPanel>
+
+                  <div className="rounded-xl border border-border bg-background p-4">
+                    <div className="mb-3 flex items-center justify-between">
+                      <div className="text-sm font-medium text-card-foreground">{t('templateLibrary.ratingTitle', 'Ratings')}</div>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Star size={14} className="text-yellow-500" />
+                        <span>{templateRatings.avgRating.toFixed(2)} / 5</span>
+                        <span>({templateRatings.count})</span>
+                      </div>
+                    </div>
+                    {templateReviews.length > 0 && (
+                      <div className="space-y-2">
+                        {templateReviews.slice(0, 3).map((review) => (
+                          <div key={review.id} className="rounded-lg border border-border/70 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+                            <div className="font-medium text-foreground">{`★ ${review.rating}`}</div>
+                            <div>{review.review || '-'}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="rounded-xl border border-border bg-background p-4">
+                    <div className="mb-3 flex items-center justify-between">
+                      <div className="text-sm font-medium text-card-foreground">{t('templateLibrary.commentsTitle', 'Comments')}</div>
+                      <MessageSquare size={14} className="text-muted-foreground" />
+                    </div>
+                    {selectedTpl.origin === 'marketplace' ? (
+                      <div className="mb-3">
+                        <label className="mb-1 block text-xs font-medium text-muted-foreground">{t('templateLibrary.ratingOptional', 'Rate (optional)')}</label>
+                        <select
+                          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                          value={ratingValue === null ? '' : String(ratingValue)}
+                          onChange={(e) => setRatingValue(e.target.value ? Number(e.target.value) : null)}
+                        >
+                          <option value="">{t('templateLibrary.noRating', 'No rating')}</option>
+                          {[5, 4, 3, 2, 1].map((v) => (
+                            <option key={v} value={v}>{v}</option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : (
+                      <div className="mb-3 text-xs text-muted-foreground">{t('templateLibrary.ownTemplateNoRating', 'You cannot rate your own template')}</div>
+                    )}
+                    {templateComments.length > 0 ? (
+                      <div className="mb-3 space-y-2">
+                        {templateComments.slice(0, 4).map((c) => (
+                          <div key={c.id} className="rounded-lg border border-border/70 bg-muted/20 px-3 py-2 text-xs">
+                            <div className="text-foreground">{c.content}</div>
+                            <div className="mt-1 text-muted-foreground">{formatDateTime(c.created_at)}</div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="mb-3 text-xs text-muted-foreground">{t('templateLibrary.noComments', 'No comments yet')}</div>
+                    )}
+                    <textarea
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring min-h-[80px] resize-y"
+                      value={commentDraft}
+                      onChange={(e) => setCommentDraft(e.target.value)}
+                      placeholder={t('templateLibrary.commentPlaceholder', 'Write a comment...')}
+                    />
+                    <button
+                      type="button"
+                      className="mt-2 inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                      onClick={() => void submitTemplateFeedback()}
+                      disabled={templateActionLoading || loadingTemplateFeedback || (!commentDraft.trim() && !(selectedTpl.origin === 'marketplace' && ratingValue !== null))}
+                    >
+                      {t('templateLibrary.submitFeedback', 'Submit')}
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="flex min-h-[320px] flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-muted/20 px-6 text-center">
@@ -1018,7 +1223,52 @@ export default function CompositeStrategies() {
         <p className="text-sm">{t('backtest.deleteConfirm')}</p>
       </Modal>
 
-      {/* ── Template Preview Drawer ───────────────────────── */}
+      {/* ── Delete Template Confirm ──────────────────────── */}
+      <Modal
+        open={!!deleteTplId}
+        onClose={() => setDeleteTplId(null)}
+        title={t('templateLibrary.deleteTitle', 'Delete Template')}
+        footer={
+          <>
+            <button onClick={() => setDeleteTplId(null)} className="px-4 py-2 text-sm rounded-md border border-border hover:bg-muted">{tc('cancel')}</button>
+            <button onClick={() => void deleteTpl()} disabled={templateActionLoading} className="px-4 py-2 text-sm rounded-md bg-red-600 text-white hover:opacity-90 disabled:opacity-50">{tc('confirm')}</button>
+          </>
+        }
+      >
+        <p className="text-sm">{t('templateLibrary.deleteConfirm', { name: deleteTplName })}</p>
+      </Modal>
+
+      {/* ── Edit Template Modal ───────────────────────────── */}
+      <Modal
+        open={editTplOpen}
+        onClose={() => setEditTplOpen(false)}
+        title={t('templateLibrary.editTitle', 'Edit Template')}
+        footer={
+          <>
+            <button onClick={() => setEditTplOpen(false)} className="px-4 py-2 text-sm rounded-md border border-border hover:bg-muted">{tc('cancel')}</button>
+            <button onClick={() => void saveEditTpl()} disabled={templateActionLoading || !editTplForm.name.trim()} className="px-4 py-2 text-sm rounded-md bg-primary text-white hover:opacity-90 disabled:opacity-50">{tc('save')}</button>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">{t('components.name')}</label>
+            <input value={editTplForm.name} onChange={(e) => setEditTplForm({ ...editTplForm, name: e.target.value })} className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">{t('components.description')}</label>
+            <textarea value={editTplForm.description} onChange={(e) => setEditTplForm({ ...editTplForm, description: e.target.value })} rows={3} className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background resize-none" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">{t('templateLibrary.visibility', 'Visibility')}</label>
+            <select value={editTplForm.visibility} onChange={(e) => setEditTplForm({ ...editTplForm, visibility: e.target.value })} className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background">
+              <option value="private">{t('templateLibrary.visibilityPrivate', 'Private')}</option>
+              <option value="team">{t('templateLibrary.visibilityTeam', 'Team')}</option>
+              <option value="public">{t('templateLibrary.visibilityPublic', 'Public')}</option>
+            </select>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }
