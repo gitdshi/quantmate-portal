@@ -211,15 +211,15 @@ describe('Strategies Page', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Basic Info' }))
     const draftNameInput = await screen.findByTestId('strategy-name-input')
-    expect(draftNameInput).toHaveValue('MyStrategy')
+    expect(draftNameInput).toHaveValue('Dual MA Crossover')
 
     fireEvent.click(screen.getByTestId('save-strategy-button'))
 
     await waitFor(() => {
       expect(strategiesAPI.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          name: 'MyStrategy',
-          class_name: 'MyStrategy',
+          name: 'Dual MA Crossover',
+          class_name: 'DualMAStrategy',
         })
       )
     })
