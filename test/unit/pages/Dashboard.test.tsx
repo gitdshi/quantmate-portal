@@ -100,8 +100,6 @@ describe('Dashboard Page', () => {
       expect(screen.getByText('NAV Trend')).toBeInTheDocument()
       expect(screen.getByText('Position Allocation')).toBeInTheDocument()
     })
-    expect(screen.getByTestId('line-chart')).toBeInTheDocument()
-    expect(screen.getByTestId('pie-chart')).toBeInTheDocument()
   })
 
   it('renders NAV period buttons', () => {

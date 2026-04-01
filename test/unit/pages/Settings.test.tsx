@@ -7,6 +7,15 @@ vi.mock('@/components/ui/toast-service', () => ({
   showToast: vi.fn(),
 }))
 
+vi.mock('@/hooks/usePermission', () => ({
+  usePermission: () => ({
+    can: (feature: string) => feature === 'admin.system-config',
+    hasPermission: (permission: string) => permission === 'system.manage',
+    isAdmin: () => true,
+    role: 'admin',
+  }),
+}))
+
 vi.mock('@/lib/api', () => ({
   api: {
     get: vi.fn(),
@@ -64,14 +73,11 @@ describe('Settings Page', () => {
     expect(screen.getByText('Settings')).toBeInTheDocument()
   })
 
-  it('shows all 6 tabs', () => {
+  it('shows the current tab set', () => {
     render(<Settings />)
-    expect(screen.getByText('General Settings')).toBeInTheDocument()
-    expect(screen.getByText('Data Source')).toBeInTheDocument()
-    expect(screen.getByText('Trading Parameters')).toBeInTheDocument()
-    expect(screen.getByText('Notifications')).toBeInTheDocument()
-    expect(screen.getByText('UI Settings')).toBeInTheDocument()
-    expect(screen.getByText('System Info')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Personal Settings' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Trading Preferences' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'System Management' })).toBeInTheDocument()
   })
 
   it('shows save button', () => {
@@ -79,7 +85,7 @@ describe('Settings Page', () => {
     expect(screen.getByText('Save Settings')).toBeInTheDocument()
   })
 
-  it('shows general settings by default', () => {
+  it('shows personal settings by default', () => {
     render(<Settings />)
     expect(screen.getByText('Language')).toBeInTheDocument()
     expect(screen.getByText('Timezone')).toBeInTheDocument()
@@ -88,40 +94,24 @@ describe('Settings Page', () => {
     expect(screen.getByText('Auto Save')).toBeInTheDocument()
   })
 
-  it('switches to datasource tab', async () => {
+  it('switches to system management tab and shows datasource config', async () => {
     render(<Settings />)
-    fireEvent.click(screen.getByText('Data Source'))
+    fireEvent.click(screen.getByRole('button', { name: 'System Management' }))
     expect(await screen.findByText('Tushare Pro')).toBeInTheDocument()
     expect(await screen.findByText('AkShare')).toBeInTheDocument()
   })
 
-  it('shows trading config tab', () => {
+  it('shows trading preferences tab', () => {
     render(<Settings />)
-    fireEvent.click(screen.getByText('Trading Parameters'))
-    expect(screen.getAllByText('Trading Parameters').length).toBeGreaterThan(0)
+    fireEvent.click(screen.getByRole('button', { name: 'Trading Preferences' }))
+    expect(screen.getByText('Trading Parameters')).toBeInTheDocument()
     expect(screen.getByText('Risk Controls')).toBeInTheDocument()
   })
 
-  it('shows notification settings tab', () => {
+  it('shows system status cards with health data', async () => {
     render(<Settings />)
-    fireEvent.click(screen.getByText('Notifications'))
-    expect(screen.getByText('Strategy Status Alerts')).toBeInTheDocument()
-    expect(screen.getByText('Trade Execution Alerts')).toBeInTheDocument()
-    expect(screen.getByText('Risk Alerts')).toBeInTheDocument()
-  })
-
-  it('shows UI settings tab', () => {
-    render(<Settings />)
-    fireEvent.click(screen.getByText('UI Settings'))
-    expect(screen.getByText('Theme Mode')).toBeInTheDocument()
-    expect(screen.getByText('Accent Color')).toBeInTheDocument()
-    expect(screen.getByText('Chart Library')).toBeInTheDocument()
-  })
-
-  it('shows system info tab with health data', async () => {
-    render(<Settings />)
-    fireEvent.click(screen.getByText('System Info'))
-    expect(await screen.findByText('System Status')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'System Management' }))
+    expect(await screen.findByText('System status')).toBeInTheDocument()
     expect(await screen.findByText('status')).toBeInTheDocument()
     expect(await screen.findByText('version')).toBeInTheDocument()
   })

@@ -49,24 +49,27 @@ describe('Reports Page', () => {
 
   it('shows perf empty state on default tab', () => {
     render(<Reports />)
-    expect(screen.getByText('No performance reports yet. Generate one first.')).toBeInTheDocument()
+    expect(screen.getByText('Generate the first performance report')).toBeInTheDocument()
+    expect(screen.getByText('Run a backtest')).toBeInTheDocument()
   })
 
   it('switches to review tab', () => {
     render(<Reports />)
     fireEvent.click(screen.getByRole('button', { name: 'Trade Review' }))
-    expect(screen.getByText('No trade review data available')).toBeInTheDocument()
+    expect(screen.getByText('Build some trading history first')).toBeInTheDocument()
+    expect(screen.getByText('Open paper trading')).toBeInTheDocument()
   })
 
   it('switches to attribution tab', () => {
     render(<Reports />)
     fireEvent.click(screen.getByRole('button', { name: 'Attribution' }))
-    expect(screen.getByText('No attribution data available')).toBeInTheDocument()
+    expect(screen.getByText('Get strategy results before doing attribution')).toBeInTheDocument()
+    expect(screen.getByText('Start first backtest')).toBeInTheDocument()
   })
 
   it('switches to list tab', async () => {
     render(<Reports />)
     fireEvent.click(screen.getByRole('button', { name: 'Reports' }))
-    expect(await screen.findByText('No reports available')).toBeInTheDocument()
+    expect(await screen.findByText(/No reports yet/i)).toBeInTheDocument()
   })
 })

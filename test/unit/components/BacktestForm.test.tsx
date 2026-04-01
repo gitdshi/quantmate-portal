@@ -2,6 +2,7 @@ import { userEvent } from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mockStrategies } from '@test/support/mockData'
 import { render, screen, waitFor } from '@test/support/utils'
+import i18n from '@/i18n'
 import BacktestForm from '@/components/BacktestForm'
 
 // Mock API
@@ -30,8 +31,10 @@ vi.mock('@/lib/api', () => ({
 import { marketDataAPI, queueAPI, strategiesAPI } from '@/lib/api'
 
 describe('BacktestForm Component', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks()
+    localStorage.setItem('quantmate-lang', 'en')
+    await i18n.changeLanguage('en')
     ;(strategiesAPI.list as any).mockResolvedValue({ data: mockStrategies })
     ;(marketDataAPI.indexes as any).mockResolvedValue({ data: [] })
     ;(marketDataAPI.symbols as any).mockResolvedValue({ data: [] })

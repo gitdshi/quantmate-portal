@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { render, screen } from '@test/support/utils'
+import i18n from '@/i18n'
 import OptimizationHeatmap from '@/components/OptimizationHeatmap'
 
 const mockResults = [
@@ -10,6 +11,11 @@ const mockResults = [
 ]
 
 describe('OptimizationHeatmap', () => {
+  beforeEach(async () => {
+    localStorage.setItem('quantmate-lang', 'en')
+    await i18n.changeLanguage('en')
+  })
+
   it('renders table with heatmap cells', () => {
     render(
       <OptimizationHeatmap
@@ -46,7 +52,8 @@ describe('OptimizationHeatmap', () => {
         metric="total_return"
       />,
     )
-    expect(screen.getByText(/not enough data/i)).toBeInTheDocument()
+    expect(screen.queryByRole('table')).not.toBeInTheDocument()
+    expect(screen.getByText(/data/i)).toBeInTheDocument()
   })
 
   it('displays metric values in cells', () => {

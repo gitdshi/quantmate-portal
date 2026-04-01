@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen } from '@test/support/utils'
+import { fireEvent, render, screen, waitFor } from '@test/support/utils'
 import i18n from '@/i18n'
 import AccountSecurity from '@/pages/AccountSecurity'
 import { showToast } from '@/components/ui/toast-service'
@@ -83,7 +83,7 @@ describe('AccountSecurity Page', () => {
     expect(screen.getAllByText('Pro Plan').length).toBeGreaterThan(0)
   })
 
-  it('submits password change from the security tab', () => {
+  it('submits password change from the security tab', async () => {
     render(<AccountSecurity />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Security' }))
@@ -94,7 +94,9 @@ describe('AccountSecurity Page', () => {
     })
     fireEvent.click(screen.getAllByRole('button', { name: 'Update Password' })[0])
 
-    expect(authAPI.changePassword).toHaveBeenCalledWith('old-pass-123', 'new-pass-123')
+    await waitFor(() => {
+      expect(authAPI.changePassword).toHaveBeenCalledWith('old-pass-123', 'new-pass-123')
+    })
   })
 
   it('prevents password change when confirmation does not match', () => {

@@ -119,6 +119,6 @@ describe('Login Component', () => {
   it('renders a language switcher on the login page', () => {
     render(<Login />)
 
-    expect(screen.getByRole('button', { name: /english/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /中文/i })).toBeInTheDocument()
   })
 })

@@ -1,8 +1,14 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@test/support/utils'
+import i18n from '@/i18n'
 import StrategyParameterForm, { type ParamSchema } from '@/components/StrategyParameterForm'
 
 describe('StrategyParameterForm', () => {
+  beforeEach(async () => {
+    localStorage.setItem('quantmate-lang', 'en')
+    await i18n.changeLanguage('en')
+  })
+
   const onChange = vi.fn()
 
   describe('Schema mode', () => {
@@ -81,16 +87,15 @@ describe('StrategyParameterForm', () => {
           onChange={onChange}
         />,
       )
-      // Should show key/value headers
-      expect(screen.getByText('Key')).toBeInTheDocument()
-      expect(screen.getByText('Value')).toBeInTheDocument()
+      expect(screen.getByDisplayValue('lookback')).toBeInTheDocument()
+      expect(screen.getByDisplayValue('20')).toBeInTheDocument()
     })
 
     it('shows add button', () => {
       render(
         <StrategyParameterForm values={{}} onChange={onChange} />,
       )
-      expect(screen.getByText(/add parameter/i)).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /add/i })).toBeInTheDocument()
     })
   })
 })

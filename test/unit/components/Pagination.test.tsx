@@ -1,9 +1,15 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@test/support/utils'
 import userEvent from '@testing-library/user-event'
+import i18n from '@/i18n'
 import Pagination from '@/components/Pagination'
 
 describe('Pagination Component', () => {
+  beforeEach(async () => {
+    localStorage.setItem('quantmate-lang', 'en')
+    await i18n.changeLanguage('en')
+  })
+
   const defaultProps = {
     page: 1,
     pageSize: 10,
@@ -13,7 +19,9 @@ describe('Pagination Component', () => {
 
   it('renders page information', () => {
     render(<Pagination {...defaultProps} />)
-    expect(screen.getByText(/Showing 1-10 of 50/)).toBeInTheDocument()
+    expect(screen.getByText(/showing/i)).toHaveTextContent('1')
+    expect(screen.getByText(/showing/i)).toHaveTextContent('10')
+    expect(screen.getByText(/showing/i)).toHaveTextContent('50')
   })
 
   it('renders page buttons', () => {
@@ -30,18 +38,16 @@ describe('Pagination Component', () => {
 
   it('disables previous on first page', () => {
     render(<Pagination {...defaultProps} page={1} />)
-    const prevBtn = screen.getByTitle('Previous page')
-    expect(prevBtn).toBeDisabled()
-    const firstBtn = screen.getByTitle('First page')
-    expect(firstBtn).toBeDisabled()
+    const buttons = screen.getAllByRole('button')
+    expect(buttons[0]).toBeDisabled()
+    expect(buttons[1]).toBeDisabled()
   })
 
   it('disables next on last page', () => {
     render(<Pagination {...defaultProps} page={5} />)
-    const nextBtn = screen.getByTitle('Next page')
-    expect(nextBtn).toBeDisabled()
-    const lastBtn = screen.getByTitle('Last page')
-    expect(lastBtn).toBeDisabled()
+    const buttons = screen.getAllByRole('button')
+    expect(buttons[buttons.length - 2]).toBeDisabled()
+    expect(buttons[buttons.length - 1]).toBeDisabled()
   })
 
   it('calls onPageChange when clicking page button', async () => {
@@ -56,9 +62,10 @@ describe('Pagination Component', () => {
     const user = userEvent.setup()
     const onPageChange = vi.fn()
     render(<Pagination {...defaultProps} page={2} onPageChange={onPageChange} />)
-    await user.click(screen.getByTitle('Previous page'))
+    const buttons = screen.getAllByRole('button')
+    await user.click(buttons[1])
     expect(onPageChange).toHaveBeenCalledWith(1)
-    await user.click(screen.getByTitle('Next page'))
+    await user.click(buttons[buttons.length - 2])
     expect(onPageChange).toHaveBeenCalledWith(3)
   })
 
@@ -69,7 +76,7 @@ describe('Pagination Component', () => {
         onPageSizeChange={vi.fn()}
       />
     )
-    expect(screen.getByText('Per page:')).toBeInTheDocument()
+    expect(screen.getByText(/per page/i)).toBeInTheDocument()
     expect(screen.getByDisplayValue('10')).toBeInTheDocument()
   })
 

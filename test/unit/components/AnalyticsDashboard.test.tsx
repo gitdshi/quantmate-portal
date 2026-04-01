@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mockAnalyticsData } from '@test/support/mockData'
 import { render, screen, waitFor } from '@test/support/utils'
+import i18n from '@/i18n'
 import AnalyticsDashboard from '@/components/AnalyticsDashboard'
 
-// Mock API â€?component uses api.get() directly, not analyticsAPI
+// Mock API ï¿½?component uses api.get() directly, not analyticsAPI
 vi.mock('@/lib/api', () => ({
   api: {
     get: vi.fn(),
@@ -17,8 +18,10 @@ vi.mock('@/lib/api', () => ({
 import { api } from '@/lib/api'
 
 describe('AnalyticsDashboard Component', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks()
+    localStorage.setItem('quantmate-lang', 'en')
+    await i18n.changeLanguage('en')
   })
 
   it('renders loading state initially', () => {

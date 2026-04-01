@@ -2,9 +2,10 @@ import { userEvent } from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mockClosedTrade, mockPosition } from '@test/support/mockData'
 import { render, screen, waitFor } from '@test/support/utils'
+import i18n from '@/i18n'
 import PortfolioManagement from '@/components/PortfolioManagement'
 
-// Mock API �?component uses api.get()/api.post() directly
+// Mock API component uses api.get()/api.post() directly
 vi.mock('@/lib/api', () => ({
   api: {
     get: vi.fn(),
@@ -18,18 +19,23 @@ vi.mock('@/lib/api', () => ({
 
 import { api } from '@/lib/api'
 
-// Helper to set up api.get mock based on URL
 function setupApiMock(positions: any[] = [], closedTrades: any[] = []) {
   ;(api.get as any).mockImplementation((url: string) => {
-    if (url.includes('positions')) return Promise.resolve({ data: { portfolio_id: 1, cash: 10000, positions } })
-    if (url.includes('transactions')) return Promise.resolve({ data: { data: closedTrades } })
+    if (url.includes('/portfolio/positions')) {
+      return Promise.resolve({ data: { portfolio_id: 1, cash: 10000, positions } })
+    }
+    if (url.includes('/transactions')) {
+      return Promise.resolve({ data: { data: closedTrades } })
+    }
     return Promise.resolve({ data: [] })
   })
 }
 
 describe('PortfolioManagement Component', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks()
+    localStorage.setItem('quantmate-lang', 'en')
+    await i18n.changeLanguage('en')
   })
 
   it('displays summary cards', async () => {

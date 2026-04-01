@@ -4,6 +4,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ReactElement } from 'react'
 import { render, screen } from '@test/support/utils'
+import i18n from '@/i18n'
 import ErrorBoundary from '@/components/ErrorBoundary'
 
 // Component that throws
@@ -19,8 +20,10 @@ function GoodComponent() {
 describe('ErrorBoundary', () => {
   // Suppress console.error for expected errors in tests
   const originalConsoleError = console.error
-  beforeEach(() => {
+  beforeEach(async () => {
     console.error = vi.fn()
+    localStorage.setItem('quantmate-lang', 'en')
+    await i18n.changeLanguage('en')
   })
   afterEach(() => {
     console.error = originalConsoleError

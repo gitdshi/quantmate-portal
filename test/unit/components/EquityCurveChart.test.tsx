@@ -1,5 +1,6 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@test/support/utils'
+import i18n from '@/i18n'
 
 const chartSpy = vi.fn()
 
@@ -13,6 +14,12 @@ vi.mock('@/components/charts/EChartWrapper', () => ({
 import EquityCurveChart from '@/components/EquityCurveChart'
 
 describe('EquityCurveChart', () => {
+  beforeEach(async () => {
+    chartSpy.mockClear()
+    localStorage.setItem('quantmate-lang', 'en')
+    await i18n.changeLanguage('en')
+  })
+
   it('renders empty state when no equity data is available', () => {
     render(<EquityCurveChart data={[]} initialCapital={100000} />)
 
