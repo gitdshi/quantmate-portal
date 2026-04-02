@@ -161,7 +161,8 @@ export default function ComponentsTab({ createOpen, setCreateOpen }: { createOpe
   const toggleLayer = useCallback((layer: ComponentLayer) => {
     setCollapsedLayers((prev) => {
       const next = new Set(prev)
-      next.has(layer) ? next.delete(layer) : next.add(layer)
+      if (next.has(layer)) next.delete(layer)
+      else next.add(layer)
       return next
     })
   }, [])
