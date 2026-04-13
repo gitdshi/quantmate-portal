@@ -1,6 +1,6 @@
 import StrategyParameterForm, { type ParamSchema } from '@/components/StrategyParameterForm'
 import i18n from '@/i18n'
-import { fireEvent, render, screen, waitFor } from '@test/support/utils'
+import { fireEvent, render, screen } from '@test/support/utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 describe('StrategyParameterForm', () => {
