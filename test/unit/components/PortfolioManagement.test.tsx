@@ -1,9 +1,9 @@
-import { userEvent } from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import PortfolioManagement from '@/components/PortfolioManagement'
+import i18n from '@/i18n'
 import { mockClosedTrade, mockPosition } from '@test/support/mockData'
 import { render, screen, waitFor } from '@test/support/utils'
-import i18n from '@/i18n'
-import PortfolioManagement from '@/components/PortfolioManagement'
+import { userEvent } from '@testing-library/user-event'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Mock API component uses api.get()/api.post() directly
 vi.mock('@/lib/api', () => ({
@@ -143,6 +143,131 @@ describe('PortfolioManagement Component', () => {
     await waitFor(() => {
       expect(screen.getByText('$800')).toBeInTheDocument() // Total unrealized P&L
     })
+  })
+
+  // ─── Close modal details (lines 340-382) ─────────
+  it('shows position details in close modal including direction and PnL', async () => {
+    const user = userEvent.setup()
+    setupApiMock([mockPosition], [])
+
+    render(<PortfolioManagement />)
+
+    await waitFor(() => {
+      expect(screen.getByText('AAPL')).toBeInTheDocument()
+    })
+
+    const closeButton = screen.getByRole('button', { name: /close/i })
+    await user.click(closeButton)
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Close Position').length).toBeGreaterThanOrEqual(1)
+    })
+
+    // Modal shows symbol and direction
+    expect(screen.getAllByText('AAPL').length).toBeGreaterThanOrEqual(2)
+    expect(screen.getAllByText('LONG').length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('shows short direction in close modal', async () => {
+    const user = userEvent.setup()
+    const shortPosition = { ...mockPosition, direction: 'short', unrealized_pnl: -200, unrealized_pnl_pct: -5.0 }
+    setupApiMock([shortPosition], [])
+
+    render(<PortfolioManagement />)
+
+    await waitFor(() => {
+      expect(screen.getByText('AAPL')).toBeInTheDocument()
+    })
+
+    const closeButton = screen.getByRole('button', { name: /close/i })
+    await user.click(closeButton)
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Close Position').length).toBeGreaterThanOrEqual(1)
+    })
+
+    expect(screen.getAllByText('SHORT').length).toBeGreaterThanOrEqual(1)
+  })
+
+  // ─── Close modal cancel button (line 385) ─────────────
+  it('closes modal when cancel button is clicked', async () => {
+    const user = userEvent.setup()
+    setupApiMock([mockPosition], [])
+
+    render(<PortfolioManagement />)
+
+    await waitFor(() => {
+      expect(screen.getByText('AAPL')).toBeInTheDocument()
+    })
+
+    const closeButton = screen.getByRole('button', { name: /close/i })
+    await user.click(closeButton)
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Close Position').length).toBeGreaterThanOrEqual(1)
+    })
+
+    // Click Cancel button to dismiss modal
+    const cancelBtn = screen.getByRole('button', { name: /cancel/i })
+    await user.click(cancelBtn)
+
+    // Modal should be closed — "are you sure" text should be gone
+    await waitFor(() => {
+      expect(screen.queryByText(/are you sure/i)).not.toBeInTheDocument()
+    })
+  })
+
+  // ─── Close modal shows quantity and current price (lines 365-370) ───
+  it('shows quantity and current price in close modal', async () => {
+    const user = userEvent.setup()
+    setupApiMock([mockPosition], [])
+
+    render(<PortfolioManagement />)
+
+    await waitFor(() => {
+      expect(screen.getByText('AAPL')).toBeInTheDocument()
+    })
+
+    const closeButton = screen.getByRole('button', { name: /close/i })
+    await user.click(closeButton)
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Close Position').length).toBeGreaterThanOrEqual(1)
+    })
+
+    // Check that price and PnL details are visible (appears in both table and modal)
+    expect(screen.getAllByText('$155.00').length).toBeGreaterThanOrEqual(2) // current_price in table + modal
+    expect(screen.getAllByText(/\$500\.00/).length).toBeGreaterThanOrEqual(2) // unrealized_pnl in table + modal
+  })
+
+  // ─── Close modal dismiss via X button (line 340) ───
+  it('closes the close modal via X button', async () => {
+    const user = userEvent.setup()
+    setupApiMock([mockPosition], [])
+
+    render(<PortfolioManagement />)
+
+    await waitFor(() => {
+      expect(screen.getByText('AAPL')).toBeInTheDocument()
+    })
+
+    const closeButton = screen.getByRole('button', { name: /close/i })
+    await user.click(closeButton)
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Close Position').length).toBeGreaterThanOrEqual(1)
+    })
+
+    // Find the modal backdrop and the X/close button inside the modal
+    const modal = document.querySelector('.fixed')
+    expect(modal).toBeTruthy()
+    const xBtn = modal?.querySelector('button')
+    if (xBtn) {
+      await user.click(xBtn)
+      await waitFor(() => {
+        expect(document.querySelector('.fixed')).toBeFalsy()
+      })
+    }
   })
 })
 

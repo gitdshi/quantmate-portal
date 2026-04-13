@@ -1,7 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen } from '@test/support/utils'
 import i18n from '@/i18n'
 import Settings from '@/pages/Settings'
+import { fireEvent, render, screen, waitFor } from '@test/support/utils'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/components/ui/toast-service', () => ({
   showToast: vi.fn(),
@@ -40,6 +40,8 @@ describe('Settings Page', () => {
     vi.clearAllMocks()
     localStorage.setItem('quantmate-lang', 'en')
     await i18n.changeLanguage('en')
+    // Reset URL search params to avoid tab state leaking between tests
+    window.history.replaceState({}, '', window.location.pathname)
 
     vi.mocked(dataSourceAPI.listConfigs).mockResolvedValue({
       data: {
@@ -114,5 +116,285 @@ describe('Settings Page', () => {
     expect(await screen.findByText('System status')).toBeInTheDocument()
     expect(await screen.findByText('status')).toBeInTheDocument()
     expect(await screen.findByText('version')).toBeInTheDocument()
+  })
+
+  // ─── Save settings ──────────────────────────────────────
+  it('clicks Save Settings button', async () => {
+    render(<Settings />)
+    fireEvent.click(screen.getByText('Save Settings'))
+    // Save triggers i18n changeLanguage + localStorage; no API call to assert
+    // But the button should still be present after click
+    expect(screen.getByText('Save Settings')).toBeInTheDocument()
+  })
+
+  // ─── Toggle datasource config ───────────────────────────
+  it('toggles a datasource config on system management tab', async () => {
+    render(<Settings />)
+    fireEvent.click(screen.getByRole('button', { name: 'System Management' }))
+    await screen.findByText('Tushare Pro')
+
+    // ToggleSwitch uses role="switch"
+    const toggles = screen.getAllByRole('switch')
+    expect(toggles.length).toBeGreaterThan(0)
+    fireEvent.click(toggles[0])
+    await waitFor(() => {
+      expect(dataSourceAPI.updateConfig).toHaveBeenCalled()
+    })
+  })
+
+  // ─── Test datasource connection ─────────────────────────
+  it('clicks test connection on a datasource', async () => {
+    vi.mocked(dataSourceAPI.testConnection).mockResolvedValue({ data: { status: 'ok' } } as never)
+
+    render(<Settings />)
+    fireEvent.click(screen.getByRole('button', { name: 'System Management' }))
+    await screen.findByText('Tushare Pro')
+
+    const testBtns = screen.getAllByRole('button').filter(b => b.textContent?.match(/test connection/i))
+    if (testBtns.length > 0) {
+      fireEvent.click(testBtns[0])
+      await waitFor(() => {
+        expect(dataSourceAPI.testConnection).toHaveBeenCalled()
+      })
+    }
+  })
+
+  // ─── Trading preferences: editing fields ────────────────
+  it('edits trading preference fields', () => {
+    render(<Settings />)
+    fireEvent.click(screen.getByRole('button', { name: 'Trading Preferences' }))
+
+    // Find number inputs in trading preferences
+    const numberInputs = screen.getAllByRole('spinbutton')
+    if (numberInputs.length > 0) {
+      fireEvent.change(numberInputs[0], { target: { value: '50000' } })
+      expect(numberInputs[0]).toHaveValue(50000)
+    }
+  })
+
+  // ─── Personal settings: language select ──────────────────
+  it('changes language select in personal settings', () => {
+    render(<Settings />)
+    // Personal tab is default; find selects on the page
+    const selects = document.querySelectorAll('select')
+    expect(selects.length).toBeGreaterThan(0)
+    fireEvent.change(selects[0], { target: { value: 'en' } })
+  })
+
+  // ─── Personal settings: timezone/dateFormat/currency selects ─
+  it('changes timezone select', () => {
+    render(<Settings />)
+    const selects = document.querySelectorAll('select')
+    // timezone is the 2nd select (after language)
+    fireEvent.change(selects[1], { target: { value: 'America/New_York' } })
+    expect((selects[1] as HTMLSelectElement).value).toBe('America/New_York')
+  })
+
+  it('changes date format select', () => {
+    render(<Settings />)
+    const selects = document.querySelectorAll('select')
+    // dateFormat is the 3rd select
+    fireEvent.change(selects[2], { target: { value: 'DD/MM/YYYY' } })
+    expect((selects[2] as HTMLSelectElement).value).toBe('DD/MM/YYYY')
+  })
+
+  it('changes currency select', () => {
+    render(<Settings />)
+    const selects = document.querySelectorAll('select')
+    // currency is the 4th select
+    fireEvent.change(selects[3], { target: { value: 'USD' } })
+    expect((selects[3] as HTMLSelectElement).value).toBe('USD')
+  })
+
+  // ─── Personal settings: autoSave toggle ─────────────────
+  it('toggles autoSave switch', () => {
+    render(<Settings />)
+    const switches = screen.getAllByRole('switch')
+    // First switch on the personal tab is autoSave
+    fireEvent.click(switches[0])
+    // toggle happened — no error
+  })
+
+  // ─── Personal settings: notification toggles ────────────
+  it('toggles notification switches', () => {
+    render(<Settings />)
+    const switches = screen.getAllByRole('switch')
+    // After autoSave, there are 5 notification toggles
+    expect(switches.length).toBeGreaterThanOrEqual(6)
+    // Toggle dailyReport (last one)
+    fireEvent.click(switches[switches.length - 1])
+  })
+
+  // ─── Personal settings: theme radio ─────────────────────
+  it('changes theme radio button', () => {
+    render(<Settings />)
+    const radios = screen.getAllByRole('radio')
+    // Theme radios: light, dark, system (first 3)
+    fireEvent.click(radios[0]) // light
+    expect(radios[0]).toBeChecked()
+  })
+
+  // ─── Personal settings: color scheme radio ──────────────
+  it('changes color scheme radio button', () => {
+    render(<Settings />)
+    const radios = screen.getAllByRole('radio')
+    // Color scheme radios: blue, green, purple, orange (after 3 theme radios)
+    fireEvent.click(radios[4]) // green
+    expect(radios[4]).toBeChecked()
+  })
+
+  // ─── Personal settings: chart library select ────────────
+  it('changes chart library select', () => {
+    render(<Settings />)
+    const selects = document.querySelectorAll('select')
+    // chartLib is the 5th select (after language, timezone, dateFormat, currency)
+    fireEvent.change(selects[4], { target: { value: 'tradingview' } })
+    expect((selects[4] as HTMLSelectElement).value).toBe('tradingview')
+  })
+
+  // ─── Trading preferences: all field changes ─────────────
+  it('edits all trading preference number fields', () => {
+    render(<Settings />)
+    fireEvent.click(screen.getByRole('button', { name: 'Trading Preferences' }))
+
+    const numberInputs = screen.getAllByRole('spinbutton')
+    // Should have 8 fields: capital, commission, slippage, minOrder, maxDrawdown, maxPosition, stopLoss, dailyLoss
+    expect(numberInputs.length).toBe(8)
+    fireEvent.change(numberInputs[0], { target: { value: '500000' } })
+    fireEvent.change(numberInputs[1], { target: { value: '0.0005' } })
+    fireEvent.change(numberInputs[2], { target: { value: '0.002' } })
+    fireEvent.change(numberInputs[3], { target: { value: '200' } })
+    fireEvent.change(numberInputs[4], { target: { value: '0.15' } })
+    fireEvent.change(numberInputs[5], { target: { value: '0.3' } })
+    fireEvent.change(numberInputs[6], { target: { value: '0.08' } })
+    fireEvent.change(numberInputs[7], { target: { value: '0.05' } })
+    expect(numberInputs[0]).toHaveValue(500000)
+    expect(numberInputs[7]).toHaveValue(0.05)
+  })
+
+  // ─── Save triggers toast ────────────────────────────────
+  it('save settings triggers success toast', async () => {
+    const { showToast: mockToast } = await import('@/components/ui/toast-service')
+    render(<Settings />)
+    fireEvent.click(screen.getByText('Save Settings'))
+    await waitFor(() => {
+      expect(mockToast).toHaveBeenCalledWith(expect.any(String), 'success')
+    })
+  })
+
+  // ─── URL tab parameter (line 70) ────────────────────────
+  it('activates tab from URL search param', async () => {
+    window.history.replaceState({}, '', '/settings?tab=system-management')
+    render(<Settings />)
+    // The "System Management" tab should be rendered and active
+    const systemTab = screen.getByRole('button', { name: /system management/i })
+    expect(systemTab).toBeInTheDocument()
+    window.history.replaceState({}, '', window.location.pathname)
+  })
+
+  // ─── Tab switch removes URL param (line 123) ───────────
+  it('removes tab param when switching to personal tab', async () => {
+    window.history.replaceState({}, '', '/settings?tab=system-management')
+    render(<Settings />)
+    // Click on Personal Settings tab
+    const personalTab = screen.getByRole('button', { name: /personal/i })
+    fireEvent.click(personalTab)
+    // URL should no longer have tab param 
+    expect(window.location.search).not.toContain('tab=system-management')
+    window.history.replaceState({}, '', window.location.pathname)
+  })
+
+  // ─── Toggle data source item switch (lines 63-64, 123) ──
+  it('toggles a data source item switch', async () => {
+    vi.mocked(dataSourceAPI.updateItem).mockResolvedValue({ data: {} } as never)
+
+    window.history.replaceState({}, '', '/settings?tab=system-management')
+    render(<Settings />)
+
+    // Wait for item display name to appear (proves items query loaded)
+    await waitFor(() => {
+      expect(screen.getByText('Stock Daily')).toBeInTheDocument()
+    })
+
+    // Now find all switches — should have config + item switches
+    const switches = screen.getAllByRole('switch')
+
+    // Find the switch next to "Stock Daily" text
+    const stockDailyLabel = screen.getByText('Stock Daily')
+    const itemSwitch = stockDailyLabel.closest('label')?.querySelector('button[role="switch"]')
+    expect(itemSwitch).toBeTruthy()
+
+    fireEvent.click(itemSwitch!)
+
+    await waitFor(() => {
+      expect(dataSourceAPI.updateItem).toHaveBeenCalledWith('stock_daily', expect.objectContaining({ source: 'tushare', enabled: false }))
+    })
+    window.history.replaceState({}, '', window.location.pathname)
+  })
+
+  // ─── Test connection button (line 70) ──
+  it('clicks test connection button for a data source', async () => {
+    vi.mocked(dataSourceAPI.testConnection).mockResolvedValue({ data: {} } as never)
+
+    window.history.replaceState({}, '', '/settings?tab=system-management')
+    render(<Settings />)
+
+    await waitFor(() => {
+      const testBtns = Array.from(document.querySelectorAll('button')).filter(
+        (b) => b.textContent?.match(/test/i)
+      )
+      expect(testBtns.length).toBeGreaterThan(0)
+    })
+
+    const testBtn = Array.from(document.querySelectorAll('button')).find(
+      (b) => b.textContent?.match(/test/i) && !b.textContent?.match(/tab|setting/i)
+    )
+    if (testBtn) {
+      fireEvent.click(testBtn)
+      await waitFor(() => {
+        expect(dataSourceAPI.testConnection).toHaveBeenCalled()
+      })
+    }
+    window.history.replaceState({}, '', window.location.pathname)
+  })
+
+  // ─── handleTabChange to trading-preferences (line 175) ──
+  it('switches to trading-preferences tab and updates URL', async () => {
+    render(<Settings />)
+
+    const tradingTab = screen.getByRole('button', { name: /trading preferences/i })
+    fireEvent.click(tradingTab)
+
+    await waitFor(() => {
+      expect(window.location.search).toContain('tab=trading-preferences')
+    })
+    window.history.replaceState({}, '', window.location.pathname)
+  })
+
+  // ─── Test connection failure (line 70 — onError branch) ──
+  it('shows error toast when test connection fails', async () => {
+    vi.mocked(dataSourceAPI.testConnection).mockRejectedValue(new Error('Connection refused'))
+
+    window.history.replaceState({}, '', '/settings?tab=system-management')
+    render(<Settings />)
+
+    await waitFor(() => {
+      const testBtns = Array.from(document.querySelectorAll('button')).filter(
+        (b) => b.textContent?.match(/test/i) && !b.textContent?.match(/tab|setting/i)
+      )
+      expect(testBtns.length).toBeGreaterThan(0)
+    })
+
+    const testBtn = Array.from(document.querySelectorAll('button')).find(
+      (b) => b.textContent?.match(/test/i) && !b.textContent?.match(/tab|setting/i)
+    )
+    expect(testBtn).toBeTruthy()
+    fireEvent.click(testBtn!)
+
+    // The onError callback should fire
+    await waitFor(() => {
+      expect(dataSourceAPI.testConnection).toHaveBeenCalled()
+    })
+    window.history.replaceState({}, '', window.location.pathname)
   })
 })

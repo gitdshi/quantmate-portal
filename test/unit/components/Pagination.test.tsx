@@ -1,8 +1,8 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@test/support/utils'
-import userEvent from '@testing-library/user-event'
-import i18n from '@/i18n'
 import Pagination from '@/components/Pagination'
+import i18n from '@/i18n'
+import { fireEvent, render, screen } from '@test/support/utils'
+import userEvent from '@testing-library/user-event'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 describe('Pagination Component', () => {
   beforeEach(async () => {
@@ -89,6 +89,65 @@ describe('Pagination Component', () => {
     render(<Pagination {...defaultProps} total={200} pageSize={10} page={10} />)
     const ellipses = screen.getAllByText('...')
     expect(ellipses.length).toBeGreaterThanOrEqual(1)
+  })
+
+  // ─── Page size change (lines 95-109) ─────────
+  it('calls onPageSizeChange when page size select changes', async () => {
+    const user = userEvent.setup()
+    const onPageSizeChange = vi.fn()
+    render(
+      <Pagination
+        {...defaultProps}
+        onPageSizeChange={onPageSizeChange}
+      />
+    )
+    const selector = screen.getByDisplayValue('10')
+    await user.selectOptions(selector, '50')
+    expect(onPageSizeChange).toHaveBeenCalledWith(50)
+  })
+
+  it('does not render page size selector without onPageSizeChange', () => {
+    render(<Pagination {...defaultProps} />)
+    expect(screen.queryByText(/per page/i)).not.toBeInTheDocument()
+  })
+
+  // ─── First page button (line 50) ───────────────────────────
+  it('navigates to first page when clicking first-page button', async () => {
+    const onPageChange = vi.fn()
+    render(<Pagination page={3} pageSize={10} total={50} onPageChange={onPageChange} />)
+
+    // First page button (double chevron left)
+    const firstBtn = screen.getByTitle(/first/i)
+    fireEvent.click(firstBtn)
+    expect(onPageChange).toHaveBeenCalledWith(1)
+  })
+
+  // ─── Last page button (line 95) ────────────────────────────
+  it('navigates to last page when clicking last-page button', async () => {
+    const onPageChange = vi.fn()
+    render(<Pagination page={1} pageSize={10} total={50} onPageChange={onPageChange} />)
+
+    const lastBtn = screen.getByTitle(/last/i)
+    fireEvent.click(lastBtn)
+    expect(onPageChange).toHaveBeenCalledWith(5)
+  })
+
+  // ─── First / last buttons disabled at boundaries ──────────
+  it('disables first/prev buttons on page 1', () => {
+    render(<Pagination page={1} pageSize={10} total={50} onPageChange={vi.fn()} />)
+    expect(screen.getByTitle(/first/i)).toBeDisabled()
+    expect(screen.getByTitle(/prev/i)).toBeDisabled()
+  })
+
+  it('disables next/last buttons on last page', () => {
+    render(<Pagination page={5} pageSize={10} total={50} onPageChange={vi.fn()} />)
+    expect(screen.getByTitle(/next/i)).toBeDisabled()
+    expect(screen.getByTitle(/last/i)).toBeDisabled()
+  })
+
+  it('returns null when total is 0', () => {
+    const { container } = render(<Pagination page={1} pageSize={10} total={0} onPageChange={vi.fn()} />)
+    expect(container.innerHTML).toBe('')
   })
 })
 

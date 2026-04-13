@@ -1,11 +1,13 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor } from '@test/support/utils'
 import i18n from '@/i18n'
 import Positions from '@/pages/Positions'
+import { fireEvent, render, screen, waitFor } from '@test/support/utils'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+const mockShowConfirm = vi.fn(async () => true)
+const mockShowToast = vi.fn()
 vi.mock('@/components/ui/toast-service', () => ({
-  showConfirm: vi.fn(async () => true),
-  showToast: vi.fn(),
+  showConfirm: (...args: unknown[]) => mockShowConfirm(...args),
+  showToast: (...args: unknown[]) => mockShowToast(...args),
 }))
 
 vi.mock('@/lib/api', () => ({
@@ -80,6 +82,90 @@ describe('Positions Page', () => {
     await waitFor(() => {
       expect(screen.getByText('Kweichow Moutai')).toBeInTheDocument()
       expect(screen.getByText('Ping An Bank')).toBeInTheDocument()
+    })
+  })
+
+  it('calculates totalMV and totalPnl in stat cards', async () => {
+    render(<Positions />)
+    await waitFor(() => {
+      // totalMV = 185000 + 6250 = 191250
+      expect(screen.getByText(/191,250/)).toBeInTheDocument()
+      // totalPnl = 5000 - 250 = 4750
+      expect(screen.getByText(/4,750/)).toBeInTheDocument()
+    })
+  })
+
+  it('shows direction badges for long and short positions', async () => {
+    const positionsWithShort = [
+      ...mockPositions,
+      { symbol: '300750.SZ', name: 'CATL', strategy: 'RSI', direction: 'short', quantity: 200, avg_cost: 250, market_price: 240, market_value: 48000, pnl: 2000, pnl_pct: 4.0 },
+    ]
+    vi.mocked(portfolioAPI.positions).mockResolvedValue({ data: { positions: positionsWithShort } } as never)
+
+    render(<Positions />)
+    await waitFor(() => {
+      expect(screen.getByText('CATL')).toBeInTheDocument()
+    })
+  })
+
+  it('shows close position button and handles close', async () => {
+    vi.mocked(portfolioAPI.close).mockResolvedValue({ data: {} } as never)
+
+    render(<Positions />)
+    await screen.findByText('Kweichow Moutai')
+
+    const closeBtns = screen.getAllByRole('button').filter(b => b.textContent?.match(/close/i))
+    expect(closeBtns.length).toBeGreaterThan(0)
+    fireEvent.click(closeBtns[0])
+
+    await waitFor(() => {
+      expect(mockShowConfirm).toHaveBeenCalled()
+    })
+    await waitFor(() => {
+      expect(portfolioAPI.close).toHaveBeenCalled()
+    })
+  })
+
+  it('handles close position failure', async () => {
+    vi.mocked(portfolioAPI.close).mockRejectedValue(new Error('fail'))
+
+    render(<Positions />)
+    await screen.findByText('Kweichow Moutai')
+
+    const closeBtns = screen.getAllByRole('button').filter(b => b.textContent?.match(/close/i))
+    if (closeBtns.length > 0) {
+      fireEvent.click(closeBtns[0])
+      await waitFor(() => {
+        expect(portfolioAPI.close).toHaveBeenCalled()
+      })
+      await waitFor(() => {
+        expect(mockShowToast).toHaveBeenCalledWith(expect.any(String), 'error')
+      })
+    }
+  })
+
+  it('filters positions by search', async () => {
+    render(<Positions />)
+    await screen.findByText('Kweichow Moutai')
+
+    const search = screen.getByPlaceholderText('Search positions...')
+    fireEvent.change(search, { target: { value: 'moutai' } })
+
+    await waitFor(() => {
+      expect(screen.getByText('Kweichow Moutai')).toBeInTheDocument()
+      expect(screen.queryByText('Ping An Bank')).not.toBeInTheDocument()
+    })
+  })
+
+  it('shows positive and negative PnL styling', async () => {
+    render(<Positions />)
+    await waitFor(() => {
+      // Positive PnL: 5000 → green class
+      const positivePnl = screen.getByText('+¥5,000')
+      expect(positivePnl.className).toMatch(/green/)
+      // Negative PnL: -250 → red class
+      const negativePnl = screen.getByText('¥250')
+      expect(negativePnl.className).toMatch(/red/)
     })
   })
 })

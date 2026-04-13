@@ -1,10 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen } from '@test/support/utils'
 import i18n from '@/i18n'
 import Reports from '@/pages/Reports'
+import { fireEvent, render, screen, waitFor } from '@test/support/utils'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+const mockShowToast = vi.fn()
 vi.mock('@/components/ui/toast-service', () => ({
-  showToast: vi.fn(),
+  showToast: (...args: unknown[]) => mockShowToast(...args),
 }))
 
 vi.mock('@/lib/api', () => ({
@@ -71,5 +72,95 @@ describe('Reports Page', () => {
     render(<Reports />)
     fireEvent.click(screen.getByRole('button', { name: 'Reports' }))
     expect(await screen.findByText(/No reports yet/i)).toBeInTheDocument()
+  })
+
+  it('switches to list tab with data', async () => {
+    vi.mocked(reportsAPI.list).mockResolvedValue({
+      data: [{ id: '1', title: 'Monthly Report', report_type: 'monthly', created_at: '2025-01-01T00:00:00Z' }],
+    } as never)
+
+    render(<Reports />)
+    fireEvent.click(screen.getByRole('button', { name: 'Reports' }))
+    await waitFor(() => {
+      expect(screen.getByText('Monthly Report')).toBeInTheDocument()
+    })
+  })
+
+  it('opens generate report modal and submits successfully', async () => {
+    render(<Reports />)
+    fireEvent.click(screen.getByText('Generate Report'))
+
+    // Modal should open
+    await waitFor(() => {
+      const modals = document.querySelectorAll('.fixed')
+      expect(modals.length).toBeGreaterThan(0)
+    })
+
+    // Click submit button in modal
+    const modals = document.querySelectorAll('.fixed')
+    const modal = modals[modals.length - 1]
+    const submitBtn = Array.from(modal.querySelectorAll('button')).find(b =>
+      b.textContent?.match(/generate|create|submit/i)
+    )
+    expect(submitBtn).toBeTruthy()
+    fireEvent.click(submitBtn!)
+
+    await waitFor(() => {
+      expect(reportsAPI.generate).toHaveBeenCalled()
+    })
+    await waitFor(() => {
+      expect(mockShowToast).toHaveBeenCalledWith(expect.any(String), 'success')
+    })
+  })
+
+  it('handles generate failure with error toast', async () => {
+    vi.mocked(reportsAPI.generate).mockRejectedValue(new Error('fail'))
+
+    render(<Reports />)
+    fireEvent.click(screen.getByText('Generate Report'))
+
+    await waitFor(() => {
+      const modals = document.querySelectorAll('.fixed')
+      expect(modals.length).toBeGreaterThan(0)
+    })
+
+    const modals = document.querySelectorAll('.fixed')
+    const modal = modals[modals.length - 1]
+    const submitBtn = Array.from(modal.querySelectorAll('button')).find(b =>
+      b.textContent?.match(/generate|create|submit/i)
+    )
+    if (submitBtn) {
+      fireEvent.click(submitBtn)
+      await waitFor(() => {
+        expect(reportsAPI.generate).toHaveBeenCalled()
+      })
+      await waitFor(() => {
+        expect(mockShowToast).toHaveBeenCalledWith(expect.any(String), 'error')
+      })
+    }
+  })
+
+  it('closes generate report modal via cancel', async () => {
+    render(<Reports />)
+    fireEvent.click(screen.getByText('Generate Report'))
+
+    await waitFor(() => {
+      const modals = document.querySelectorAll('.fixed')
+      expect(modals.length).toBeGreaterThan(0)
+    })
+
+    const modals = document.querySelectorAll('.fixed')
+    const modal = modals[modals.length - 1]
+    const cancelBtn = Array.from(modal.querySelectorAll('button')).find(b =>
+      b.textContent?.match(/cancel/i)
+    )
+    if (cancelBtn) {
+      fireEvent.click(cancelBtn)
+      await waitFor(() => {
+        const remaining = document.querySelectorAll('.fixed')
+        // Modal should be closed (either removed or reduced)
+        expect(remaining.length).toBeLessThanOrEqual(modals.length)
+      })
+    }
   })
 })

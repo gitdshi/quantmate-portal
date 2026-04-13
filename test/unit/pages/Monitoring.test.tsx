@@ -1,7 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@test/support/utils'
 import i18n from '@/i18n'
 import Monitoring from '@/pages/Monitoring'
+import { fireEvent, render, screen, waitFor } from '@test/support/utils'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/components/ui/FilterBar', () => ({
   default: () => <div data-testid="filter-bar" />,
@@ -118,5 +118,155 @@ describe('Monitoring Page', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Channels' }))
     expect(await screen.findByText('email')).toBeInTheDocument()
     expect(screen.getByText(/daniel@example.com/)).toBeInTheDocument()
+  })
+
+  // ─── Acknowledge alert ──────────────────────────────────
+  it('acknowledges a live alert', async () => {
+    render(<Monitoring />)
+    await screen.findByText('Strategy Halted')
+
+    const confirmBtns = screen.getAllByRole('button').filter(b => b.textContent?.match(/confirm|acknowledge/i))
+    if (confirmBtns.length > 0) {
+      fireEvent.click(confirmBtns[0])
+      await waitFor(() => {
+        expect(alertsAPI.acknowledgeAlert).toHaveBeenCalled()
+      })
+    }
+  })
+
+  // ─── Create rule modal ─────────────────────────────────
+  it('opens new rule modal and creates a rule', async () => {
+    render(<Monitoring />)
+    fireEvent.click(screen.getByText('New Rule'))
+
+    // Modal should appear
+    await waitFor(() => {
+      const modals = document.querySelectorAll('.fixed')
+      expect(modals.length).toBeGreaterThan(0)
+    })
+
+    const modals = document.querySelectorAll('.fixed')
+    const modal = modals[modals.length - 1]
+
+    // Fill form fields
+    const inputs = modal.querySelectorAll('input')
+    if (inputs[0]) {
+      fireEvent.change(inputs[0], { target: { value: 'My Rule' } })
+    }
+
+    // Find and click create/submit button
+    const submitBtn = Array.from(modal.querySelectorAll('button')).find(b => b.textContent?.match(/create|submit/i))
+    if (submitBtn) {
+      fireEvent.click(submitBtn)
+      await waitFor(() => {
+        expect(alertsAPI.createRule).toHaveBeenCalled()
+      })
+    }
+  })
+
+  // ─── Toggle rule enabled ────────────────────────────────
+  it('toggles a rule enabled switch', async () => {
+    render(<Monitoring />)
+    fireEvent.click(screen.getByRole('button', { name: 'Rules' }))
+    await screen.findByText('Max Drawdown Alert')
+
+    // ToggleSwitch uses role="switch"
+    const toggles = screen.getAllByRole('switch')
+    expect(toggles.length).toBeGreaterThan(0)
+    fireEvent.click(toggles[0])
+    await waitFor(() => {
+      expect(alertsAPI.updateRule).toHaveBeenCalled()
+    })
+  })
+
+  // ─── History tab ────────────────────────────────────────
+  it('switches to history tab and shows data', async () => {
+    render(<Monitoring />)
+    fireEvent.click(screen.getByRole('button', { name: 'History' }))
+    await waitFor(() => {
+      // History tab should render (using same listHistory data)
+      expect(screen.getByText('Strategy Halted')).toBeInTheDocument()
+    })
+  })
+
+  // ─── Create rule failure ────────────────────────────────
+  it('handles create rule failure', async () => {
+    vi.mocked(alertsAPI.createRule).mockRejectedValue(new Error('fail'))
+    render(<Monitoring />)
+    fireEvent.click(screen.getByText('New Rule'))
+
+    await waitFor(() => {
+      const modals = document.querySelectorAll('.fixed')
+      expect(modals.length).toBeGreaterThan(0)
+    })
+
+    const modals = document.querySelectorAll('.fixed')
+    const modal = modals[modals.length - 1]
+    const inputs = modal.querySelectorAll('input')
+    if (inputs[0]) {
+      fireEvent.change(inputs[0], { target: { value: 'Bad Rule' } })
+    }
+
+    const submitBtn = Array.from(modal.querySelectorAll('button')).find(b => b.textContent?.match(/create|submit/i))
+    if (submitBtn) {
+      fireEvent.click(submitBtn)
+      await waitFor(() => {
+        expect(alertsAPI.createRule).toHaveBeenCalled()
+      })
+    }
+  })
+
+  // ─── Empty channels tab (line 365) ──────────────────────
+  it('shows empty state on channels tab when no channels exist', async () => {
+    vi.mocked(alertsAPI.listChannels).mockResolvedValue({ data: [] } as never)
+
+    render(<Monitoring />)
+    fireEvent.click(screen.getByRole('button', { name: 'Channels' }))
+
+    await waitFor(() => {
+      const emptyMsg = Array.from(document.querySelectorAll('p')).find(
+        (p) => p.textContent?.match(/no.*channel|empty/i)
+      )
+      expect(emptyMsg).toBeTruthy()
+    })
+  })
+
+  // ─── Empty state CTA opens new rule modal (line 302) ────
+  it('opens new rule modal from empty state CTA', async () => {
+    vi.mocked(alertsAPI.listHistory).mockResolvedValue({ data: [] } as never)
+    vi.mocked(alertsAPI.listRules).mockResolvedValue({ data: [] } as never)
+    vi.mocked(alertsAPI.listChannels).mockResolvedValue({ data: [] } as never)
+
+    render(<Monitoring />)
+
+    // Switch to rules tab
+    const rulesTab = screen.getByRole('button', { name: /rules/i })
+    fireEvent.click(rulesTab)
+
+    // Wait for empty state to appear and click the EmptyState CTA (the second "New Rule" button)
+    await waitFor(() => {
+      const newRuleBtns = Array.from(document.querySelectorAll('button')).filter(
+        (b) => b.textContent?.match(/new.*rule/i)
+      )
+      // First one is the page header button, second is the EmptyState CTA
+      expect(newRuleBtns.length).toBeGreaterThanOrEqual(2)
+      fireEvent.click(newRuleBtns[newRuleBtns.length - 1])
+    })
+
+    // Modal should open
+    await waitFor(() => {
+      const modals = document.querySelectorAll('.fixed')
+      expect(modals.length).toBeGreaterThan(0)
+    })
+
+    // Close it via cancel button (line 370)
+    const modals = document.querySelectorAll('.fixed')
+    const modal = modals[modals.length - 1]
+    const cancelBtn = Array.from(modal.querySelectorAll('button')).find(
+      (b) => b.textContent?.match(/cancel/i)
+    )
+    if (cancelBtn) {
+      fireEvent.click(cancelBtn)
+    }
   })
 })

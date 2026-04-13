@@ -1,9 +1,9 @@
-import { userEvent } from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import StrategyList from '@/components/StrategyList'
+import i18n from '@/i18n'
 import { mockStrategies } from '@test/support/mockData'
 import { render, screen, waitFor } from '@test/support/utils'
-import i18n from '@/i18n'
-import StrategyList from '@/components/StrategyList'
+import { userEvent } from '@testing-library/user-event'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Mock API
 vi.mock('@/lib/api', () => ({
@@ -125,6 +125,32 @@ describe('StrategyList Component', () => {
 
     await waitFor(() => {
       expect(screen.getByText(/no strategies/i)).toBeInTheDocument()
+    })
+  })
+
+  // ─── Delete confirmation triggers mutation (line 126) ─────────
+  it('deletes strategy on confirm', async () => {
+    const user = userEvent.setup()
+    ;(strategiesAPI.list as any).mockResolvedValue({ data: mockStrategies })
+    ;(strategiesAPI.delete as any).mockResolvedValue({ data: { success: true } })
+
+    render(<StrategyList onEdit={mockOnEdit} onView={mockOnView} />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Test Strategy')).toBeInTheDocument()
+    })
+
+    const deleteButtons = screen.getAllByTitle(/delete/i)
+    await user.click(deleteButtons[0])
+
+    await waitFor(() => {
+      expect(screen.getByText(/confirm/i)).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByText(/confirm/i))
+
+    await waitFor(() => {
+      expect(strategiesAPI.delete).toHaveBeenCalledWith(mockStrategies[0].id)
     })
   })
 })

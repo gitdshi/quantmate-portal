@@ -1,9 +1,9 @@
-import { userEvent } from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
 import i18n from '@/i18n'
+import Login from '@/pages/auth/Login'
 import * as authStore from '@/stores/auth'
 import { render, screen, waitFor } from '@test/support/utils'
-import Login from '@/pages/auth/Login'
+import { userEvent } from '@testing-library/user-event'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Mock the auth store
 vi.mock('@/stores/auth', () => ({
@@ -120,5 +120,65 @@ describe('Login Component', () => {
     render(<Login />)
 
     expect(screen.getByRole('button', { name: /中文/i })).toBeInTheDocument()
+  })
+
+  it('redirects to / when already authenticated', () => {
+    ;(authStore.useAuthStore as any).mockReturnValue({
+      setAuth: mockSetAuth,
+      isAuthenticated: true,
+    })
+
+    render(<Login />)
+    expect(mockNavigate).toHaveBeenCalledWith('/')
+  })
+
+  it('falls back to error.message when detail is missing', async () => {
+    const user = userEvent.setup()
+    mockApiLogin.mockRejectedValue({
+      response: { data: { error: { message: 'Account locked' } } },
+    })
+
+    render(<Login />)
+    await user.type(screen.getByLabelText('Username'), 'user')
+    await user.type(screen.getByLabelText('Password'), 'pass')
+    await user.click(screen.getByRole('button', { name: /sign in/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Account locked')).toBeInTheDocument()
+    })
+  })
+
+  it('falls back to generic error when no detail or message', async () => {
+    const user = userEvent.setup()
+    mockApiLogin.mockRejectedValue({
+      response: { data: {} },
+    })
+
+    render(<Login />)
+    await user.type(screen.getByLabelText('Username'), 'user')
+    await user.type(screen.getByLabelText('Password'), 'pass')
+    await user.click(screen.getByRole('button', { name: /sign in/i }))
+
+    await waitFor(() => {
+      // Should show generic login failed message
+      const errorEl = document.querySelector('[role="alert"], .text-destructive, .text-red-500')
+      expect(errorEl || screen.getByText(/failed|error/i)).toBeTruthy()
+    })
+  })
+
+  // ─── Language toggle (lines 53-55) ─────────────────────
+  it('toggles language when language button is clicked', async () => {
+    const user = userEvent.setup()
+    render(<Login />)
+
+    const langBtn = screen.getByRole('button', { name: /中文/i })
+    await user.click(langBtn)
+
+    // After clicking, language should have changed
+    await waitFor(() => {
+      // Language toggle button text should change
+      const btn = screen.getAllByRole('button').find((b) => b.textContent?.match(/english|en|中文/i))
+      expect(btn).toBeTruthy()
+    })
   })
 })

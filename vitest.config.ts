@@ -26,6 +26,7 @@ export default defineConfig({
         '**/*.config.*',
         '**/mockData',
         'dist/',
+        'src/i18n/locales/**',
       ],
     },
   },
