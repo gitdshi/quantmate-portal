@@ -111,7 +111,12 @@
       "display": "界面偏好"
     },
     "systemManagement": {
-      "datasourceHint": "只保留你真正信任的数据源，这样系统健康状态和同步覆盖范围才更容易解释。"
+      "datasourceHint": "只保留你真正信任的数据源，这样系统健康状态和同步覆盖范围才更容易解释。",
+      "tabs": {
+        "datasources": "数据源",
+        "tusharePro": "Tushare Pro",
+        "systemStatus": "系统状态"
+      }
     }
   },
   "accountPage": {
@@ -283,5 +288,22 @@
   "saving": "保存中...",
   "saved": "设置已保存",
   "saveFailed": "保存设置失败",
-  "loadFailed": "加载数据源失败"
+  "loadFailed": "加载数据源失败",
+  "tushare": {
+    "title": "Tushare Pro 接口目录",
+    "subtitle": "共 {{total}} 个接口，已启用 {{enabled}} 个",
+    "loading": "加载 Tushare Pro 目录...",
+    "batchLabel": "按权限批量操作",
+    "enableAll": "全部启用 {{perm}}",
+    "disableAll": "全部禁用 {{perm}}",
+    "enable": "启用",
+    "disable": "禁用",
+    "batchOk": "已批量{{action}} {{perm}} 接口",
+    "groupEnable": "批量启用",
+    "groupDisable": "批量禁用",
+    "groupBatchOk": "已批量{{action}} {{name}}",
+    "batchFail": "批量操作失败",
+    "toggleFail": "切换失败",
+    "unsupported": "未接入同步"
+  }
 }

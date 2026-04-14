@@ -111,7 +111,12 @@
       "display": "Display preferences"
     },
     "systemManagement": {
-      "datasourceHint": "Only enable the feeds you trust, so sync coverage and system health remain explainable."
+      "datasourceHint": "Only enable the feeds you trust, so sync coverage and system health remain explainable.",
+      "tabs": {
+        "datasources": "Data Sources",
+        "tusharePro": "Tushare Pro",
+        "systemStatus": "System Status"
+      }
     }
   },
   "accountPage": {
@@ -283,5 +288,22 @@
   "saving": "Saving...",
   "saved": "Settings saved",
   "saveFailed": "Failed to save settings",
-  "loadFailed": "Failed to load data source items"
+  "loadFailed": "Failed to load data source items",
+  "tushare": {
+    "title": "Tushare Pro API Catalog",
+    "subtitle": "{{total}} APIs total, {{enabled}} enabled",
+    "loading": "Loading Tushare Pro catalog...",
+    "batchLabel": "Batch by permission",
+    "enableAll": "Enable all {{perm}}",
+    "disableAll": "Disable all {{perm}}",
+    "enable": "enable",
+    "disable": "disable",
+    "batchOk": "Batch {{action}} {{perm}} APIs",
+    "groupEnable": "Batch enable",
+    "groupDisable": "Batch disable",
+    "groupBatchOk": "Batch {{action}} {{name}}",
+    "batchFail": "Batch operation failed",
+    "toggleFail": "Toggle failed",
+    "unsupported": "Sync not implemented"
+  }
 }

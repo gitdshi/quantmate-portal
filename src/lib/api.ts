@@ -432,11 +432,16 @@ export const strategyCodeAPI = {
 
 // Data Source Settings API
 export const dataSourceAPI = {
-  listItems: () => api.get('/settings/datasource-items'),
+  listItems: (params?: { source?: string; category?: string }) =>
+    api.get('/settings/datasource-items', { params }),
   updateItem: (itemKey: string, data: { enabled: boolean; source: string }) =>
     api.put(`/settings/datasource-items/${itemKey}`, { enabled: data.enabled }, { params: { source: data.source } }),
   batchUpdate: (data: { items: Array<{ source: string; item_key: string; enabled: boolean }> }) =>
     api.put('/settings/datasource-items/batch', data),
+  batchByPermission: (source: string, data: { permission_points: string; enabled: boolean }) =>
+    api.put('/settings/datasource-items/batch-by-permission', data, { params: { source } }),
+  listPermissions: (source: string) =>
+    api.get('/settings/datasource-items/permissions', { params: { source } }),
   testConnection: (source: string) =>
     api.post(`/settings/datasource-items/test/${source}`),
   listConfigs: () => api.get('/settings/datasource-configs'),

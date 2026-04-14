@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Bell, Database, Monitor, Palette, Server, Settings2 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 
@@ -9,6 +9,7 @@ import ToggleSwitch from '../components/ui/ToggleSwitch'
 import { showToast } from '../components/ui/toast-service'
 import { usePermission } from '../hooks/usePermission'
 import { dataSourceAPI, systemAPI } from '../lib/api'
+import TushareProTab from '../components/TushareProTab'
 
 type DSConfig = {
   source_key: string
@@ -163,21 +164,38 @@ export default function Settings() {
     return baseTabs
   }, [canManageSystem, t])
 
-  const [activeTab, setActiveTab] = useState<string>('personal')
+  const [activeSystemTab, setActiveSystemTab] = useState<string>('datasources')
 
-  useEffect(() => {
+  const systemManagementTabs = useMemo(
+    () => [
+      {
+        key: 'datasources',
+        label: t('page.systemManagement.tabs.datasources', 'Data Sources'),
+        icon: <Settings2 size={16} />,
+      },
+      {
+        key: 'tushare-pro',
+        label: t('page.systemManagement.tabs.tusharePro', 'Tushare Pro'),
+        icon: <Database size={16} />,
+      },
+      {
+        key: 'system-status',
+        label: t('page.systemManagement.tabs.systemStatus', 'System Status'),
+        icon: <Server size={16} />,
+      },
+    ],
+    [t]
+  )
+
+  const activeTab = useMemo(() => {
     const requestedTab = searchParams.get('tab')
     if (requestedTab && tabs.some((tab) => tab.key === requestedTab)) {
-      setActiveTab(requestedTab)
-      return
+      return requestedTab
     }
-    if (!tabs.some((tab) => tab.key === activeTab)) {
-      setActiveTab(tabs[0]?.key ?? 'personal')
-    }
-  }, [activeTab, searchParams, tabs])
+    return tabs[0]?.key ?? 'personal'
+  }, [searchParams, tabs])
 
   const handleTabChange = (tabKey: string) => {
-    setActiveTab(tabKey)
     const nextParams = new URLSearchParams(searchParams)
     if (tabKey === 'personal') {
       nextParams.delete('tab')
@@ -225,7 +243,7 @@ export default function Settings() {
   const { data: systemInfo } = useQuery({
     queryKey: ['system-info'],
     queryFn: () => systemAPI.syncStatus().then((response) => response.data),
-    enabled: activeTab === 'system-management' && canManageSystem,
+    enabled: activeTab === 'system-management' && activeSystemTab === 'system-status' && canManageSystem,
   })
 
   const saveMutation = useMutation({
@@ -529,29 +547,35 @@ export default function Settings() {
 
         {activeTab === 'system-management' && canManageSystem && (
           <div className="space-y-4">
-            <DataSourceTab />
+            <TabPanel tabs={systemManagementTabs} activeTab={activeSystemTab} onChange={setActiveSystemTab}>
+              {activeSystemTab === 'datasources' && <DataSourceTab />}
 
-            <div className="rounded-lg border border-border bg-card p-6">
-              <div className="mb-4 flex items-center gap-2">
-                <Database size={18} className="text-muted-foreground" />
-                <h3 className="font-semibold text-card-foreground">
-                  {t('page.system.title', 'System status')}
-                </h3>
-              </div>
+              {activeSystemTab === 'tushare-pro' && <TushareProTab />}
 
-              {systemItems.length > 0 ? (
-                <div className="grid gap-3 md:grid-cols-2">
-                  {systemItems.map((item) => (
-                    <div key={item.label} className="rounded-lg border border-border bg-background px-4 py-3">
-                      <p className="text-xs uppercase tracking-wide text-muted-foreground">{item.label}</p>
-                      <p className="mt-1 text-sm text-foreground break-all">{item.value}</p>
+              {activeSystemTab === 'system-status' && (
+                <div className="rounded-lg border border-border bg-card p-6">
+                  <div className="mb-4 flex items-center gap-2">
+                    <Database size={18} className="text-muted-foreground" />
+                    <h3 className="font-semibold text-card-foreground">
+                      {t('page.system.title', 'System status')}
+                    </h3>
+                  </div>
+
+                  {systemItems.length > 0 ? (
+                    <div className="grid gap-3 md:grid-cols-2">
+                      {systemItems.map((item) => (
+                        <div key={item.label} className="rounded-lg border border-border bg-background px-4 py-3">
+                          <p className="text-xs uppercase tracking-wide text-muted-foreground">{item.label}</p>
+                          <p className="mt-1 text-sm text-foreground break-all">{item.value}</p>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  ) : (
+                    <p className="text-sm text-muted-foreground">{t('page.system.empty')}</p>
+                  )}
                 </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">{t('page.system.empty')}</p>
               )}
-            </div>
+            </TabPanel>
           </div>
         )}
       </TabPanel>
