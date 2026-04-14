@@ -230,7 +230,7 @@ describe('Extended API — untested HTTP calls', () => {
   describe('dataSourceAPI', () => {
     it('listItems sends GET', () => {
       dataSourceAPI.listItems()
-      expect(mockGet).toHaveBeenCalledWith('/settings/datasource-items')
+      expect(mockGet).toHaveBeenCalledWith('/settings/datasource-items', { params: undefined })
     })
 
     it('updateItem sends PUT with params', () => {

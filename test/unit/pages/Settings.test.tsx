@@ -35,6 +35,22 @@ vi.mock('@/lib/api', () => ({
 
 import { dataSourceAPI, systemAPI } from '@/lib/api'
 
+async function openSystemManagementTab() {
+  fireEvent.click(screen.getByRole('button', { name: 'System Management' }))
+  await screen.findByRole('button', { name: 'Data Sources' })
+}
+
+async function openSystemStatusTab() {
+  await openSystemManagementTab()
+  fireEvent.click(screen.getByRole('button', { name: 'System Status' }))
+}
+
+function getCardSwitchByHeading(heading: string) {
+  const title = screen.getByRole('heading', { name: heading })
+  const card = title.closest('div.rounded-lg')
+  return card?.querySelector('button[role="switch"]') ?? null
+}
+
 describe('Settings Page', () => {
   beforeEach(async () => {
     vi.clearAllMocks()
@@ -98,7 +114,7 @@ describe('Settings Page', () => {
 
   it('switches to system management tab and shows datasource config', async () => {
     render(<Settings />)
-    fireEvent.click(screen.getByRole('button', { name: 'System Management' }))
+    await openSystemManagementTab()
     expect(await screen.findByText('Tushare Pro')).toBeInTheDocument()
     expect(await screen.findByText('AkShare')).toBeInTheDocument()
   })
@@ -112,7 +128,7 @@ describe('Settings Page', () => {
 
   it('shows system status cards with health data', async () => {
     render(<Settings />)
-    fireEvent.click(screen.getByRole('button', { name: 'System Management' }))
+    await openSystemStatusTab()
     expect(await screen.findByText('System status')).toBeInTheDocument()
     expect(await screen.findByText('status')).toBeInTheDocument()
     expect(await screen.findByText('version')).toBeInTheDocument()
@@ -130,13 +146,12 @@ describe('Settings Page', () => {
   // ─── Toggle datasource config ───────────────────────────
   it('toggles a datasource config on system management tab', async () => {
     render(<Settings />)
-    fireEvent.click(screen.getByRole('button', { name: 'System Management' }))
+    await openSystemManagementTab()
     await screen.findByText('Tushare Pro')
 
-    // ToggleSwitch uses role="switch"
-    const toggles = screen.getAllByRole('switch')
-    expect(toggles.length).toBeGreaterThan(0)
-    fireEvent.click(toggles[0])
+    const configSwitch = getCardSwitchByHeading('Tushare Pro')
+    expect(configSwitch).toBeTruthy()
+    fireEvent.click(configSwitch!)
     await waitFor(() => {
       expect(dataSourceAPI.updateConfig).toHaveBeenCalled()
     })
@@ -147,7 +162,7 @@ describe('Settings Page', () => {
     vi.mocked(dataSourceAPI.testConnection).mockResolvedValue({ data: { status: 'ok' } } as never)
 
     render(<Settings />)
-    fireEvent.click(screen.getByRole('button', { name: 'System Management' }))
+    await openSystemManagementTab()
     await screen.findByText('Tushare Pro')
 
     const testBtns = screen.getAllByRole('button').filter(b => b.textContent?.match(/test connection/i))
