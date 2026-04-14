@@ -1,6 +1,6 @@
 import axios from 'axios'
-import type { StrategyComparison, StrategyFile, StrategyFileContent, SyncResult } from '../types'
 import { useAuthStore } from '../stores/auth'
+import type { StrategyComparison, StrategyFile, StrategyFileContent, SyncResult } from '../types'
 
 const API_URL = import.meta.env.VITE_API_URL || '/api/v1'
 
@@ -688,6 +688,29 @@ export const factorAPI = {
   }) => api.post('/factors/mining/run', data),
   screeningHistory: () => api.get('/factors/screening/history'),
   screeningDetails: (runId: number) => api.get(`/factors/screening/${runId}`),
+}
+
+// RD-Agent Auto Pilot API
+export const rdagentAPI = {
+  startMining: (data: {
+    scenario?: string
+    max_iterations?: number
+    llm_model?: string
+    universe?: string
+    feature_columns?: string[]
+    start_date?: string
+    end_date?: string
+  }) => api.post('/rdagent/runs', data),
+  listRuns: (params?: { limit?: number; offset?: number }) =>
+    api.get('/rdagent/runs', { params }),
+  getRun: (runId: string) => api.get(`/rdagent/runs/${runId}`),
+  cancelRun: (runId: string) => api.delete(`/rdagent/runs/${runId}`),
+  getIterations: (runId: string) => api.get(`/rdagent/runs/${runId}/iterations`),
+  getDiscoveredFactors: (runId: string) => api.get(`/rdagent/runs/${runId}/factors`),
+  importFactor: (runId: string, factorId: number) =>
+    api.post(`/rdagent/runs/${runId}/import`, { discovered_factor_id: factorId }),
+  getDataCatalog: () => api.get('/rdagent/data-catalog'),
+  getFeatureDescriptor: () => api.get('/rdagent/feature-descriptor'),
 }
 
 // Strategy Template / Marketplace API

@@ -23,6 +23,7 @@ const Reports = lazy(() => import('./pages/Reports'))
 const AccountSecurity = lazy(() => import('./pages/AccountSecurity'))
 const AIAssistant = lazy(() => import('./pages/AIAssistant'))
 const FactorLab = lazy(() => import('./pages/FactorLab'))
+const AutoPilot = lazy(() => import('./pages/AutoPilot'))
 const Marketplace = lazy(() => import('./pages/Marketplace'))
 const TeamSpace = lazy(() => import('./pages/TeamSpace'))
 const VisualExplorer = lazy(() => import('./pages/VisualExplorer'))
@@ -151,6 +152,7 @@ function App() {
           <Route path="account-security" element={<AccountSecurity />} />
           <Route path="ai-assistant" element={<AIAssistant />} />
           <Route path="factor-lab" element={<FactorLab />} />
+          <Route path="auto-pilot" element={<AutoPilot />} />
           <Route path="composite-strategies" element={<CompositeStrategies />} />
           <Route path="marketplace" element={<Marketplace />} />
           <Route path="team-space" element={<TeamSpace />} />

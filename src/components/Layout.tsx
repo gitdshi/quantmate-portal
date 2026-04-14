@@ -1,7 +1,10 @@
+import { useQuery } from '@tanstack/react-query'
+import type { LucideIcon } from 'lucide-react'
 import {
   ArrowLeftRight,
   BarChart3,
   Bell,
+  Bot,
   Briefcase,
   Combine,
   Database,
@@ -13,23 +16,21 @@ import {
   LogOut,
   Menu,
   Settings,
-  Shield,
   Share2,
+  Shield,
   Sparkles,
   Store,
   TrendingUp,
   Users,
 } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 
-import Badge from './ui/Badge'
 import { systemAPI } from '../lib/api'
-import type { SystemVersionInfo } from '../types'
 import { useAuthStore } from '../stores/auth'
+import type { SystemVersionInfo } from '../types'
+import Badge from './ui/Badge'
 
 type NavSection = { sectionKey: string }
 type NavItem = {
@@ -165,6 +166,13 @@ export default function Layout() {
         nameKey: 'items.aiAssistant',
         href: '/ai-assistant',
         icon: Sparkles,
+        badge: t('badges.preview', 'Preview'),
+        badgeTone: 'preview',
+      },
+      {
+        nameKey: 'items.autoPilot',
+        href: '/auto-pilot',
+        icon: Bot,
         badge: t('badges.preview', 'Preview'),
         badgeTone: 'preview',
       },
