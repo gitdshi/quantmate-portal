@@ -2,6 +2,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import {
   Calendar,
   CheckCircle2,
+  Database,
   Gauge,
   LineChart as LineChartIcon,
   List,
@@ -14,6 +15,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import CandlestickChart from '../components/charts/CandlestickChart'
+import TushareDataBrowserTab from '../components/TushareDataBrowserTab'
 import TabPanel from '../components/ui/TabPanel'
 import { showToast } from '../components/ui/toast-service'
 import { datasyncAPI, marketDataAPI, multiMarketAPI, calendarAPI, sentimentAPI } from '../lib/api'
@@ -623,6 +625,7 @@ export default function MarketData() {
     () => [
       { key: 'quotes', label: t('page.tabs.quotes'), icon: <List size={16} /> },
       { key: 'kline', label: t('page.tabs.kline'), icon: <LineChartIcon size={16} /> },
+      { key: 'tushare-browser', label: t('page.tabs.tushareBrowser'), icon: <Database size={16} /> },
       { key: 'sync', label: t('page.tabs.sync'), icon: <RefreshCw size={16} /> },
       { key: 'calendar', label: t('page.tabs.calendar'), icon: <Calendar size={16} /> },
       { key: 'sentiment', label: t('page.tabs.sentiment'), icon: <Gauge size={16} /> },
@@ -1014,6 +1017,8 @@ export default function MarketData() {
             )}
           </div>
         )}
+
+        {activeTab === 'tushare-browser' && <TushareDataBrowserTab />}
 
         {activeTab === 'sync' && <SyncStatusPanel />}
 

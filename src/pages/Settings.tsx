@@ -4,12 +4,12 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 
+import TushareProTab from '../components/TushareProTab'
 import TabPanel from '../components/ui/TabPanel'
 import ToggleSwitch from '../components/ui/ToggleSwitch'
 import { showToast } from '../components/ui/toast-service'
 import { usePermission } from '../hooks/usePermission'
 import { dataSourceAPI, systemAPI } from '../lib/api'
-import TushareProTab from '../components/TushareProTab'
 
 type DSConfig = {
   source_key: string

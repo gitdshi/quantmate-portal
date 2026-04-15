@@ -314,6 +314,25 @@ export const marketDataAPI = {
     options?: { timeoutMs?: number }
   ) =>
     api.get('/data/quote/series', { params, timeout: options?.timeoutMs }),
+  tushareTables: (keyword?: string) =>
+    api.get('/data/tushare/tables', { params: { keyword } }),
+  tushareTableSchema: (tableName: string) =>
+    api.get(`/data/tushare/tables/${encodeURIComponent(tableName)}/schema`),
+  tushareTableRows: (
+    tableName: string,
+    data: {
+      page?: number
+      page_size?: number
+      sort_by?: string
+      sort_dir?: 'asc' | 'desc'
+      filters?: Array<{
+        column: string
+        operator: string
+        value?: unknown
+        values?: unknown[]
+      }>
+    }
+  ) => api.post(`/data/tushare/tables/${encodeURIComponent(tableName)}/rows`, data),
 }
 
 // Analytics API

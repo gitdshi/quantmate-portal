@@ -13,9 +13,9 @@ import { ChevronDown, ChevronRight, Zap } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { dataSourceAPI } from '../lib/api'
 import ToggleSwitch from './ui/ToggleSwitch'
 import { showToast } from './ui/toast-service'
-import { dataSourceAPI } from '../lib/api'
 
 /* ---------- types ---------- */
 

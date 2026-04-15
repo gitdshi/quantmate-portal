@@ -69,4 +69,50 @@ test.describe('API Health Check', () => {
       expect(res.status()).toBeLessThan(500)
     })
   }
+
+  test('Tushare datasource catalog should expose metadata and sync support flags', async ({ request }) => {
+    const res = await request.get(`${env.apiURL}/api/v1/settings/datasource-items?source=tushare`, {
+      headers: { Authorization: `Bearer ${authToken}` },
+    })
+
+    expect(res.ok()).toBeTruthy()
+    const payload = await res.json()
+    const items = payload.data ?? []
+
+    expect(items.length).toBeGreaterThan(100)
+
+    const top10Holders = items.find((item: { item_key: string }) => item.item_key === 'top10_holders')
+    expect(top10Holders).toBeTruthy()
+    expect(top10Holders.sync_supported).toBe(true)
+
+    const tradeCalendar = items.find((item: { item_key: string }) => item.item_key === 'trade_cal')
+    expect(tradeCalendar).toBeTruthy()
+    expect(tradeCalendar.sync_supported).toBe(false)
+    expect(tradeCalendar.description).toBeTruthy()
+  })
+
+  test('Tushare permission batch list should exclude paid-only tiers', async ({ request }) => {
+    const res = await request.get(`${env.apiURL}/api/v1/settings/datasource-items/permissions?source=tushare`, {
+      headers: { Authorization: `Bearer ${authToken}` },
+    })
+
+    expect(res.ok()).toBeTruthy()
+    const payload = await res.json()
+    const permissions = payload.data ?? []
+
+    expect(permissions.length).toBeGreaterThan(0)
+    expect(permissions).not.toContain('paid')
+  })
+
+  test('Unsupported Tushare interfaces should reject enable attempts', async ({ request }) => {
+    const res = await request.put(`${env.apiURL}/api/v1/settings/datasource-items/trade_cal?source=tushare`, {
+      headers: {
+        Authorization: `Bearer ${authToken}`,
+        'Content-Type': 'application/json',
+      },
+      data: { enabled: true },
+    })
+
+    expect(res.status()).toBe(400)
+  })
 })

@@ -319,6 +319,30 @@ describe('API Client - HTTP Calls', () => {
         params: { industry: 'Tech', exchange: 'SH', limit: 50 },
       })
     })
+
+    it('tushareTables sends GET with keyword', () => {
+      marketDataAPI.tushareTables('daily')
+      expect(mockGet).toHaveBeenCalledWith('/data/tushare/tables', {
+        params: { keyword: 'daily' },
+      })
+    })
+
+    it('tushareTableSchema sends GET', () => {
+      marketDataAPI.tushareTableSchema('stock_daily')
+      expect(mockGet).toHaveBeenCalledWith('/data/tushare/tables/stock_daily/schema')
+    })
+
+    it('tushareTableRows sends POST with filters', () => {
+      const payload = {
+        page: 1,
+        page_size: 50,
+        sort_by: 'trade_date',
+        sort_dir: 'desc' as const,
+        filters: [{ column: 'ts_code', operator: 'eq', value: '000001.SZ' }],
+      }
+      marketDataAPI.tushareTableRows('stock_daily', payload)
+      expect(mockPost).toHaveBeenCalledWith('/data/tushare/tables/stock_daily/rows', payload)
+    })
   })
 
   // ─── Analytics API ───────────────────────────────────────

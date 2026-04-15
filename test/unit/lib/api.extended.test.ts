@@ -163,6 +163,19 @@ describe('Extended API — untested HTTP calls', () => {
         timeout: 5000,
       })
     })
+
+    it('tushareTables sends GET without keyword', () => {
+      marketDataAPI.tushareTables()
+      expect(mockGet).toHaveBeenCalledWith('/data/tushare/tables', {
+        params: { keyword: undefined },
+      })
+    })
+
+    it('tushareTableRows encodes table name and posts payload', () => {
+      const payload = { page: 2, page_size: 25, filters: [] }
+      marketDataAPI.tushareTableRows('stock daily', payload)
+      expect(mockPost).toHaveBeenCalledWith('/data/tushare/tables/stock%20daily/rows', payload)
+    })
   })
 
   // ─── strategyFilesAPI (legacy stubs) ────────────────────

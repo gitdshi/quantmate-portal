@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 import { navigateToPage } from './helpers'
 
 test.describe('Settings', () => {
@@ -13,32 +13,46 @@ test.describe('Settings', () => {
     await expect(page.locator('h1').filter({ hasText: 'Settings' })).toBeVisible({ timeout: 150000 })
   })
 
+  async function openSystemManagement(page: Page) {
+    await page.getByRole('button', { name: /System Management|系统管理/i }).click()
+    await expect(page.getByRole('button', { name: /Data Sources|数据源/i })).toBeVisible({ timeout: 60000 })
+  }
+
   test('should display settings page', async ({ page }) => {
-    // h1 already verified in beforeEach
-    await expect(page.getByText(/manage data sources/i)).toBeVisible({ timeout: 60000 })
+    await expect(page.locator('h1').filter({ hasText: 'Settings' })).toBeVisible()
   })
 
-  test('should display data item toggle management section', async ({ page }) => {
-    await expect(page.locator('h2').filter({ hasText: /data item toggle/i })).toBeVisible()
+  test('should show nested system management tabs', async ({ page }) => {
+    await openSystemManagement(page)
+    await expect(page.getByRole('button', { name: /Data Sources|数据源/i })).toBeVisible()
+    await expect(page.getByRole('button', { name: /Tushare Pro/i })).toBeVisible()
+    await expect(page.getByRole('button', { name: /System Status|系统状态/i })).toBeVisible()
   })
 
-  test('should show enabled/total items stats', async ({ page }) => {
-    const stats = page.getByText(/enabled:.*items/i)
-    await expect(stats).toBeVisible().catch(() => {})
+  test('should show datasource cards in system management', async ({ page }) => {
+    await openSystemManagement(page)
+    await expect(page.getByText(/Tushare Pro/i).first()).toBeVisible({ timeout: 60000 })
+    await expect(page.getByText(/AkShare/i).first()).toBeVisible({ timeout: 60000 })
   })
 
-  test('should display data source sections', async ({ page }) => {
-    const sourceSection = page.getByText(/tushare|akshare|data source/i).first()
-    await expect(sourceSection).toBeVisible().catch(() => {})
+  test('should show tushare catalog controls in dedicated tab', async ({ page }) => {
+    await openSystemManagement(page)
+    await page.getByRole('button', { name: /Tushare Pro/i }).click()
+
+    await expect(page.getByText(/Tushare Pro API Catalog|Tushare Pro 接口目录/i)).toBeVisible({ timeout: 120000 })
+    await expect(page.getByText(/Batch by permission|按权限批量操作/i)).toBeVisible({ timeout: 60000 })
+
+    const categoryToggle = page.locator('button').filter({ hasText: /\(\d+\/\d+\)/ }).first()
+    await expect(categoryToggle).toBeVisible({ timeout: 60000 })
+    await categoryToggle.click()
+
+    await expect(page.locator('button[role="switch"]').first()).toBeVisible({ timeout: 60000 })
   })
 
-  test('should have refresh button', async ({ page }) => {
-    const refreshBtn = page.locator('button').filter({ has: page.locator('svg.lucide-refresh-cw, svg.lucide-rotate-cw') }).first()
-    await expect(refreshBtn).toBeVisible().catch(() => {})
-  })
+  test('should show system status in dedicated tab', async ({ page }) => {
+    await openSystemManagement(page)
+    await page.getByRole('button', { name: /System Status|系统状态/i }).click()
 
-  test('should show toggle switches for data items', async ({ page }) => {
-    const toggles = page.locator('button[role="switch"], input[type="checkbox"]').first()
-    await expect(toggles).toBeVisible().catch(() => {})
+    await expect(page.getByText(/System status|系统状态/i)).toBeVisible({ timeout: 60000 })
   })
 })
