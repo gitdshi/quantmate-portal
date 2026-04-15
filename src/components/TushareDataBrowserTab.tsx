@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
-import { Database, Filter, Plus, RotateCcw, Search, X } from 'lucide-react'
+import { Database, Filter, Plus, RotateCcw, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import Pagination from './Pagination'
+import Modal from './ui/Modal'
 import DataTable, { type Column } from './ui/DataTable'
 import FilterBar from './ui/FilterBar'
 import { marketDataAPI } from '../lib/api'
@@ -134,6 +135,8 @@ export default function TushareDataBrowserTab() {
   const [pageSize, setPageSize] = useState(50)
   const [sortBy, setSortBy] = useState('')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+  const [tableInfoOpen, setTableInfoOpen] = useState(false)
+  const [schemaOpen, setSchemaOpen] = useState(false)
 
   const { data: tables = [], isLoading: tablesLoading, error: tablesError } = useQuery<TushareTableInfo[]>({
     queryKey: ['market', 'tushare', 'tables', tableKeyword],
@@ -186,6 +189,10 @@ export default function TushareDataBrowserTab() {
     () => tables.map((table) => ({ value: table.name, label: `${table.name} (${table.column_count})` })),
     [tables]
   )
+  const selectedTableInfo = useMemo(
+    () => tables.find((table) => table.name === selectedTable) ?? null,
+    [selectedTable, tables]
+  )
 
   const schemaColumns = schema?.columns ?? []
   const sortOptions = useMemo(
@@ -215,21 +222,21 @@ export default function TushareDataBrowserTab() {
           .map((value) => value.trim())
           .filter(Boolean)
         if (values.length === 0) {
-          throw new Error(t('browser.errors.inValueRequired'))
+          throw new Error(t('page.browser.errors.inValueRequired'))
         }
         normalized.push({ column: item.column, operator: item.operator, values })
         continue
       }
       if (operatorNeedsRange(item.operator)) {
         if (!item.value.trim() || !item.valueTo.trim()) {
-          throw new Error(t('browser.errors.betweenValueRequired'))
+          throw new Error(t('page.browser.errors.betweenValueRequired'))
         }
         normalized.push({ column: item.column, operator: item.operator, values: [item.value.trim(), item.valueTo.trim()] })
         continue
       }
       if (operatorNeedsValue(item.operator)) {
         if (!item.value.trim()) {
-          throw new Error(t('browser.errors.filterValueRequired'))
+          throw new Error(t('page.browser.errors.filterValueRequired'))
         }
         normalized.push({ column: item.column, operator: item.operator, value: item.value.trim() })
         continue
@@ -246,7 +253,7 @@ export default function TushareDataBrowserTab() {
       setFilterError(null)
       setPage(1)
     } catch (error) {
-      setFilterError(error instanceof Error ? error.message : t('browser.errors.invalidFilter'))
+      setFilterError(error instanceof Error ? error.message : t('page.browser.errors.invalidFilter'))
     }
   }
 
@@ -260,6 +267,29 @@ export default function TushareDataBrowserTab() {
   const updateDraftFilter = (id: string, patch: Partial<DraftFilter>) => {
     setDraftFilters((current) => current.map((item) => (item.id === id ? { ...item, ...patch } : item)))
   }
+
+  const popupButtonClass =
+    'inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50'
+  const modalInfoCardClass = 'rounded-lg border border-border bg-background px-4 py-3'
+  const resolvedTotalRows = rowsData?.meta.total ?? t('page.browser.info.notLoaded')
+  const resolvedPrimaryKeys = selectedTableInfo?.primary_keys?.length
+    ? selectedTableInfo.primary_keys.join(', ')
+    : t('page.browser.info.primaryKeysEmpty')
+  const resolvedSort = rowsData?.meta.sort_by
+    ? `${rowsData.meta.sort_by} · ${rowsData.meta.sort_dir}`
+    : t('page.browser.info.notLoaded')
+  const modalFooter = (
+    <button
+      type="button"
+      onClick={() => {
+        setTableInfoOpen(false)
+        setSchemaOpen(false)
+      }}
+      className="rounded-md border border-border px-4 py-2 text-sm font-medium hover:bg-muted"
+    >
+      {t('common:cancel')}
+    </button>
+  )
 
   return (
     <div className="space-y-4">
@@ -295,62 +325,34 @@ export default function TushareDataBrowserTab() {
             },
           ]}
         >
-          <div className="ml-auto text-xs text-muted-foreground">
-            {t('page.browser.tableCount', { count: tables.length })}
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setTableInfoOpen(true)}
+              disabled={!selectedTable}
+              className={popupButtonClass}
+              data-testid="tushare-table-info-button"
+            >
+              {t('page.browser.tableInfoButton')}
+            </button>
+            <button
+              type="button"
+              onClick={() => setSchemaOpen(true)}
+              disabled={!selectedTable}
+              className={popupButtonClass}
+              data-testid="tushare-schema-button"
+            >
+              {t('page.browser.schemaButton')}
+            </button>
+            <div className="text-xs text-muted-foreground">
+              {t('page.browser.tableCount', { count: tables.length })}
+            </div>
           </div>
         </FilterBar>
 
         {tablesError && <p className="text-sm text-destructive">{t('page.browser.tableLoadFailed')}</p>}
         {tablesLoading && <p className="text-sm text-muted-foreground">{t('page.browser.loadingTables')}</p>}
       </div>
-
-      {selectedTable && (
-        <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-4">
-          <div className="rounded-lg border border-border bg-card p-4">
-            <div className="text-xs text-muted-foreground">{t('page.browser.selectedTable')}</div>
-            <div className="mt-1 text-base font-semibold text-foreground">{selectedTable}</div>
-          </div>
-          <div className="rounded-lg border border-border bg-card p-4">
-            <div className="text-xs text-muted-foreground">{t('page.browser.columnCount')}</div>
-            <div className="mt-1 text-base font-semibold text-foreground">{schemaColumns.length}</div>
-          </div>
-          <div className="rounded-lg border border-border bg-card p-4">
-            <div className="text-xs text-muted-foreground">{t('page.browser.totalRows')}</div>
-            <div className="mt-1 text-base font-semibold text-foreground">{rowsData?.meta.total ?? '--'}</div>
-          </div>
-          <div className="rounded-lg border border-border bg-card p-4">
-            <div className="text-xs text-muted-foreground">{t('page.browser.appliedFilters')}</div>
-            <div className="mt-1 text-base font-semibold text-foreground">{appliedFilters.length}</div>
-          </div>
-        </div>
-      )}
-
-      {selectedTable && (
-        <div className="rounded-xl border border-border bg-card p-5">
-          <div className="mb-3 flex items-center gap-2">
-            <Search size={16} className="text-muted-foreground" />
-            <h3 className="font-semibold text-foreground">{t('page.browser.schemaTitle')}</h3>
-          </div>
-
-          {schemaLoading && <p className="text-sm text-muted-foreground">{t('page.browser.loadingSchema')}</p>}
-          {schemaError && <p className="text-sm text-destructive">{t('page.browser.schemaLoadFailed')}</p>}
-
-          {!schemaLoading && schemaColumns.length > 0 && (
-            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-              {schemaColumns.map((column) => (
-                <div key={column.name} className="rounded-lg border border-border bg-background px-3 py-2 text-sm">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-foreground">{column.name}</span>
-                    {column.primary_key && <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">PK</span>}
-                    {column.indexed && <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-700">IDX</span>}
-                  </div>
-                  <div className="mt-1 text-xs text-muted-foreground">{column.data_type}</div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
 
       {selectedTable && (
         <div className="rounded-xl border border-border bg-card p-5">
@@ -501,7 +503,12 @@ export default function TushareDataBrowserTab() {
         <div className="rounded-xl border border-border bg-card p-5">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
-              <h3 className="font-semibold text-foreground">{t('page.browser.dataTitle')}</h3>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="font-semibold text-foreground">{t('page.browser.dataTitle')}</h3>
+                <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                  {selectedTable}
+                </span>
+              </div>
               <p className="text-sm text-muted-foreground">
                 {rowsData?.meta.sort_by
                   ? t('page.browser.dataSubtitle', { sortBy: rowsData.meta.sort_by, sortDir: rowsData.meta.sort_dir })
@@ -538,6 +545,88 @@ export default function TushareDataBrowserTab() {
           )}
         </div>
       )}
+
+      <Modal
+        open={tableInfoOpen}
+        onClose={() => setTableInfoOpen(false)}
+        title={t('page.browser.tableInfoModalTitle')}
+        footer={modalFooter}
+      >
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className={modalInfoCardClass}>
+            <div className="text-xs text-muted-foreground">{t('page.browser.info.tableName')}</div>
+            <div className="mt-1 text-base font-semibold text-foreground">{selectedTable || '--'}</div>
+          </div>
+          <div className={modalInfoCardClass}>
+            <div className="text-xs text-muted-foreground">{t('page.browser.columnCount')}</div>
+            <div className="mt-1 text-base font-semibold text-foreground">{selectedTableInfo?.column_count ?? schemaColumns.length}</div>
+          </div>
+          <div className={modalInfoCardClass}>
+            <div className="text-xs text-muted-foreground">{t('page.browser.totalRows')}</div>
+            <div className="mt-1 text-base font-semibold text-foreground">{resolvedTotalRows}</div>
+          </div>
+          <div className={modalInfoCardClass}>
+            <div className="text-xs text-muted-foreground">{t('page.browser.appliedFilters')}</div>
+            <div className="mt-1 text-base font-semibold text-foreground">{appliedFilters.length}</div>
+          </div>
+          <div className={`${modalInfoCardClass} sm:col-span-2`}>
+            <div className="text-xs text-muted-foreground">{t('page.browser.info.primaryKeys')}</div>
+            <div className="mt-1 text-sm font-medium text-foreground break-all">{resolvedPrimaryKeys}</div>
+          </div>
+          <div className={`${modalInfoCardClass} sm:col-span-2`}>
+            <div className="text-xs text-muted-foreground">{t('page.browser.info.currentSort')}</div>
+            <div className="mt-1 text-sm font-medium text-foreground">{resolvedSort}</div>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={schemaOpen}
+        onClose={() => setSchemaOpen(false)}
+        title={t('page.browser.schemaModalTitle')}
+        footer={modalFooter}
+        size="lg"
+      >
+        {schemaLoading && <p className="text-sm text-muted-foreground">{t('page.browser.loadingSchema')}</p>}
+        {schemaError && <p className="text-sm text-destructive">{t('page.browser.schemaLoadFailed')}</p>}
+        {!schemaLoading && !schemaError && schemaColumns.length === 0 && (
+          <p className="text-sm text-muted-foreground">{t('page.browser.schemaEmpty')}</p>
+        )}
+        {!schemaLoading && !schemaError && schemaColumns.length > 0 && (
+          <div className="overflow-x-auto rounded-lg border border-border">
+            <table className="min-w-full divide-y divide-border text-sm">
+              <thead className="bg-muted/50 text-left text-muted-foreground">
+                <tr>
+                  <th className="px-4 py-3 font-medium">{t('page.browser.schemaColumns.name')}</th>
+                  <th className="px-4 py-3 font-medium">{t('page.browser.schemaColumns.type')}</th>
+                  <th className="px-4 py-3 font-medium">{t('page.browser.schemaColumns.nullable')}</th>
+                  <th className="px-4 py-3 font-medium">{t('page.browser.schemaColumns.default')}</th>
+                  <th className="px-4 py-3 font-medium">{t('page.browser.schemaColumns.primaryKey')}</th>
+                  <th className="px-4 py-3 font-medium">{t('page.browser.schemaColumns.indexed')}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border bg-card">
+                {schemaColumns.map((column) => (
+                  <tr key={column.name}>
+                    <td className="px-4 py-3 font-medium text-foreground">{column.name}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{column.data_type}</td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {column.nullable ? t('page.browser.schemaColumns.yes') : t('page.browser.schemaColumns.no')}
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">{column.default || '--'}</td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {column.primary_key ? t('page.browser.schemaColumns.yes') : t('page.browser.schemaColumns.no')}
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {column.indexed ? t('page.browser.schemaColumns.yes') : t('page.browser.schemaColumns.no')}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }

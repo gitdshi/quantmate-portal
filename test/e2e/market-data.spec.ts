@@ -47,7 +47,8 @@ test.describe('Market Data', () => {
     await page.getByRole('button', { name: /Tushare Browser|Tushare数据浏览/i }).click()
 
     await expect(page.getByText(/Tushare Table Browser|Tushare 数据表浏览/i)).toBeVisible({ timeout: 30000 })
-    await expect(page.getByText(/Advanced Filters|高级筛选/i)).toBeVisible({ timeout: 30000 })
+    await expect(page.getByTestId('tushare-table-info-button')).toBeVisible({ timeout: 30000 })
+    await expect(page.getByTestId('tushare-schema-button')).toBeVisible({ timeout: 30000 })
 
     const tableSelect = page.locator('select').filter({ has: page.locator('option') }).first()
     await expect(tableSelect).toBeVisible({ timeout: 30000 })
