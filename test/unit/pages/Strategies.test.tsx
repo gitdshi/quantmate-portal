@@ -112,6 +112,11 @@ const mockMarketplaceTemplates = [
   },
 ]
 
+async function waitForLoadedStrategyDetail() {
+  await screen.findByTestId('strategy-code-panel')
+  return screen.getByTestId('strategy-detail')
+}
+
 describe('Strategies Page', () => {
   beforeEach(async () => {
     vi.clearAllMocks()
@@ -1685,7 +1690,7 @@ describe('Strategies Page', () => {
   // ─── Discard unsaved changes ────────────────────────────
   it('discards unsaved changes when switching strategies', async () => {
     render(<Strategies />)
-    await screen.findByTestId('strategy-detail')
+    await waitForLoadedStrategyDetail()
 
     // Make an edit
     fireEvent.click(screen.getByRole('button', { name: 'Basic Info' }))
@@ -1807,7 +1812,7 @@ describe('Strategies Page', () => {
     } as never)
 
     render(<Strategies />)
-    await screen.findByTestId('strategy-detail')
+    await waitForLoadedStrategyDetail()
     fireEvent.click(screen.getByRole('button', { name: 'Version History' }))
 
     const historyPanel = await screen.findByTestId('strategy-history-panel')
@@ -1832,7 +1837,7 @@ describe('Strategies Page', () => {
   // ─── Format parameters button ───────────────────────────
   it('formats parameters JSON when format button is clicked', async () => {
     render(<Strategies />)
-    await screen.findByTestId('strategy-detail')
+    await waitForLoadedStrategyDetail()
     fireEvent.click(screen.getByRole('button', { name: 'Parameters' }))
 
     // Edit parameters to unformatted JSON
@@ -1855,7 +1860,7 @@ describe('Strategies Page', () => {
   // ─── Code editor fullscreen triggered by second draft exit ─
   it('exits fullscreen when draft becomes null', async () => {
     render(<Strategies />)
-    await screen.findByTestId('strategy-detail')
+    await waitForLoadedStrategyDetail()
 
     // Enter fullscreen
     const fullscreenBtns = screen.getAllByRole('button').filter((b) =>
@@ -1878,7 +1883,7 @@ describe('Strategies Page', () => {
     } as never)
 
     render(<Strategies />)
-    await screen.findByTestId('strategy-detail')
+    await waitForLoadedStrategyDetail()
 
     // Find validate button in code panel
     const codePanel = screen.getByTestId('strategy-code-panel')
@@ -2040,7 +2045,7 @@ describe('Strategies Page', () => {
   // ─── Duplicate strategy (lines 275-285) ───────────────
   it('duplicates current strategy', async () => {
     render(<Strategies />)
-    const detail = await screen.findByTestId('strategy-detail')
+    const detail = await waitForLoadedStrategyDetail()
 
     // Find duplicate button
     const dupBtn = Array.from(detail.querySelectorAll('button')).find((b) =>
@@ -2060,7 +2065,7 @@ describe('Strategies Page', () => {
     vi.mocked(strategiesAPI.delete).mockResolvedValue({ data: { success: true } } as never)
 
     render(<Strategies />)
-    const detail = await screen.findByTestId('strategy-detail')
+    const detail = await waitForLoadedStrategyDetail()
 
     // Find delete button
     const deleteBtn = Array.from(detail.querySelectorAll('button')).find((b) =>
@@ -2086,7 +2091,7 @@ describe('Strategies Page', () => {
   // ─── History restore (lines 1220-1260) ────────────────
   it('opens history restore confirm dialog', async () => {
     render(<Strategies />)
-    await screen.findByTestId('strategy-detail')
+    await waitForLoadedStrategyDetail()
     fireEvent.click(screen.getByRole('button', { name: 'Version History' }))
 
     const historyPanel = await screen.findByTestId('strategy-history-panel')
@@ -2170,7 +2175,7 @@ describe('Strategies Page', () => {
   // ─── Template editor create flow (lines 1040-1085) ───
   it('opens template editor for creating new template from code', async () => {
     render(<Strategies />)
-    await screen.findByTestId('strategy-detail')
+    await waitForLoadedStrategyDetail()
 
     // Look for "Publish as Template" or "Create Template" button
     const publishBtn = Array.from(screen.getAllByRole('button')).find((b) =>
@@ -2193,7 +2198,7 @@ describe('Strategies Page', () => {
     vi.mocked(strategyCodeAPI.parse).mockResolvedValue({ data: { valid: true } } as never)
 
     render(<Strategies />)
-    await screen.findByTestId('strategy-detail')
+    await waitForLoadedStrategyDetail()
 
     // Click validate button in the code tab
     const validateBtn = Array.from(screen.getAllByRole('button')).find((b) =>
@@ -2651,7 +2656,7 @@ describe('Strategies Page', () => {
     } as never)
 
     render(<Strategies />)
-    await screen.findByTestId('strategy-detail')
+    await waitForLoadedStrategyDetail()
 
     // Click "Save Current As Template" button
     const publishBtn = screen.getByTestId('save-as-template-button')
@@ -3728,7 +3733,7 @@ describe('Strategies Page', () => {
     await screen.findByTestId('strategies-page')
 
     // Wait for strategy detail to load (auto-selects first strategy)
-    await screen.findByTestId('strategy-detail')
+    await waitForLoadedStrategyDetail()
 
     // Switch to code tab
     fireEvent.click(screen.getByRole('button', { name: 'Code Editor' }))
