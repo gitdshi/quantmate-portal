@@ -18,7 +18,7 @@ import CandlestickChart from '../components/charts/CandlestickChart'
 import TushareDataBrowserTab from '../components/TushareDataBrowserTab'
 import TabPanel from '../components/ui/TabPanel'
 import { showToast } from '../components/ui/toast-service'
-import { datasyncAPI, marketDataAPI, multiMarketAPI, calendarAPI, sentimentAPI } from '../lib/api'
+import { calendarAPI, datasyncAPI, marketDataAPI, multiMarketAPI, sentimentAPI } from '../lib/api'
 import type { MarketSymbol, OHLCBar } from '../types'
 
 type QuoteMarket = 'CN' | 'HK' | 'US' | 'CRYPTO' | 'FUTURES' | 'CN_INDEX'
@@ -262,6 +262,31 @@ type SyncSummary = {
   by_date: Record<string, Record<string, Record<string, number>>>
 }
 
+type SyncInitializationItem = {
+  source: string
+  item_key: string
+}
+
+type SyncInitializationCoverageItem = SyncInitializationItem & {
+  initialized_from: string
+  initialized_to: string
+  expected_rows: number
+  actual_rows: number
+}
+
+type SyncInitializationState = {
+  bootstrap_completed: boolean
+  sync_status_initialized: boolean
+  needs_initialization: boolean
+  sync_status_window_start: string
+  sync_status_window_end: string
+  trade_days_in_window: number
+  enabled_sync_items: number
+  sync_status_missing_items: SyncInitializationItem[]
+  sync_status_incomplete_items: SyncInitializationCoverageItem[]
+  sync_status_unsupported_enabled_items: SyncInitializationItem[]
+}
+
 function StatusBadge({ status }: { status: string }) {
   const cls: Record<string, string> = {
     success: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400',
@@ -493,6 +518,16 @@ function SyncStatusPanel() {
     refetchInterval: 60000,
   })
 
+  const {
+    data: initState,
+    isLoading: initLoading,
+    error: initError,
+  } = useQuery<SyncInitializationState>({
+    queryKey: ['datasync', 'initialization'],
+    queryFn: () => datasyncAPI.initialization().then((r) => r.data),
+    refetchInterval: 60000,
+  })
+
   const triggerMutation = useMutation({
     mutationFn: () => datasyncAPI.trigger(),
     onSuccess: (response) => {
@@ -513,7 +548,7 @@ function SyncStatusPanel() {
     }
   }
 
-  if (latestLoading && summaryLoading) {
+  if (latestLoading && summaryLoading && initLoading) {
     return (
       <div className="flex items-center justify-center py-16">
         <Loader2 className="animate-spin text-muted-foreground" size={24} />
@@ -527,6 +562,23 @@ function SyncStatusPanel() {
 
   const items = latestData?.items ?? []
   const overall = summaryData?.overall ?? {}
+  const missingItems = initState?.sync_status_missing_items ?? []
+  const incompleteItems = initState?.sync_status_incomplete_items ?? []
+  const unsupportedItems = initState?.sync_status_unsupported_enabled_items ?? []
+  const initHealthy = Boolean(initState && !initState.needs_initialization)
+
+  const renderInterfaceList = (entries: SyncInitializationItem[]) => (
+    <div className="mt-2 flex flex-wrap gap-2">
+      {entries.map((entry) => (
+        <span
+          key={`${entry.source}/${entry.item_key}`}
+          className="rounded border border-border bg-background px-2 py-1 text-xs text-foreground"
+        >
+          {entry.source}/{entry.item_key}
+        </span>
+      ))}
+    </div>
+  )
 
   return (
     <div className="space-y-4">
@@ -568,6 +620,109 @@ function SyncStatusPanel() {
             <div className="mt-1 text-lg font-semibold text-foreground">{overall[s] ?? 0}</div>
           </div>
         ))}
+      </div>
+
+      <div
+        className={`rounded-lg border p-4 ${
+          initHealthy
+            ? 'border-emerald-200 bg-emerald-50/60'
+            : 'border-amber-200 bg-amber-50/60'
+        }`}
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            {initHealthy ? (
+              <CheckCircle2 className="mt-0.5 text-emerald-600" size={18} />
+            ) : (
+              <XCircle className="mt-0.5 text-amber-700" size={18} />
+            )}
+            <div>
+              <h3 className="font-semibold text-foreground">{t('page.sync.initializationTitle')}</h3>
+              <p className="text-sm text-muted-foreground">
+                {initHealthy
+                  ? t('page.sync.initializationComplete')
+                  : t('page.sync.initializationIncomplete')}
+              </p>
+            </div>
+          </div>
+          <span
+            className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+              initHealthy
+                ? 'bg-emerald-100 text-emerald-800'
+                : 'bg-amber-100 text-amber-900'
+            }`}
+          >
+            {initHealthy ? t('page.sync.statusReady') : t('page.sync.statusNeedsAttention')}
+          </span>
+        </div>
+
+        {initError ? (
+          <p className="mt-3 text-sm text-destructive">{t('page.sync.initializationLoadFailed')}</p>
+        ) : initState ? (
+          <>
+            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <div className="rounded-lg border border-border bg-background p-3">
+                <div className="text-xs text-muted-foreground">{t('page.sync.enabledInterfaces')}</div>
+                <div className="mt-1 text-lg font-semibold text-foreground">{initState.enabled_sync_items}</div>
+              </div>
+              <div className="rounded-lg border border-border bg-background p-3">
+                <div className="text-xs text-muted-foreground">{t('page.sync.tradeDays')}</div>
+                <div className="mt-1 text-lg font-semibold text-foreground">{initState.trade_days_in_window}</div>
+              </div>
+              <div className="rounded-lg border border-border bg-background p-3">
+                <div className="text-xs text-muted-foreground">{t('page.sync.coverageWindow')}</div>
+                <div className="mt-1 text-sm font-semibold text-foreground">
+                  {initState.sync_status_window_start} - {initState.sync_status_window_end}
+                </div>
+              </div>
+              <div className="rounded-lg border border-border bg-background p-3">
+                <div className="text-xs text-muted-foreground">{t('page.sync.bootstrapStatus')}</div>
+                <div className="mt-1 text-sm font-semibold text-foreground">
+                  {initState.bootstrap_completed
+                    ? t('page.sync.bootstrapCompleted')
+                    : t('page.sync.bootstrapPending')}
+                </div>
+              </div>
+            </div>
+
+            {!initHealthy && (
+              <div className="mt-4 space-y-3">
+                {missingItems.length > 0 && (
+                  <div>
+                    <div className="text-sm font-medium text-foreground">{t('page.sync.missingItems')}</div>
+                    {renderInterfaceList(missingItems)}
+                  </div>
+                )}
+
+                {incompleteItems.length > 0 && (
+                  <div>
+                    <div className="text-sm font-medium text-foreground">{t('page.sync.incompleteItems')}</div>
+                    <div className="mt-2 space-y-2">
+                      {incompleteItems.map((entry) => (
+                        <div
+                          key={`${entry.source}/${entry.item_key}`}
+                          className="rounded-lg border border-border bg-background px-3 py-2 text-xs text-foreground"
+                        >
+                          <div className="font-medium">{entry.source}/{entry.item_key}</div>
+                          <div className="mt-1 text-muted-foreground">
+                            {entry.initialized_from} - {entry.initialized_to} | {entry.actual_rows}/{entry.expected_rows}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {unsupportedItems.length > 0 && (
+                  <div>
+                    <div className="text-sm font-medium text-foreground">{t('page.sync.unsupportedItems')}</div>
+                    {renderInterfaceList(unsupportedItems)}
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        ) : null}
       </div>
 
       {/* Latest sync table */}

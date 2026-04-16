@@ -3,6 +3,7 @@ import { useAuthStore } from '../stores/auth'
 import type { StrategyComparison, StrategyFile, StrategyFileContent, SyncResult } from '../types'
 
 const API_URL = import.meta.env.VITE_API_URL || '/api/v1'
+const TUSHARE_BROWSER_TIMEOUT_MS = 30000
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -315,9 +316,11 @@ export const marketDataAPI = {
   ) =>
     api.get('/data/quote/series', { params, timeout: options?.timeoutMs }),
   tushareTables: (keyword?: string) =>
-    api.get('/data/tushare/tables', { params: { keyword } }),
+    api.get('/data/tushare/tables', { params: { keyword }, timeout: TUSHARE_BROWSER_TIMEOUT_MS }),
   tushareTableSchema: (tableName: string) =>
-    api.get(`/data/tushare/tables/${encodeURIComponent(tableName)}/schema`),
+    api.get(`/data/tushare/tables/${encodeURIComponent(tableName)}/schema`, {
+      timeout: TUSHARE_BROWSER_TIMEOUT_MS,
+    }),
   tushareTableRows: (
     tableName: string,
     data: {
@@ -332,7 +335,10 @@ export const marketDataAPI = {
         values?: unknown[]
       }>
     }
-  ) => api.post(`/data/tushare/tables/${encodeURIComponent(tableName)}/rows`, data),
+  ) =>
+    api.post(`/data/tushare/tables/${encodeURIComponent(tableName)}/rows`, data, {
+      timeout: TUSHARE_BROWSER_TIMEOUT_MS,
+    }),
 }
 
 // Analytics API
@@ -474,6 +480,7 @@ export const datasyncAPI = {
     api.get('/datasync/status', { params }),
   summary: (days?: number) => api.get('/datasync/status/summary', { params: { days } }),
   latest: () => api.get('/datasync/status/latest'),
+  initialization: () => api.get('/datasync/status/initialization'),
   trigger: (targetDate?: string) =>
     api.post('/datasync/trigger', { target_date: targetDate }),
   jobStatus: (jobId: string) => api.get(`/datasync/job/${jobId}`),

@@ -87,7 +87,7 @@ test.describe('API Health Check', () => {
 
     const tradeCalendar = items.find((item: { item_key: string }) => item.item_key === 'trade_cal')
     expect(tradeCalendar).toBeTruthy()
-    expect(tradeCalendar.sync_supported).toBe(false)
+    expect(tradeCalendar.sync_supported).toBe(true)
     expect(tradeCalendar.description).toBeTruthy()
   })
 
@@ -104,7 +104,7 @@ test.describe('API Health Check', () => {
     expect(permissions).not.toContain('paid')
   })
 
-  test('Unsupported Tushare interfaces should reject enable attempts', async ({ request }) => {
+  test('Supported Tushare interfaces should accept enable attempts', async ({ request }) => {
     const res = await request.put(`${env.apiURL}/api/v1/settings/datasource-items/trade_cal?source=tushare`, {
       headers: {
         Authorization: `Bearer ${authToken}`,
@@ -113,6 +113,6 @@ test.describe('API Health Check', () => {
       data: { enabled: true },
     })
 
-    expect(res.status()).toBe(400)
+    expect(res.ok()).toBeTruthy()
   })
 })

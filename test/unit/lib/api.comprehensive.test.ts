@@ -39,19 +39,19 @@ vi.mock('@/stores/auth', () => ({
 }))
 
 import {
-  analyticsAPI,
-  authAPI,
-  backtestAPI,
-  marketDataAPI,
-  optimizationAPI,
-  paperTradingAPI,
-  portfolioAPI,
-  qlibAPI,
-  queueAPI,
-  strategiesAPI,
-  strategyCodeAPI,
-  systemAPI,
-  tradingAPI,
+    analyticsAPI,
+    authAPI,
+    backtestAPI,
+    marketDataAPI,
+    optimizationAPI,
+    paperTradingAPI,
+    portfolioAPI,
+    qlibAPI,
+    queueAPI,
+    strategiesAPI,
+    strategyCodeAPI,
+    systemAPI,
+    tradingAPI,
 } from '@/lib/api'
 
 // Capture interceptor registrations immediately after module load,
@@ -324,12 +324,15 @@ describe('API Client - HTTP Calls', () => {
       marketDataAPI.tushareTables('daily')
       expect(mockGet).toHaveBeenCalledWith('/data/tushare/tables', {
         params: { keyword: 'daily' },
+        timeout: 30000,
       })
     })
 
     it('tushareTableSchema sends GET', () => {
       marketDataAPI.tushareTableSchema('stock_daily')
-      expect(mockGet).toHaveBeenCalledWith('/data/tushare/tables/stock_daily/schema')
+      expect(mockGet).toHaveBeenCalledWith('/data/tushare/tables/stock_daily/schema', {
+        timeout: 30000,
+      })
     })
 
     it('tushareTableRows sends POST with filters', () => {
@@ -341,7 +344,9 @@ describe('API Client - HTTP Calls', () => {
         filters: [{ column: 'ts_code', operator: 'eq', value: '000001.SZ' }],
       }
       marketDataAPI.tushareTableRows('stock_daily', payload)
-      expect(mockPost).toHaveBeenCalledWith('/data/tushare/tables/stock_daily/rows', payload)
+      expect(mockPost).toHaveBeenCalledWith('/data/tushare/tables/stock_daily/rows', payload, {
+        timeout: 30000,
+      })
     })
   })
 

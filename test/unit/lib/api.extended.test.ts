@@ -44,33 +44,33 @@ vi.mock('@/stores/auth', () => ({
 }))
 
 import {
-    accountSecurityAPI,
-    aiAPI,
-    alertsAPI,
-    brokerAPI,
-    calendarAPI,
-    componentBacktestAPI,
-    compositeBacktestAPI,
-    compositeStrategiesAPI,
-    dataSourceAPI,
-    datasyncAPI,
-    factorAPI,
-    indicatorAPI,
-    marketDataAPI,
-    multiMarketAPI,
-    optimizationAPI,
-    paperAccountAPI,
-    paperTradingAPI,
-    reportsAPI,
-    riskAPI,
-    sentimentAPI,
-    strategiesAPI,
-    strategyComponentsAPI,
-    strategyFilesAPI,
-    systemAPI,
-    teamAPI,
-    templateAPI,
-    tradingAPI
+  accountSecurityAPI,
+  aiAPI,
+  alertsAPI,
+  brokerAPI,
+  calendarAPI,
+  componentBacktestAPI,
+  compositeBacktestAPI,
+  compositeStrategiesAPI,
+  dataSourceAPI,
+  datasyncAPI,
+  factorAPI,
+  indicatorAPI,
+  marketDataAPI,
+  multiMarketAPI,
+  optimizationAPI,
+  paperAccountAPI,
+  paperTradingAPI,
+  reportsAPI,
+  riskAPI,
+  sentimentAPI,
+  strategiesAPI,
+  strategyComponentsAPI,
+  strategyFilesAPI,
+  systemAPI,
+  teamAPI,
+  templateAPI,
+  tradingAPI
 } from '@/lib/api'
 
 // Capture interceptors
@@ -168,13 +168,16 @@ describe('Extended API — untested HTTP calls', () => {
       marketDataAPI.tushareTables()
       expect(mockGet).toHaveBeenCalledWith('/data/tushare/tables', {
         params: { keyword: undefined },
+        timeout: 30000,
       })
     })
 
     it('tushareTableRows encodes table name and posts payload', () => {
       const payload = { page: 2, page_size: 25, filters: [] }
       marketDataAPI.tushareTableRows('stock daily', payload)
-      expect(mockPost).toHaveBeenCalledWith('/data/tushare/tables/stock%20daily/rows', payload)
+      expect(mockPost).toHaveBeenCalledWith('/data/tushare/tables/stock%20daily/rows', payload, {
+        timeout: 30000,
+      })
     })
   })
 
@@ -293,6 +296,11 @@ describe('Extended API — untested HTTP calls', () => {
     it('latest sends GET', () => {
       datasyncAPI.latest()
       expect(mockGet).toHaveBeenCalledWith('/datasync/status/latest')
+    })
+
+    it('initialization sends GET', () => {
+      datasyncAPI.initialization()
+      expect(mockGet).toHaveBeenCalledWith('/datasync/status/initialization')
     })
 
     it('trigger sends POST with date', () => {

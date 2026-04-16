@@ -3,11 +3,11 @@ import { Database, Filter, Plus, RotateCcw, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { marketDataAPI } from '../lib/api'
 import Pagination from './Pagination'
-import Modal from './ui/Modal'
 import DataTable, { type Column } from './ui/DataTable'
 import FilterBar from './ui/FilterBar'
-import { marketDataAPI } from '../lib/api'
+import Modal from './ui/Modal'
 
 type FilterOperator =
   | 'eq'
