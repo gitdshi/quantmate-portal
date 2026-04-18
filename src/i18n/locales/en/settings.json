@@ -113,7 +113,7 @@
     "systemManagement": {
       "datasourceHint": "Only enable the feeds you trust, so sync coverage and system health remain explainable.",
       "tabs": {
-        "datasources": "Data Sources",
+        "datasources": "AkShare",
         "tusharePro": "Tushare Pro",
         "systemStatus": "System Status"
       }
@@ -292,18 +292,28 @@
   "tushare": {
     "title": "Tushare Pro API Catalog",
     "subtitle": "{{total}} APIs total, {{enabled}} enabled",
-    "loading": "Loading Tushare Pro catalog...",
+    "loading": "Loading Tushare Pro catalog..."
+  },
+  "akshare": {
+    "title": "AkShare API Catalog",
+    "loading": "Loading AkShare catalog..."
+  },
+  "catalog": {
+    "subtitle": "{{total}} APIs total, {{enabled}} enabled",
     "batchLabel": "Batch by permission",
     "enableAll": "Enable all {{perm}}",
     "disableAll": "Disable all {{perm}}",
     "enable": "enable",
     "disable": "disable",
-    "batchOk": "Batch {{action}} {{perm}} APIs",
     "groupEnable": "Batch enable",
     "groupDisable": "Batch disable",
     "groupBatchOk": "Batch {{action}} {{name}}",
     "batchFail": "Batch operation failed",
     "toggleFail": "Toggle failed",
-    "unsupported": "Sync not implemented"
+    "configToggleFail": "Source toggle failed",
+    "sourceSwitch": "Source switch",
+    "unsupported": "Sync not implemented",
+    "general": "General",
+    "empty": "No catalog data"
   }
 }

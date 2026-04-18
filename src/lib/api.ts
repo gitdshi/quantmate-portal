@@ -463,7 +463,7 @@ export const dataSourceAPI = {
     api.put(`/settings/datasource-items/${itemKey}`, { enabled: data.enabled }, { params: { source: data.source } }),
   batchUpdate: (data: { items: Array<{ source: string; item_key: string; enabled: boolean }> }) =>
     api.put('/settings/datasource-items/batch', data),
-  batchByPermission: (source: string, data: { permission_points: string; enabled: boolean }) =>
+  batchByPermission: (source: string, data: { permission_points: number; enabled: boolean }) =>
     api.put('/settings/datasource-items/batch-by-permission', data, { params: { source } }),
   listPermissions: (source: string) =>
     api.get('/settings/datasource-items/permissions', { params: { source } }),

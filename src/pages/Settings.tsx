@@ -1,142 +1,19 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { Bell, Database, Monitor, Palette, Server, Settings2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 
+import AkshareTab from '../components/AkshareTab'
 import TushareProTab from '../components/TushareProTab'
 import TabPanel from '../components/ui/TabPanel'
 import ToggleSwitch from '../components/ui/ToggleSwitch'
 import { showToast } from '../components/ui/toast-service'
 import { usePermission } from '../hooks/usePermission'
-import { dataSourceAPI, systemAPI } from '../lib/api'
-
-type DSConfig = {
-  source_key: string
-  display_name: string
-  enabled: number
-  config_json: string | null
-  requires_token: number
-}
-
-type DSItem = {
-  source: string
-  item_key: string
-  display_name: string
-  enabled: number
-  target_database: string
-  target_table: string
-  table_created: number
-  sync_priority: number
-}
+import { systemAPI } from '../lib/api'
 
 function DataSourceTab() {
-  const { t } = useTranslation('settings')
-  const queryClient = useQueryClient()
-
-  const { data: configs = [] } = useQuery<DSConfig[]>({
-    queryKey: ['ds-configs'],
-    queryFn: () =>
-      dataSourceAPI.listConfigs().then((response) => (response.data as { data: DSConfig[] }).data ?? []),
-  })
-
-  const { data: items = [] } = useQuery<DSItem[]>({
-    queryKey: ['ds-items'],
-    queryFn: () =>
-      dataSourceAPI.listItems().then((response) => (response.data as { data: DSItem[] }).data ?? []),
-  })
-
-  const toggleConfigMutation = useMutation({
-    mutationFn: ({ key, enabled }: { key: string; enabled: boolean }) =>
-      dataSourceAPI.updateConfig(key, { enabled }),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['ds-configs'] }),
-  })
-
-  const toggleItemMutation = useMutation({
-    mutationFn: ({
-      source,
-      item_key,
-      enabled,
-    }: {
-      source: string
-      item_key: string
-      enabled: boolean
-    }) => dataSourceAPI.updateItem(item_key, { source, enabled }),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['ds-items'] }),
-  })
-
-  const testMutation = useMutation({
-    mutationFn: (source: string) => dataSourceAPI.testConnection(source),
-    onSuccess: (_data, source) => showToast(`${source}: ${t('page.datasource.testOk')}`, 'success'),
-    onError: (_error, source) => showToast(`${source}: ${t('page.datasource.testFail')}`, 'error'),
-  })
-
-  const groupedItems = useMemo(() => {
-    const map: Record<string, DSItem[]> = {}
-    for (const item of items) {
-      ;(map[item.source] ??= []).push(item)
-    }
-    return map
-  }, [items])
-
-  return (
-    <div className="space-y-4">
-      <div className="rounded-lg border border-border bg-card p-5">
-        <p className="text-sm text-muted-foreground">
-          {t(
-            'page.systemManagement.datasourceHint',
-            'Enable only the feeds you trust so system health and sync coverage stay explainable.'
-          )}
-        </p>
-      </div>
-
-      {configs.map((config) => {
-        const sourceItems = groupedItems[config.source_key] ?? []
-        return (
-          <div key={config.source_key} className="rounded-lg border border-border bg-card p-5">
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-card-foreground">{config.display_name}</h3>
-                <p className="text-xs text-muted-foreground">{config.source_key}</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  className="text-xs text-primary hover:underline"
-                  onClick={() => testMutation.mutate(config.source_key)}
-                  disabled={testMutation.isPending}
-                >
-                  {t('page.datasource.testBtn')}
-                </button>
-                <ToggleSwitch
-                  checked={Boolean(config.enabled)}
-                  onChange={(value) => toggleConfigMutation.mutate({ key: config.source_key, enabled: value })}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {sourceItems.map((item) => (
-                <label key={item.item_key} className="flex items-center gap-2 text-sm">
-                  <ToggleSwitch
-                    checked={Boolean(item.enabled)}
-                    onChange={(value) =>
-                      toggleItemMutation.mutate({
-                        source: item.source,
-                        item_key: item.item_key,
-                        enabled: value,
-                      })
-                    }
-                  />
-                  <span>{item.display_name || item.item_key}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-        )
-      })}
-    </div>
-  )
+  return <AkshareTab />
 }
 
 export default function Settings() {
