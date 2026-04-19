@@ -18,7 +18,16 @@ interface TushareCatalogOrder {
   apis: string[]
 }
 
-const TUSHARE_CATALOG_ORDER: TushareCatalogOrder = __TUSHARE_CATALOG_ORDER__
+const EMPTY_TUSHARE_CATALOG_ORDER: TushareCatalogOrder = {
+  categories: [],
+  subcategories: {},
+  apis: [],
+}
+
+const TUSHARE_CATALOG_ORDER: TushareCatalogOrder =
+  typeof __TUSHARE_CATALOG_ORDER__ === 'undefined'
+    ? EMPTY_TUSHARE_CATALOG_ORDER
+    : __TUSHARE_CATALOG_ORDER__
 
 function normalizeCatalogValue(value: string | null | undefined): string {
   return String(value ?? '')

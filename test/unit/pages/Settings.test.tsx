@@ -26,6 +26,7 @@ vi.mock('@/lib/api', () => ({
     listItems: vi.fn(),
     updateConfig: vi.fn(),
     updateItem: vi.fn(),
+    batchUpdate: vi.fn(),
     testConnection: vi.fn(),
   },
   systemAPI: {
@@ -37,7 +38,13 @@ import { dataSourceAPI, systemAPI } from '@/lib/api'
 
 async function openSystemManagementTab() {
   fireEvent.click(screen.getByRole('button', { name: 'System Management' }))
-  await screen.findByRole('button', { name: 'Data Sources' })
+  await screen.findByRole('heading', { name: 'AkShare API Catalog' })
+}
+
+async function openTushareManagementTab() {
+  await openSystemManagementTab()
+  fireEvent.click(screen.getByRole('button', { name: 'Tushare Pro' }))
+  await screen.findByRole('heading', { name: 'Tushare Pro API Catalog' })
 }
 
 async function openSystemStatusTab() {
@@ -67,22 +74,50 @@ describe('Settings Page', () => {
         ],
       },
     } as never)
-    vi.mocked(dataSourceAPI.listItems).mockResolvedValue({
-      data: {
-        data: [
-          {
-            source: 'tushare',
-            item_key: 'stock_daily',
-            display_name: 'Stock Daily',
-            enabled: 1,
-            target_database: 'quantmate',
-            target_table: 'stock_daily',
-            table_created: 1,
-            sync_priority: 1,
-          },
-        ],
-      },
-    } as never)
+    vi.mocked(dataSourceAPI.listItems).mockImplementation((params?: { source?: string }) =>
+      Promise.resolve({
+        data: {
+          data:
+            params?.source === 'akshare'
+              ? [
+                  {
+                    id: 1,
+                    source: 'akshare',
+                    item_key: 'index_daily',
+                    display_name: 'Index Daily',
+                    enabled: 1,
+                    description: 'Index data',
+                    category: 'AkShare',
+                    sub_category: 'Core',
+                    api_name: 'index_daily',
+                    permission_points: null,
+                    rate_limit_note: null,
+                    requires_permission: '0',
+                    sync_priority: 1,
+                    sync_supported: true,
+                  },
+                ]
+              : [
+                  {
+                    id: 2,
+                    source: 'tushare',
+                    item_key: 'stock_daily',
+                    display_name: 'Stock Daily',
+                    enabled: 1,
+                    description: 'Daily bars',
+                    category: 'Market Data',
+                    sub_category: 'Daily',
+                    api_name: 'stock_daily',
+                    permission_points: 120,
+                    rate_limit_note: null,
+                    requires_permission: '0',
+                    sync_priority: 1,
+                    sync_supported: true,
+                  },
+                ],
+        },
+      }) as never
+    )
     vi.mocked(systemAPI.syncStatus).mockResolvedValue({ data: { status: 'ok', version: 'v1.2.0' } } as never)
   })
 
@@ -115,8 +150,8 @@ describe('Settings Page', () => {
   it('switches to system management tab and shows datasource config', async () => {
     render(<Settings />)
     await openSystemManagementTab()
-    expect(await screen.findByText('Tushare Pro')).toBeInTheDocument()
-    expect(await screen.findByText('AkShare')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'AkShare API Catalog' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Tushare Pro' })).toBeInTheDocument()
   })
 
   it('shows trading preferences tab', () => {
@@ -147,9 +182,9 @@ describe('Settings Page', () => {
   it('toggles a datasource config on system management tab', async () => {
     render(<Settings />)
     await openSystemManagementTab()
-    await screen.findByText('Tushare Pro')
+    await screen.findByRole('heading', { name: 'AkShare API Catalog' })
 
-    const configSwitch = getCardSwitchByHeading('Tushare Pro')
+    const configSwitch = getCardSwitchByHeading('AkShare API Catalog')
     expect(configSwitch).toBeTruthy()
     fireEvent.click(configSwitch!)
     await waitFor(() => {
@@ -163,7 +198,7 @@ describe('Settings Page', () => {
 
     render(<Settings />)
     await openSystemManagementTab()
-    await screen.findByText('Tushare Pro')
+    await screen.findByRole('heading', { name: 'AkShare API Catalog' })
 
     const testBtns = screen.getAllByRole('button').filter(b => b.textContent?.match(/test connection/i))
     if (testBtns.length > 0) {
@@ -326,17 +361,16 @@ describe('Settings Page', () => {
     window.history.replaceState({}, '', '/settings?tab=system-management')
     render(<Settings />)
 
+    await openTushareManagementTab()
+    fireEvent.click(screen.getByRole('button', { name: /Market Data/ }))
+
     // Wait for item display name to appear (proves items query loaded)
     await waitFor(() => {
       expect(screen.getByText('Stock Daily')).toBeInTheDocument()
     })
 
-    // Now find all switches — should have config + item switches
-    const switches = screen.getAllByRole('switch')
-
-    // Find the switch next to "Stock Daily" text
     const stockDailyLabel = screen.getByText('Stock Daily')
-    const itemSwitch = stockDailyLabel.closest('label')?.querySelector('button[role="switch"]')
+    const itemSwitch = stockDailyLabel.closest('div.min-w-0')?.parentElement?.querySelector('button[role="switch"]')
     expect(itemSwitch).toBeTruthy()
 
     fireEvent.click(itemSwitch!)
