@@ -321,7 +321,7 @@ describe('API Client - HTTP Calls', () => {
     })
 
     it('tushareTables sends GET with keyword', () => {
-      marketDataAPI.tushareTables('daily')
+      marketDataAPI.tushareTables({ keyword: 'daily' })
       expect(mockGet).toHaveBeenCalledWith('/data/tushare/tables', {
         params: { keyword: 'daily' },
         timeout: 30000,

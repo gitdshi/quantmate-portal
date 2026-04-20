@@ -38,25 +38,27 @@ vi.mock('@/lib/api', () => ({
 
 import { dataSourceAPI, systemAPI } from '@/lib/api'
 
-async function openSystemManagementTab() {
-  fireEvent.click(screen.getByRole('button', { name: 'System Management' }))
+async function openDataSourceManagementTab() {
+  fireEvent.click(screen.getByRole('button', { name: 'Data Source Management' }))
   await screen.findByRole('heading', { name: 'AkShare API Catalog' })
 }
 
 async function openTushareManagementTab() {
-  await openSystemManagementTab()
+  await openDataSourceManagementTab()
   fireEvent.click(screen.getByRole('button', { name: 'Tushare Pro' }))
   await screen.findByRole('heading', { name: 'Tushare Pro API Catalog' })
 }
 
 async function openSystemStatusTab() {
-  await openSystemManagementTab()
+  fireEvent.click(screen.getByRole('button', { name: 'System Management' }))
   fireEvent.click(screen.getByRole('button', { name: 'System Status' }))
+  await screen.findByRole('heading', { name: 'System status' })
 }
 
 async function openSystemLogsTab() {
-  await openSystemManagementTab()
+  fireEvent.click(screen.getByRole('button', { name: 'System Management' }))
   fireEvent.click(screen.getByRole('button', { name: 'System Logs' }))
+  await screen.findByRole('heading', { name: 'System Logs' })
 }
 
 function getCardSwitchByHeading(heading: string) {
@@ -141,6 +143,7 @@ describe('Settings Page', () => {
     render(<Settings />)
     expect(screen.getByRole('button', { name: 'Personal Settings' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Trading Preferences' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Data Source Management' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'System Management' })).toBeInTheDocument()
   })
 
@@ -158,9 +161,9 @@ describe('Settings Page', () => {
     expect(screen.getByText('Auto Save')).toBeInTheDocument()
   })
 
-  it('switches to system management tab and shows datasource config', async () => {
+  it('switches to data source management tab and shows datasource config', async () => {
     render(<Settings />)
-    await openSystemManagementTab()
+    await openDataSourceManagementTab()
     expect(await screen.findByRole('heading', { name: 'AkShare API Catalog' })).toBeInTheDocument()
     expect(await screen.findByRole('button', { name: 'Tushare Pro' })).toBeInTheDocument()
   })
@@ -176,8 +179,8 @@ describe('Settings Page', () => {
     render(<Settings />)
     await openSystemStatusTab()
     expect(await screen.findByText('System status')).toBeInTheDocument()
-    expect(await screen.findByText('status')).toBeInTheDocument()
-    expect(await screen.findByText('version')).toBeInTheDocument()
+    expect(await screen.findByText('Status')).toBeInTheDocument()
+    expect(await screen.findByText('Version')).toBeInTheDocument()
   })
 
   it('shows system logs tab and streams module output', async () => {
@@ -208,7 +211,7 @@ describe('Settings Page', () => {
   // ─── Toggle datasource config ───────────────────────────
   it('toggles a datasource config on system management tab', async () => {
     render(<Settings />)
-    await openSystemManagementTab()
+    await openDataSourceManagementTab()
     await screen.findByRole('heading', { name: 'AkShare API Catalog' })
 
     const configSwitch = getCardSwitchByHeading('AkShare API Catalog')
@@ -224,7 +227,7 @@ describe('Settings Page', () => {
     vi.mocked(dataSourceAPI.testConnection).mockResolvedValue({ data: { status: 'ok' } } as never)
 
     render(<Settings />)
-    await openSystemManagementTab()
+    await openDataSourceManagementTab()
     await screen.findByRole('heading', { name: 'AkShare API Catalog' })
 
     const testBtns = screen.getAllByRole('button').filter(b => b.textContent?.match(/test connection/i))
@@ -397,7 +400,7 @@ describe('Settings Page', () => {
   it('toggles a data source item switch', async () => {
     vi.mocked(dataSourceAPI.updateItem).mockResolvedValue({ data: {} } as never)
 
-    window.history.replaceState({}, '', '/settings?tab=system-management')
+    window.history.replaceState({}, '', '/settings?tab=data-source-management')
     render(<Settings />)
 
     await openTushareManagementTab()
@@ -424,7 +427,7 @@ describe('Settings Page', () => {
   it('clicks test connection button for a data source', async () => {
     vi.mocked(dataSourceAPI.testConnection).mockResolvedValue({ data: {} } as never)
 
-    window.history.replaceState({}, '', '/settings?tab=system-management')
+    window.history.replaceState({}, '', '/settings?tab=data-source-management')
     render(<Settings />)
 
     await waitFor(() => {
@@ -463,7 +466,7 @@ describe('Settings Page', () => {
   it('shows error toast when test connection fails', async () => {
     vi.mocked(dataSourceAPI.testConnection).mockRejectedValue(new Error('Connection refused'))
 
-    window.history.replaceState({}, '', '/settings?tab=system-management')
+    window.history.replaceState({}, '', '/settings?tab=data-source-management')
     render(<Settings />)
 
     await waitFor(() => {
