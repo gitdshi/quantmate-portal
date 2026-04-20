@@ -15,6 +15,7 @@
       "system": "System Info",
       "personal": "Personal Settings",
       "tradingPreferences": "Trading Preferences",
+      "dataSourceManagement": "Data Source Management",
       "systemManagement": "System Management"
     },
     "general": {
@@ -103,20 +104,55 @@
     },
     "system": {
       "title": "System status",
-      "empty": "No system status information is available yet."
+      "empty": "No system status information is available yet.",
+      "table": {
+        "columns": {
+          "section": "Section",
+          "field": "Field",
+          "value": "Value"
+        },
+        "root": "Overview",
+        "value": "Value",
+        "emptyValue": "-",
+        "yes": "Yes",
+        "no": "No"
+      }
     },
     "sections": {
       "personalCore": "Identity, locale, and display defaults",
       "notifications": "Notification preferences",
       "display": "Display preferences"
     },
+    "dataSourceManagement": {
+      "tabs": {
+        "akshare": "AkShare",
+        "tusharePro": "Tushare Pro"
+      }
+    },
     "systemManagement": {
       "datasourceHint": "Only enable the feeds you trust, so sync coverage and system health remain explainable.",
       "tabs": {
-        "datasources": "AkShare",
-        "tusharePro": "Tushare Pro",
-        "systemStatus": "System Status"
+        "systemStatus": "System Status",
+        "systemLogs": "System Logs"
       }
+    },
+    "systemLogs": {
+      "title": "System Logs",
+      "subtitle": "Tail live container stdout and stderr from the current deployment.",
+      "streamFailed": "Log stream failed",
+      "tailLabel": "Initial tail size",
+      "tailAria": "Initial tail size",
+      "clear": "Clear",
+      "reconnect": "Reconnect",
+      "moduleAria": "System log modules",
+      "status": {
+        "streaming": "Streaming",
+        "error": "Stream error",
+        "connecting": "Connecting"
+      },
+      "lineCount": "{{count}} lines",
+      "waiting": "Opening log stream...",
+      "empty": "No log lines received yet for this module."
     }
   },
   "accountPage": {

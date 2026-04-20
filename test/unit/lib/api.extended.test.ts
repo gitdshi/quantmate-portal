@@ -44,33 +44,33 @@ vi.mock('@/stores/auth', () => ({
 }))
 
 import {
-  accountSecurityAPI,
-  aiAPI,
-  alertsAPI,
-  brokerAPI,
-  calendarAPI,
-  componentBacktestAPI,
-  compositeBacktestAPI,
-  compositeStrategiesAPI,
-  dataSourceAPI,
-  datasyncAPI,
-  factorAPI,
-  indicatorAPI,
-  marketDataAPI,
-  multiMarketAPI,
-  optimizationAPI,
-  paperAccountAPI,
-  paperTradingAPI,
-  reportsAPI,
-  riskAPI,
-  sentimentAPI,
-  strategiesAPI,
-  strategyComponentsAPI,
-  strategyFilesAPI,
-  systemAPI,
-  teamAPI,
-  templateAPI,
-  tradingAPI
+    accountSecurityAPI,
+    aiAPI,
+    alertsAPI,
+    brokerAPI,
+    calendarAPI,
+    componentBacktestAPI,
+    compositeBacktestAPI,
+    compositeStrategiesAPI,
+    dataSourceAPI,
+    datasyncAPI,
+    factorAPI,
+    indicatorAPI,
+    marketDataAPI,
+    multiMarketAPI,
+    optimizationAPI,
+    paperAccountAPI,
+    paperTradingAPI,
+    reportsAPI,
+    riskAPI,
+    sentimentAPI,
+    strategiesAPI,
+    strategyComponentsAPI,
+    strategyFilesAPI,
+    systemAPI,
+    teamAPI,
+    templateAPI,
+    tradingAPI
 } from '@/lib/api'
 
 // Capture interceptors
@@ -217,7 +217,15 @@ describe('Extended API — untested HTTP calls', () => {
     it('tushareTables sends GET without keyword', () => {
       marketDataAPI.tushareTables()
       expect(mockGet).toHaveBeenCalledWith('/data/tushare/tables', {
-        params: { keyword: undefined },
+        params: undefined,
+        timeout: 30000,
+      })
+    })
+
+    it('tushareTables sends GET with metadata filters', () => {
+      marketDataAPI.tushareTables({ keyword: 'daily', category: '股票数据', sub_category: '行情数据' })
+      expect(mockGet).toHaveBeenCalledWith('/data/tushare/tables', {
+        params: { keyword: 'daily', category: '股票数据', sub_category: '行情数据' },
         timeout: 30000,
       })
     })

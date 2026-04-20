@@ -7,14 +7,35 @@ import { useSearchParams } from 'react-router-dom'
 import AkshareTab from '../components/AkshareTab'
 import SystemLogsTab from '../components/SystemLogsTab'
 import TushareProTab from '../components/TushareProTab'
+import DataTable, { type Column } from '../components/ui/DataTable'
 import TabPanel from '../components/ui/TabPanel'
 import ToggleSwitch from '../components/ui/ToggleSwitch'
 import { showToast } from '../components/ui/toast-service'
 import { usePermission } from '../hooks/usePermission'
 import { systemAPI } from '../lib/api'
 
-function DataSourceTab() {
-  return <AkshareTab />
+interface SystemStatusRow {
+  id: string
+  section: string
+  field: string
+  value: string
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return Object.prototype.toString.call(value) === '[object Object]'
+}
+
+function humanizeStatusSegment(segment: string) {
+  const normalized = segment
+    .replace(/\[(\d+)\]/g, ' $1')
+    .replace(/[_-]+/g, ' ')
+    .trim()
+
+  if (!normalized) {
+    return segment
+  }
+
+  return normalized.replace(/\b\w/g, (char) => char.toUpperCase())
 }
 
 export default function Settings() {
@@ -34,6 +55,11 @@ export default function Settings() {
     ]
     if (canManageSystem) {
       baseTabs.push({
+        key: 'data-source-management',
+        label: t('page.tabs.dataSourceManagement', 'Data Source Management'),
+        icon: <Database size={16} />,
+      })
+      baseTabs.push({
         key: 'system-management',
         label: t('page.tabs.systemManagement', 'System Management'),
         icon: <Server size={16} />,
@@ -42,20 +68,27 @@ export default function Settings() {
     return baseTabs
   }, [canManageSystem, t])
 
-  const [activeSystemTab, setActiveSystemTab] = useState<string>('datasources')
+  const [activeDataSourceTab, setActiveDataSourceTab] = useState<string>('akshare')
+  const [activeSystemTab, setActiveSystemTab] = useState<string>('system-status')
 
-  const systemManagementTabs = useMemo(
+  const dataSourceManagementTabs = useMemo(
     () => [
       {
-        key: 'datasources',
-        label: t('page.systemManagement.tabs.datasources', 'Data Sources'),
-        icon: <Settings2 size={16} />,
+        key: 'akshare',
+        label: t('page.dataSourceManagement.tabs.akshare', 'AkShare'),
+        icon: <Database size={16} />,
       },
       {
         key: 'tushare-pro',
-        label: t('page.systemManagement.tabs.tusharePro', 'Tushare Pro'),
+        label: t('page.dataSourceManagement.tabs.tusharePro', 'Tushare Pro'),
         icon: <Database size={16} />,
       },
+    ],
+    [t]
+  )
+
+  const systemManagementTabs = useMemo(
+    () => [
       {
         key: 'system-status',
         label: t('page.systemManagement.tabs.systemStatus', 'System Status'),
@@ -138,13 +171,6 @@ export default function Settings() {
     onSuccess: () => showToast(t('page.saved'), 'success'),
   })
 
-  const systemItems = systemInfo
-    ? Object.entries(systemInfo).map(([key, value]) => ({
-        label: key,
-        value: typeof value === 'object' ? JSON.stringify(value) : String(value ?? '-'),
-      }))
-    : []
-
   const inputClass =
     'w-full rounded-md border border-border bg-background px-3 py-2 text-sm'
   const labelClass = 'mb-1 block text-sm font-medium'
@@ -156,6 +182,109 @@ export default function Settings() {
     'systemAlert',
     'dailyReport',
   ] as const
+
+  const systemStatusColumns = useMemo<Column<SystemStatusRow>[]>(
+    () => [
+      {
+        key: 'section',
+        label: t('page.system.table.columns.section', 'Section'),
+        sortable: true,
+        width: '20%',
+      },
+      {
+        key: 'field',
+        label: t('page.system.table.columns.field', 'Field'),
+        sortable: true,
+        width: '35%',
+      },
+      {
+        key: 'value',
+        label: t('page.system.table.columns.value', 'Value'),
+        width: '45%',
+        className: 'break-all',
+      },
+    ],
+    [t]
+  )
+
+  const systemStatusRows = useMemo<SystemStatusRow[]>(() => {
+    const emptyValue = t('page.system.table.emptyValue', '-')
+    const yesLabel = t('page.system.table.yes', 'Yes')
+    const noLabel = t('page.system.table.no', 'No')
+    const defaultSection = t('page.system.table.root', 'Overview')
+    const defaultField = t('page.system.table.value', 'Value')
+
+    const formatValue = (value: unknown) => {
+      if (value == null) {
+        return emptyValue
+      }
+      if (typeof value === 'boolean') {
+        return value ? yesLabel : noLabel
+      }
+      if (Array.isArray(value)) {
+        if (value.length === 0) {
+          return emptyValue
+        }
+        return value.map((item) => formatValue(item)).join(', ')
+      }
+      const text = String(value).trim()
+      return text || emptyValue
+    }
+
+    const rows: SystemStatusRow[] = []
+
+    const pushRow = (path: string[], value: unknown) => {
+      const [sectionKey, ...fieldParts] = path
+      rows.push({
+        id: path.join('.'),
+        section: sectionKey ? humanizeStatusSegment(sectionKey) : defaultSection,
+        field: fieldParts.length > 0
+          ? fieldParts.map((part) => humanizeStatusSegment(part)).join(' / ')
+          : defaultField,
+        value: formatValue(value),
+      })
+    }
+
+    const visit = (value: unknown, path: string[]) => {
+      if (Array.isArray(value)) {
+        if (value.length === 0) {
+          pushRow(path, value)
+          return
+        }
+
+        const allPrimitive = value.every(
+          (item) => item == null || typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean'
+        )
+        if (allPrimitive) {
+          pushRow(path, value)
+          return
+        }
+
+        value.forEach((item, index) => visit(item, [...path, `[${index + 1}]`]))
+        return
+      }
+
+      if (isPlainObject(value)) {
+        const entries = Object.entries(value)
+        if (entries.length === 0) {
+          pushRow(path, emptyValue)
+          return
+        }
+
+        entries.forEach(([key, nestedValue]) => visit(nestedValue, [...path, key]))
+        return
+      }
+
+      pushRow(path.length > 0 ? path : [defaultSection], value)
+    }
+
+    if (!systemInfo) {
+      return rows
+    }
+
+    visit(systemInfo, [])
+    return rows
+  }, [systemInfo, t])
 
   return (
     <div className="space-y-6">
@@ -428,12 +557,24 @@ export default function Settings() {
           </div>
         )}
 
+        {activeTab === 'data-source-management' && canManageSystem && (
+          <div className="space-y-4">
+            <TabPanel
+              tabs={dataSourceManagementTabs}
+              activeTab={activeDataSourceTab}
+              onChange={setActiveDataSourceTab}
+            >
+              {activeDataSourceTab === 'akshare' && <AkshareTab />}
+
+              {activeDataSourceTab === 'tushare-pro' && <TushareProTab />}
+            </TabPanel>
+          </div>
+        )}
+
         {activeTab === 'system-management' && canManageSystem && (
           <div className="space-y-4">
             <TabPanel tabs={systemManagementTabs} activeTab={activeSystemTab} onChange={setActiveSystemTab}>
-              {activeSystemTab === 'datasources' && <DataSourceTab />}
 
-              {activeSystemTab === 'tushare-pro' && <TushareProTab />}
 
               {activeSystemTab === 'system-status' && (
                 <div className="rounded-lg border border-border bg-card p-6">
@@ -444,15 +585,13 @@ export default function Settings() {
                     </h3>
                   </div>
 
-                  {systemItems.length > 0 ? (
-                    <div className="grid gap-3 md:grid-cols-2">
-                      {systemItems.map((item) => (
-                        <div key={item.label} className="rounded-lg border border-border bg-background px-4 py-3">
-                          <p className="text-xs uppercase tracking-wide text-muted-foreground">{item.label}</p>
-                          <p className="mt-1 text-sm text-foreground break-all">{item.value}</p>
-                        </div>
-                      ))}
-                    </div>
+                  {systemStatusRows.length > 0 ? (
+                    <DataTable
+                      columns={systemStatusColumns}
+                      data={systemStatusRows}
+                      keyField="id"
+                      emptyText={t('page.system.empty')}
+                    />
                   ) : (
                     <p className="text-sm text-muted-foreground">{t('page.system.empty')}</p>
                   )}

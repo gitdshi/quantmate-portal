@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Database, Filter, Plus, RotateCcw, X } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { marketDataAPI } from '../lib/api'
@@ -24,6 +24,13 @@ type FilterOperator =
 
 type TushareTableInfo = {
   name: string
+  target_database: string
+  target_table: string
+  table_created: boolean
+  item_key?: string | null
+  item_name?: string | null
+  category?: string | null
+  sub_category?: string | null
   column_count: number
   primary_keys: string[]
 }
@@ -123,11 +130,10 @@ function operatorNeedsList(operator: FilterOperator) {
   return operator === 'in'
 }
 
-export default function TushareDataBrowserTab() {
+function TushareTableContent({ tableInfo }: { tableInfo: TushareTableInfo }) {
   const { t } = useTranslation(['market', 'common'])
 
-  const [tableKeyword, setTableKeyword] = useState('')
-  const [selectedTable, setSelectedTable] = useState('')
+  const selectedTable = tableInfo.name
   const [draftFilters, setDraftFilters] = useState<DraftFilter[]>([createDraftFilter()])
   const [appliedFilters, setAppliedFilters] = useState<BrowserRequestFilter[]>([])
   const [filterError, setFilterError] = useState<string | null>(null)
@@ -137,29 +143,6 @@ export default function TushareDataBrowserTab() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [tableInfoOpen, setTableInfoOpen] = useState(false)
   const [schemaOpen, setSchemaOpen] = useState(false)
-
-  const { data: tables = [], isLoading: tablesLoading, error: tablesError } = useQuery<TushareTableInfo[]>({
-    queryKey: ['market', 'tushare', 'tables', tableKeyword],
-    queryFn: () =>
-      marketDataAPI
-        .tushareTables(tableKeyword || undefined)
-        .then((response) => (response.data as { data: TushareTableInfo[] }).data ?? []),
-  })
-
-  useEffect(() => {
-    if (!selectedTable && tables.length > 0) {
-      setSelectedTable(tables[0].name)
-    }
-  }, [selectedTable, tables])
-
-  useEffect(() => {
-    setDraftFilters([createDraftFilter()])
-    setAppliedFilters([])
-    setFilterError(null)
-    setPage(1)
-    setSortBy('')
-    setSortDir('desc')
-  }, [selectedTable])
 
   const { data: schema, isLoading: schemaLoading, error: schemaError } = useQuery<TushareSchema>({
     queryKey: ['market', 'tushare', 'schema', selectedTable],
@@ -185,16 +168,7 @@ export default function TushareDataBrowserTab() {
       marketDataAPI.tushareTableRows(selectedTable, rowsPayload).then((response) => response.data as TushareRowsResponse),
   })
 
-  const tableOptions = useMemo(
-    () => tables.map((table) => ({ value: table.name, label: `${table.name} (${table.column_count})` })),
-    [tables]
-  )
-  const selectedTableInfo = useMemo(
-    () => tables.find((table) => table.name === selectedTable) ?? null,
-    [selectedTable, tables]
-  )
-
-  const schemaColumns = schema?.columns ?? []
+  const schemaColumns = useMemo(() => schema?.columns ?? [], [schema?.columns])
   const sortOptions = useMemo(
     () => schemaColumns.map((column) => ({ value: column.name, label: `${column.name} · ${column.data_type}` })),
     [schemaColumns]
@@ -272,8 +246,8 @@ export default function TushareDataBrowserTab() {
     'inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50'
   const modalInfoCardClass = 'rounded-lg border border-border bg-background px-4 py-3'
   const resolvedTotalRows = rowsData?.meta.total ?? t('page.browser.info.notLoaded')
-  const resolvedPrimaryKeys = selectedTableInfo?.primary_keys?.length
-    ? selectedTableInfo.primary_keys.join(', ')
+  const resolvedPrimaryKeys = tableInfo.primary_keys?.length
+    ? tableInfo.primary_keys.join(', ')
     : t('page.browser.info.primaryKeysEmpty')
   const resolvedSort = rowsData?.meta.sort_by
     ? `${rowsData.meta.sort_by} · ${rowsData.meta.sort_dir}`
@@ -292,44 +266,40 @@ export default function TushareDataBrowserTab() {
   )
 
   return (
-    <div className="space-y-4">
+    <>
       <div className="rounded-xl border border-border bg-card p-5">
-        <div className="mb-3 flex items-center gap-2">
-          <Database size={18} className="text-muted-foreground" />
-          <div>
-            <h2 className="text-lg font-semibold text-foreground">{t('page.browser.title')}</h2>
-            <p className="text-sm text-muted-foreground">{t('page.browser.subtitle')}</p>
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Filter size={16} className="text-muted-foreground" />
+            <h3 className="font-semibold text-foreground">{t('page.browser.filtersTitle')}</h3>
           </div>
-        </div>
-
-        <FilterBar
-          searchValue={tableKeyword}
-          onSearchChange={setTableKeyword}
-          searchPlaceholder={t('page.browser.tableSearchPlaceholder')}
-          filters={[
-            {
-              key: 'table',
-              value: selectedTable,
-              options: tableOptions,
-              onChange: (value) => setSelectedTable(value),
-              placeholder: t('page.browser.selectTable'),
-            },
-            {
-              key: 'page-size',
-              value: String(pageSize),
-              options: [25, 50, 100].map((size) => ({ value: String(size), label: `${size}` })),
-              onChange: (value) => {
-                setPageSize(Number(value))
-                setPage(1)
-              },
-            },
-          ]}
-        >
-          <div className="ml-auto flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setDraftFilters((current) => [...current, createDraftFilter()])}
+              className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm hover:bg-muted"
+            >
+              <Plus size={14} />
+              {t('page.browser.addFilter')}
+            </button>
+            <button
+              type="button"
+              onClick={handleClearFilters}
+              className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm hover:bg-muted"
+            >
+              <RotateCcw size={14} />
+              {t('page.browser.clearFilters')}
+            </button>
+            <button
+              type="button"
+              onClick={handleApplyFilters}
+              className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground hover:opacity-90"
+            >
+              {t('page.browser.applyFilters')}
+            </button>
             <button
               type="button"
               onClick={() => setTableInfoOpen(true)}
-              disabled={!selectedTable}
               className={popupButtonClass}
               data-testid="tushare-table-info-button"
             >
@@ -338,213 +308,183 @@ export default function TushareDataBrowserTab() {
             <button
               type="button"
               onClick={() => setSchemaOpen(true)}
-              disabled={!selectedTable}
               className={popupButtonClass}
               data-testid="tushare-schema-button"
             >
               {t('page.browser.schemaButton')}
             </button>
-            <div className="text-xs text-muted-foreground">
-              {t('page.browser.tableCount', { count: tables.length })}
-            </div>
           </div>
-        </FilterBar>
+        </div>
 
-        {tablesError && <p className="text-sm text-destructive">{t('page.browser.tableLoadFailed')}</p>}
-        {tablesLoading && <p className="text-sm text-muted-foreground">{t('page.browser.loadingTables')}</p>}
-      </div>
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <select
+            value={String(pageSize)}
+            onChange={(event) => setPageSize(Number(event.target.value))}
+            className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+          >
+            {[25, 50, 100].map((size) => (
+              <option key={size} value={size}>{size}</option>
+            ))}
+          </select>
+          <select
+            value={sortBy}
+            onChange={(event) => setSortBy(event.target.value)}
+            className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+          >
+            <option value="">{t('page.browser.autoSort')}</option>
+            {sortOptions.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+          <select
+            value={sortDir}
+            onChange={(event) => setSortDir(event.target.value as 'asc' | 'desc')}
+            className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+          >
+            <option value="desc">{t('page.browser.sortDesc')}</option>
+            <option value="asc">{t('page.browser.sortAsc')}</option>
+          </select>
+        </div>
 
-      {selectedTable && (
-        <div className="rounded-xl border border-border bg-card p-5">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <Filter size={16} className="text-muted-foreground" />
-              <h3 className="font-semibold text-foreground">{t('page.browser.filtersTitle')}</h3>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setDraftFilters((current) => [...current, createDraftFilter()])}
-                className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm hover:bg-muted"
+        <div className="space-y-3">
+          {draftFilters.map((filter, index) => (
+            <div key={filter.id} className="grid gap-2 rounded-lg border border-border bg-background p-3 md:grid-cols-[1fr_180px_1fr_1fr_auto]">
+              <select
+                value={filter.column}
+                onChange={(event) => updateDraftFilter(filter.id, { column: event.target.value })}
+                className="rounded-md border border-border bg-card px-3 py-2 text-sm"
               >
-                <Plus size={14} />
-                {t('page.browser.addFilter')}
-              </button>
-              <button
-                type="button"
-                onClick={handleClearFilters}
-                className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm hover:bg-muted"
+                <option value="">{t('page.browser.selectColumn')}</option>
+                {schemaColumns.map((column) => (
+                  <option key={column.name} value={column.name}>{column.name}</option>
+                ))}
+              </select>
+
+              <select
+                value={filter.operator}
+                onChange={(event) =>
+                  updateDraftFilter(filter.id, {
+                    operator: event.target.value as FilterOperator,
+                    value: '',
+                    valueTo: '',
+                    values: '',
+                  })
+                }
+                className="rounded-md border border-border bg-card px-3 py-2 text-sm"
               >
-                <RotateCcw size={14} />
-                {t('page.browser.clearFilters')}
-              </button>
-              <button
-                type="button"
-                onClick={handleApplyFilters}
-                className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground hover:opacity-90"
-              >
-                {t('page.browser.applyFilters')}
-              </button>
-            </div>
-          </div>
+                {FILTER_OPERATORS.map((operator) => (
+                  <option key={operator} value={operator}>{t(`page.browser.operators.${operator}`)}</option>
+                ))}
+              </select>
 
-          <div className="mb-4 flex flex-wrap items-center gap-3">
-            <select
-              value={sortBy}
-              onChange={(event) => {
-                setSortBy(event.target.value)
-                setPage(1)
-              }}
-              className="rounded-md border border-border bg-background px-3 py-2 text-sm"
-            >
-              <option value="">{t('page.browser.autoSort')}</option>
-              {sortOptions.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-            <select
-              value={sortDir}
-              onChange={(event) => {
-                setSortDir(event.target.value as 'asc' | 'desc')
-                setPage(1)
-              }}
-              className="rounded-md border border-border bg-background px-3 py-2 text-sm"
-            >
-              <option value="desc">{t('page.browser.sortDesc')}</option>
-              <option value="asc">{t('page.browser.sortAsc')}</option>
-            </select>
-          </div>
-
-          <div className="space-y-3">
-            {draftFilters.map((filter, index) => (
-              <div key={filter.id} className="grid gap-2 rounded-lg border border-border bg-background p-3 md:grid-cols-[1fr_180px_1fr_1fr_auto]">
-                <select
-                  value={filter.column}
-                  onChange={(event) => updateDraftFilter(filter.id, { column: event.target.value })}
-                  className="rounded-md border border-border bg-card px-3 py-2 text-sm"
-                >
-                  <option value="">{t('page.browser.selectColumn')}</option>
-                  {schemaColumns.map((column) => (
-                    <option key={column.name} value={column.name}>{column.name}</option>
-                  ))}
-                </select>
-
-                <select
-                  value={filter.operator}
-                  onChange={(event) =>
-                    updateDraftFilter(filter.id, {
-                      operator: event.target.value as FilterOperator,
-                      value: '',
-                      valueTo: '',
-                      values: '',
-                    })
-                  }
-                  className="rounded-md border border-border bg-card px-3 py-2 text-sm"
-                >
-                  {FILTER_OPERATORS.map((operator) => (
-                    <option key={operator} value={operator}>{t(`page.browser.operators.${operator}`)}</option>
-                  ))}
-                </select>
-
-                {operatorNeedsList(filter.operator) ? (
-                  <input
-                    value={filter.values}
-                    onChange={(event) => updateDraftFilter(filter.id, { values: event.target.value })}
-                    placeholder={t('page.browser.valuesPlaceholder')}
-                    className="rounded-md border border-border bg-card px-3 py-2 text-sm md:col-span-2"
-                  />
-                ) : operatorNeedsRange(filter.operator) ? (
-                  <>
-                    <input
-                      value={filter.value}
-                      onChange={(event) => updateDraftFilter(filter.id, { value: event.target.value })}
-                      placeholder={t('page.browser.fromPlaceholder')}
-                      className="rounded-md border border-border bg-card px-3 py-2 text-sm"
-                    />
-                    <input
-                      value={filter.valueTo}
-                      onChange={(event) => updateDraftFilter(filter.id, { valueTo: event.target.value })}
-                      placeholder={t('page.browser.toPlaceholder')}
-                      className="rounded-md border border-border bg-card px-3 py-2 text-sm"
-                    />
-                  </>
-                ) : operatorNeedsValue(filter.operator) ? (
+              {operatorNeedsList(filter.operator) ? (
+                <input
+                  value={filter.values}
+                  onChange={(event) => updateDraftFilter(filter.id, { values: event.target.value })}
+                  placeholder={t('page.browser.valuesPlaceholder')}
+                  className="rounded-md border border-border bg-card px-3 py-2 text-sm md:col-span-2"
+                />
+              ) : operatorNeedsRange(filter.operator) ? (
+                <>
                   <input
                     value={filter.value}
                     onChange={(event) => updateDraftFilter(filter.id, { value: event.target.value })}
-                    placeholder={t('page.browser.valuePlaceholder')}
-                    className="rounded-md border border-border bg-card px-3 py-2 text-sm md:col-span-2"
+                    placeholder={t('page.browser.fromPlaceholder')}
+                    className="rounded-md border border-border bg-card px-3 py-2 text-sm"
                   />
-                ) : (
-                  <div className="md:col-span-2 flex items-center text-sm text-muted-foreground">
-                    {t('page.browser.noValueNeeded')}
-                  </div>
-                )}
-
-                <button
-                  type="button"
-                  disabled={draftFilters.length === 1}
-                  onClick={() => setDraftFilters((current) => current.filter((item) => item.id !== filter.id))}
-                  className="inline-flex h-10 items-center justify-center rounded-md border border-border px-3 py-2 text-sm hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-                  aria-label={t('page.browser.removeFilter')}
-                  title={index === 0 ? t('page.browser.keepOneFilter') : t('page.browser.removeFilter')}
-                >
-                  <X size={14} />
-                </button>
-              </div>
-            ))}
-          </div>
-
-          {filterError && <p className="mt-3 text-sm text-destructive">{filterError}</p>}
-        </div>
-      )}
-
-      {selectedTable && (
-        <div className="rounded-xl border border-border bg-card p-5">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className="font-semibold text-foreground">{t('page.browser.dataTitle')}</h3>
-                <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
-                  {selectedTable}
-                </span>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                {rowsData?.meta.sort_by
-                  ? t('page.browser.dataSubtitle', { sortBy: rowsData.meta.sort_by, sortDir: rowsData.meta.sort_dir })
-                  : t('page.browser.dataSubtitleEmpty')}
-              </p>
-            </div>
-          </div>
-
-          {rowsLoading && <p className="text-sm text-muted-foreground">{t('page.browser.loadingRows')}</p>}
-          {rowsError && <p className="text-sm text-destructive">{t('page.browser.rowsLoadFailed')}</p>}
-
-          {!rowsLoading && !rowsError && dataColumns.length > 0 && (
-            <>
-              <DataTable
-                columns={dataColumns}
-                data={rowsData?.data ?? []}
-                keyField={schemaColumns.find((column) => column.primary_key)?.name || schemaColumns[0]?.name}
-                emptyText={t('page.browser.noRows')}
-              />
-              {rowsData?.meta && hasAnyRows && (
-                <Pagination
-                  page={rowsData.meta.page}
-                  pageSize={rowsData.meta.page_size}
-                  total={rowsData.meta.total}
-                  onPageChange={setPage}
-                  onPageSizeChange={(nextPageSize) => {
-                    setPageSize(nextPageSize)
-                    setPage(1)
-                  }}
-                  pageSizeOptions={[25, 50, 100]}
+                  <input
+                    value={filter.valueTo}
+                    onChange={(event) => updateDraftFilter(filter.id, { valueTo: event.target.value })}
+                    placeholder={t('page.browser.toPlaceholder')}
+                    className="rounded-md border border-border bg-card px-3 py-2 text-sm"
+                  />
+                </>
+              ) : operatorNeedsValue(filter.operator) ? (
+                <input
+                  value={filter.value}
+                  onChange={(event) => updateDraftFilter(filter.id, { value: event.target.value })}
+                  placeholder={t('page.browser.valuePlaceholder')}
+                  className="rounded-md border border-border bg-card px-3 py-2 text-sm md:col-span-2"
                 />
+              ) : (
+                <div className="md:col-span-2 flex items-center text-sm text-muted-foreground">
+                  {t('page.browser.noValueNeeded')}
+                </div>
               )}
-            </>
-          )}
+
+              <button
+                type="button"
+                disabled={draftFilters.length === 1}
+                onClick={() => setDraftFilters((current) => current.filter((item) => item.id !== filter.id))}
+                className="inline-flex h-10 items-center justify-center rounded-md border border-border px-3 py-2 text-sm hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label={t('page.browser.removeFilter')}
+                title={index === 0 ? t('page.browser.keepOneFilter') : t('page.browser.removeFilter')}
+              >
+                <X size={14} />
+              </button>
+            </div>
+          ))}
         </div>
-      )}
+
+        {filterError && <p className="mt-3 text-sm text-destructive">{filterError}</p>}
+      </div>
+
+      <div className="rounded-xl border border-border bg-card p-5">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="font-semibold text-foreground">{t('page.browser.dataTitle')}</h3>
+              <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                {selectedTable}
+              </span>
+              {tableInfo.item_name && (
+                <span className="rounded-full border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                  {tableInfo.item_name}
+                </span>
+              )}
+              {tableInfo.category && (
+                <span className="rounded-full border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                  {tableInfo.category}
+                </span>
+              )}
+              {tableInfo.sub_category && (
+                <span className="rounded-full border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                  {tableInfo.sub_category}
+                </span>
+              )}
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {rowsData?.meta.sort_by
+                ? t('page.browser.dataSubtitle', { sortBy: rowsData.meta.sort_by, sortDir: rowsData.meta.sort_dir })
+                : t('page.browser.dataSubtitleEmpty')}
+            </p>
+          </div>
+        </div>
+
+        {rowsLoading && <p className="text-sm text-muted-foreground">{t('page.browser.loadingRows')}</p>}
+        {rowsError && <p className="text-sm text-destructive">{t('page.browser.rowsLoadFailed')}</p>}
+
+        {!rowsLoading && !rowsError && dataColumns.length > 0 && (
+          <>
+            <DataTable
+              columns={dataColumns}
+              data={rowsData?.data ?? []}
+              keyField={schemaColumns.find((column) => column.primary_key)?.name || schemaColumns[0]?.name}
+              emptyText={t('page.browser.noRows')}
+            />
+            {rowsData?.meta && hasAnyRows && (
+              <Pagination
+                page={rowsData.meta.page}
+                pageSize={rowsData.meta.page_size}
+                total={rowsData.meta.total}
+                onPageChange={setPage}
+                onPageSizeChange={setPageSize}
+                pageSizeOptions={[25, 50, 100]}
+              />
+            )}
+          </>
+        )}
+      </div>
 
       <Modal
         open={tableInfoOpen}
@@ -556,10 +496,17 @@ export default function TushareDataBrowserTab() {
           <div className={modalInfoCardClass}>
             <div className="text-xs text-muted-foreground">{t('page.browser.info.tableName')}</div>
             <div className="mt-1 text-base font-semibold text-foreground">{selectedTable || '--'}</div>
+            {tableInfo.item_name && (
+              <div className="mt-1 text-sm text-muted-foreground">{tableInfo.item_name}</div>
+            )}
+          </div>
+          <div className={modalInfoCardClass}>
+            <div className="text-xs text-muted-foreground">{t('page.browser.info.targetDatabase')}</div>
+            <div className="mt-1 text-base font-semibold text-foreground">{tableInfo.target_database || '--'}</div>
           </div>
           <div className={modalInfoCardClass}>
             <div className="text-xs text-muted-foreground">{t('page.browser.columnCount')}</div>
-            <div className="mt-1 text-base font-semibold text-foreground">{selectedTableInfo?.column_count ?? schemaColumns.length}</div>
+            <div className="mt-1 text-base font-semibold text-foreground">{tableInfo.column_count ?? schemaColumns.length}</div>
           </div>
           <div className={modalInfoCardClass}>
             <div className="text-xs text-muted-foreground">{t('page.browser.totalRows')}</div>
@@ -568,6 +515,20 @@ export default function TushareDataBrowserTab() {
           <div className={modalInfoCardClass}>
             <div className="text-xs text-muted-foreground">{t('page.browser.appliedFilters')}</div>
             <div className="mt-1 text-base font-semibold text-foreground">{appliedFilters.length}</div>
+          </div>
+          <div className={modalInfoCardClass}>
+            <div className="text-xs text-muted-foreground">{t('page.browser.info.category')}</div>
+            <div className="mt-1 text-base font-semibold text-foreground">{tableInfo.category || '--'}</div>
+          </div>
+          <div className={modalInfoCardClass}>
+            <div className="text-xs text-muted-foreground">{t('page.browser.info.subCategory')}</div>
+            <div className="mt-1 text-base font-semibold text-foreground">{tableInfo.sub_category || '--'}</div>
+          </div>
+          <div className={modalInfoCardClass}>
+            <div className="text-xs text-muted-foreground">{t('page.browser.info.tableCreated')}</div>
+            <div className="mt-1 text-base font-semibold text-foreground">
+              {tableInfo.table_created ? t('page.browser.info.created') : t('page.browser.info.notCreated')}
+            </div>
           </div>
           <div className={`${modalInfoCardClass} sm:col-span-2`}>
             <div className="text-xs text-muted-foreground">{t('page.browser.info.primaryKeys')}</div>
@@ -627,6 +588,153 @@ export default function TushareDataBrowserTab() {
           </div>
         )}
       </Modal>
+    </>
+  )
+}
+
+export default function TushareDataBrowserTab() {
+  const { t } = useTranslation(['market', 'common'])
+
+  const [tableKeyword, setTableKeyword] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState('')
+  const [subCategoryFilter, setSubCategoryFilter] = useState('')
+  const [selectedTable, setSelectedTable] = useState('')
+
+  const { data: tableCatalog = [] } = useQuery<TushareTableInfo[]>({
+    queryKey: ['market', 'tushare', 'tables', 'catalog'],
+    queryFn: () =>
+      marketDataAPI
+        .tushareTables()
+        .then((response) => (response.data as { data: TushareTableInfo[] }).data ?? []),
+  })
+
+  const categoryOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          tableCatalog
+            .map((table) => table.category?.trim())
+            .filter((value): value is string => Boolean(value))
+        )
+      )
+        .sort((left, right) => left.localeCompare(right, 'zh-Hans-CN'))
+        .map((value) => ({ value, label: value })),
+    [tableCatalog]
+  )
+
+  const subCategoryOptions = useMemo(() => {
+    const scopedTables = tableCatalog.filter(
+      (table) => !categoryFilter || (table.category?.trim() ?? '') === categoryFilter
+    )
+    return Array.from(
+      new Set(
+        scopedTables
+          .map((table) => table.sub_category?.trim())
+          .filter((value): value is string => Boolean(value))
+      )
+    )
+      .sort((left, right) => left.localeCompare(right, 'zh-Hans-CN'))
+      .map((value) => ({ value, label: value }))
+  }, [categoryFilter, tableCatalog])
+
+  const activeSubCategoryFilter = useMemo(
+    () =>
+      subCategoryOptions.some((option) => option.value === subCategoryFilter)
+        ? subCategoryFilter
+        : '',
+    [subCategoryFilter, subCategoryOptions]
+  )
+
+  const { data: tables = [], isLoading: tablesLoading, error: tablesError } = useQuery<TushareTableInfo[]>({
+    queryKey: ['market', 'tushare', 'tables', tableKeyword, categoryFilter, activeSubCategoryFilter],
+    queryFn: () =>
+      marketDataAPI
+        .tushareTables({
+          keyword: tableKeyword || undefined,
+          category: categoryFilter || undefined,
+          sub_category: activeSubCategoryFilter || undefined,
+        })
+        .then((response) => (response.data as { data: TushareTableInfo[] }).data ?? []),
+  })
+
+  const activeTable = useMemo(() => {
+    if (tables.some((table) => table.name === selectedTable)) {
+      return selectedTable
+    }
+    return tables[0]?.name ?? ''
+  }, [selectedTable, tables])
+
+  const tableOptions = useMemo(
+    () =>
+      tables.map((table) => ({
+        value: table.name,
+        label: table.item_name
+          ? `${table.name} · ${table.item_name} (${table.column_count})`
+          : `${table.name} (${table.column_count})`,
+      })),
+    [tables]
+  )
+
+  const selectedTableInfo = useMemo(
+    () => tables.find((table) => table.name === activeTable) ?? null,
+    [activeTable, tables]
+  )
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-xl border border-border bg-card p-5">
+        <div className="mb-3 flex items-center gap-2">
+          <Database size={18} className="text-muted-foreground" />
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">{t('page.browser.title')}</h2>
+            <p className="text-sm text-muted-foreground">{t('page.browser.subtitle')}</p>
+          </div>
+        </div>
+
+        <FilterBar
+          searchValue={tableKeyword}
+          onSearchChange={setTableKeyword}
+          searchPlaceholder={t('page.browser.tableSearchPlaceholder')}
+          filters={[
+            {
+              key: 'category',
+              value: categoryFilter,
+              options: categoryOptions,
+              onChange: (value) => {
+                setCategoryFilter(value)
+                setSubCategoryFilter('')
+              },
+              placeholder: t('page.browser.categoryFilterPlaceholder'),
+            },
+            {
+              key: 'sub-category',
+              value: activeSubCategoryFilter,
+              options: subCategoryOptions,
+              onChange: (value) => setSubCategoryFilter(value),
+              placeholder: t('page.browser.subCategoryFilterPlaceholder'),
+            },
+            {
+              key: 'table',
+              value: activeTable,
+              options: tableOptions,
+              onChange: (value) => setSelectedTable(value),
+              placeholder: t('page.browser.selectTable'),
+            },
+          ]}
+        >
+          <div className="ml-auto text-xs text-muted-foreground">
+            {t('page.browser.tableCount', { count: tables.length })}
+          </div>
+        </FilterBar>
+
+        {tablesError && <p className="text-sm text-destructive">{t('page.browser.tableLoadFailed')}</p>}
+        {tablesLoading && <p className="text-sm text-muted-foreground">{t('page.browser.loadingTables')}</p>}
+        {!tablesLoading && !tablesError && tables.length === 0 && (
+          <p className="text-sm text-muted-foreground">{t('page.browser.noTables')}</p>
+        )}
+      </div>
+
+      {selectedTableInfo && <TushareTableContent key={selectedTableInfo.name} tableInfo={selectedTableInfo} />}
     </div>
   )
 }

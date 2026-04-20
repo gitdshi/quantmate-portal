@@ -15,6 +15,7 @@
       "system": "系统信息",
       "personal": "个人设置",
       "tradingPreferences": "交易偏好",
+      "dataSourceManagement": "数据源管理",
       "systemManagement": "系统管理"
     },
     "general": {
@@ -103,20 +104,55 @@
     },
     "system": {
       "title": "系统状态",
-      "empty": "暂时还没有系统状态信息可展示。"
+      "empty": "暂时还没有系统状态信息可展示。",
+      "table": {
+        "columns": {
+          "section": "分类",
+          "field": "字段",
+          "value": "值"
+        },
+        "root": "概览",
+        "value": "值",
+        "emptyValue": "-",
+        "yes": "是",
+        "no": "否"
+      }
     },
     "sections": {
       "personalCore": "身份、语言与显示默认项",
       "notifications": "通知偏好",
       "display": "界面偏好"
     },
+    "dataSourceManagement": {
+      "tabs": {
+        "akshare": "AkShare",
+        "tusharePro": "Tushare Pro"
+      }
+    },
     "systemManagement": {
       "datasourceHint": "只保留你真正信任的数据源，这样系统健康状态和同步覆盖范围才更容易解释。",
       "tabs": {
-        "datasources": "AkShare",
-        "tusharePro": "Tushare Pro",
-        "systemStatus": "系统状态"
+        "systemStatus": "系统状态",
+        "systemLogs": "系统日志"
       }
+    },
+    "systemLogs": {
+      "title": "系统日志",
+      "subtitle": "查看当前部署中的容器 stdout 和 stderr 实时输出。",
+      "streamFailed": "日志流连接失败",
+      "tailLabel": "初始尾部行数",
+      "tailAria": "初始尾部行数",
+      "clear": "清空",
+      "reconnect": "重连",
+      "moduleAria": "系统日志模块",
+      "status": {
+        "streaming": "流式输出中",
+        "error": "日志流错误",
+        "connecting": "连接中"
+      },
+      "lineCount": "{{count}} 行",
+      "waiting": "正在打开日志流...",
+      "empty": "当前模块暂时还没有收到日志内容。"
     }
   },
   "accountPage": {

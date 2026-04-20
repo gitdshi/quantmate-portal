@@ -331,8 +331,8 @@ export const marketDataAPI = {
     options?: { timeoutMs?: number }
   ) =>
     api.get('/data/quote/series', { params, timeout: options?.timeoutMs }),
-  tushareTables: (keyword?: string) =>
-    api.get('/data/tushare/tables', { params: { keyword }, timeout: TUSHARE_BROWSER_TIMEOUT_MS }),
+  tushareTables: (params?: { keyword?: string; category?: string; sub_category?: string }) =>
+    api.get('/data/tushare/tables', { params, timeout: TUSHARE_BROWSER_TIMEOUT_MS }),
   tushareTableSchema: (tableName: string) =>
     api.get(`/data/tushare/tables/${encodeURIComponent(tableName)}/schema`, {
       timeout: TUSHARE_BROWSER_TIMEOUT_MS,
