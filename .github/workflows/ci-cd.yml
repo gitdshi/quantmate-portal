@@ -128,7 +128,7 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/arm64
           build-args: |
             IMAGE_BUILD_TIME=${{ steps.build_meta.outputs.image_build_time }}
           tags: |
