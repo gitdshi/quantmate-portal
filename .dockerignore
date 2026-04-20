@@ -1,0 +1,15 @@
+.DS_Store
+.git
+.github
+.idea
+.vscode
+coverage
+dist
+logs
+node_modules
+playwright-report
+test-results
+.env
+.env.*
+tmp_utf8_test.txt
+test

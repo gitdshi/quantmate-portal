@@ -57,7 +57,10 @@ function buildTushareCatalogOrder(): TushareCatalogOrder {
     const header = parseCsvLine(headerLine)
     const categoryIndex = header.findIndex((value) => normalizeCsvValue(value) === '数据大类')
     const subCategoryIndex = header.findIndex((value) => normalizeCsvValue(value) === '数据子类')
-    const apiNameIndex = header.findIndex((value) => normalizeCsvValue(value) === '接口名称')
+    const apiNameIndex = header.findIndex((value) => {
+      const normalized = normalizeCsvValue(value)
+      return normalized === '接口名称' || normalized === '接口'
+    })
 
     const categories: string[] = []
     const subcategories = new Map<string, string[]>()
