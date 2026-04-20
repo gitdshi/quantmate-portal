@@ -57,18 +57,6 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
-      <div className="mb-4 flex w-full max-w-md justify-end">
-        <button
-          type="button"
-          onClick={toggleLanguage}
-          className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-foreground"
-          title={t('switchLang', { ns: 'nav' })}
-        >
-          <Globe className="h-4 w-4" />
-          <span>{currentLanguage.startsWith('zh') ? 'English' : '中文'}</span>
-        </button>
-      </div>
-
       <div className="w-full max-w-md mb-6 rounded-lg overflow-hidden shadow-md">
         <img src="/banner.svg" alt="QuantMate Platform" className="w-full h-auto" />
       </div>
@@ -126,12 +114,24 @@ export default function Login() {
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-muted-foreground">
-            {t('noAccount')}{' '}
-            <Link to="/register" className="text-primary hover:underline font-medium">
-              {t('signUp')}
-            </Link>
-          </p>
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 text-sm">
+            <p className="text-muted-foreground">
+              {t('noAccount')}{' '}
+              <Link to="/register" className="text-primary hover:underline font-medium">
+                {t('signUp')}
+              </Link>
+            </p>
+
+            <button
+              type="button"
+              onClick={toggleLanguage}
+              className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-foreground"
+              title={t('switchLang', { ns: 'nav' })}
+            >
+              <Globe className="h-4 w-4" />
+              <span>{currentLanguage.startsWith('zh') ? 'English' : '中文'}</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

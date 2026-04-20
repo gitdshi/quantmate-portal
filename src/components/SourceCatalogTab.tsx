@@ -40,6 +40,8 @@ interface SourceCatalogItem {
   rate_limit_note: string | null
   requires_permission: string | null
   sync_priority: number
+  capability_supported?: boolean
+  auto_sync_supported?: boolean
   sync_supported: boolean
 }
 
@@ -462,6 +464,9 @@ export default function SourceCatalogTab({
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
                       {sub.items.map((item) => {
                         const needsExplicitPermission = requiresExplicitPermission(item.requires_permission)
+                        const isCapabilityUnsupported = item.capability_supported === false
+                        const isAutoSyncUnavailable =
+                          item.capability_supported !== false && item.auto_sync_supported === false
                         const isUnsupported = !item.sync_supported
                         const permissionLabel = formatPermissionLabel(
                           item.permission_points,
@@ -472,10 +477,12 @@ export default function SourceCatalogTab({
                           <div
                             key={item.item_key}
                             className={`flex items-center justify-between rounded-md border px-3 py-2 text-sm ${
-                              needsExplicitPermission && isUnsupported
+                              needsExplicitPermission && isCapabilityUnsupported
                                 ? 'border-dashed border-muted-foreground/30 opacity-60'
-                                : isUnsupported
+                                : isCapabilityUnsupported
                                   ? 'border-amber-300/70 bg-amber-50/40'
+                                  : isAutoSyncUnavailable
+                                    ? 'border-dashed border-border bg-muted/30'
                                   : 'border-border'
                             }`}
                           >
@@ -504,9 +511,14 @@ export default function SourceCatalogTab({
                                     {item.rate_limit_note}
                                   </span>
                                 )}
-                                {isUnsupported && (
+                                {isCapabilityUnsupported && (
                                   <span className="rounded border border-amber-300 bg-amber-50 px-1.5 py-px text-amber-800">
-                                    {t('catalog.unsupported', '当前配置不支持同步')}
+                                    {t('catalog.capabilityUnsupported', '当前积分或权限不支持同步')}
+                                  </span>
+                                )}
+                                {isAutoSyncUnavailable && (
+                                  <span className="rounded border border-border bg-muted px-1.5 py-px text-muted-foreground">
+                                    {t('catalog.autoSyncPending', '暂未接入自动同步')}
                                   </span>
                                 )}
                               </div>

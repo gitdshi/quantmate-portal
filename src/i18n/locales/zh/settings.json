@@ -349,6 +349,8 @@
     "configToggleFail": "数据源切换失败",
     "sourceSwitch": "数据源开关",
     "unsupported": "未接入同步",
+    "capabilityUnsupported": "当前积分或权限不支持同步",
+    "autoSyncPending": "暂未接入自动同步",
     "general": "通用",
     "empty": "暂无目录数据"
   }

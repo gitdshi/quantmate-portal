@@ -76,6 +76,15 @@ api.interceptors.response.use(
           })
 
           localStorage.setItem('access_token', data.access_token)
+          if (data.refresh_token) {
+            localStorage.setItem('refresh_token', data.refresh_token)
+          }
+          useAuthStore.setState((state) => ({
+            ...state,
+            accessToken: data.access_token,
+            refreshToken: data.refresh_token ?? state.refreshToken,
+            isAuthenticated: true,
+          }))
           originalRequest.headers.Authorization = `Bearer ${data.access_token}`
 
           return api(originalRequest)
@@ -118,12 +127,12 @@ api.interceptors.response.use(
 export const authAPI = {
   login: (username: string, password: string) =>
     api.post('/auth/login', { username, password }),
-  
+
   register: (username: string, email: string, password: string) =>
     api.post('/auth/register', { username, email, password }),
-  
+
   me: () => api.get('/auth/me'),
-  
+
   refresh: (refreshToken: string) =>
     api.post('/auth/refresh', { refresh_token: refreshToken }),
 

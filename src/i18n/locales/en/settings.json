@@ -349,6 +349,8 @@
     "configToggleFail": "Source toggle failed",
     "sourceSwitch": "Source switch",
     "unsupported": "Sync not implemented",
+    "capabilityUnsupported": "Blocked by current points or permission",
+    "autoSyncPending": "Auto sync not wired yet",
     "general": "General",
     "empty": "No catalog data"
   }
