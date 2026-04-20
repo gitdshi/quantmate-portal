@@ -1,10 +1,11 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { Bell, Database, Monitor, Palette, Server, Settings2 } from 'lucide-react'
+import { Bell, Database, Monitor, Palette, Server, Settings2, SquareTerminal } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 
 import AkshareTab from '../components/AkshareTab'
+import SystemLogsTab from '../components/SystemLogsTab'
 import TushareProTab from '../components/TushareProTab'
 import TabPanel from '../components/ui/TabPanel'
 import ToggleSwitch from '../components/ui/ToggleSwitch'
@@ -59,6 +60,11 @@ export default function Settings() {
         key: 'system-status',
         label: t('page.systemManagement.tabs.systemStatus', 'System Status'),
         icon: <Server size={16} />,
+      },
+      {
+        key: 'system-logs',
+        label: t('page.systemManagement.tabs.systemLogs', 'System Logs'),
+        icon: <SquareTerminal size={16} />,
       },
     ],
     [t]
@@ -452,6 +458,8 @@ export default function Settings() {
                   )}
                 </div>
               )}
+
+              {activeSystemTab === 'system-logs' && <SystemLogsTab />}
             </TabPanel>
           </div>
         )}

@@ -1,6 +1,6 @@
 import i18n from '@/i18n'
 import Settings from '@/pages/Settings'
-import { fireEvent, render, screen, waitFor } from '@test/support/utils'
+import { act, fireEvent, render, screen, waitFor } from '@test/support/utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/components/ui/toast-service', () => ({
@@ -27,10 +27,12 @@ vi.mock('@/lib/api', () => ({
     updateConfig: vi.fn(),
     updateItem: vi.fn(),
     batchUpdate: vi.fn(),
+    rebuildSyncStatus: vi.fn(),
     testConnection: vi.fn(),
   },
   systemAPI: {
     syncStatus: vi.fn(),
+    streamLogs: vi.fn(),
   },
 }))
 
@@ -50,6 +52,11 @@ async function openTushareManagementTab() {
 async function openSystemStatusTab() {
   await openSystemManagementTab()
   fireEvent.click(screen.getByRole('button', { name: 'System Status' }))
+}
+
+async function openSystemLogsTab() {
+  await openSystemManagementTab()
+  fireEvent.click(screen.getByRole('button', { name: 'System Logs' }))
 }
 
 function getCardSwitchByHeading(heading: string) {
@@ -119,6 +126,10 @@ describe('Settings Page', () => {
       }) as never
     )
     vi.mocked(systemAPI.syncStatus).mockResolvedValue({ data: { status: 'ok', version: 'v1.2.0' } } as never)
+    vi.mocked(dataSourceAPI.rebuildSyncStatus).mockResolvedValue({
+      data: { pending_records: 12, items_reconciled: 1, backfill_jobs: [] },
+    } as never)
+    vi.mocked(systemAPI.streamLogs).mockResolvedValue(undefined as never)
   })
 
   it('renders heading', () => {
@@ -169,10 +180,26 @@ describe('Settings Page', () => {
     expect(await screen.findByText('version')).toBeInTheDocument()
   })
 
+  it('shows system logs tab and streams module output', async () => {
+    vi.mocked(systemAPI.streamLogs).mockImplementation(async ({ onEvent }) => {
+      onEvent({ type: 'meta', module: 'api', container: 'quantmate-api-1', tail: 200 })
+      onEvent({ type: 'log', module: 'api', container: 'quantmate-api-1', line: 'api ready' })
+    })
+
+    render(<Settings />)
+    await openSystemLogsTab()
+
+    expect(await screen.findByRole('heading', { name: 'System Logs' })).toBeInTheDocument()
+    expect(await screen.findByText('api ready')).toBeInTheDocument()
+    expect(systemAPI.streamLogs).toHaveBeenCalled()
+  })
+
   // ─── Save settings ──────────────────────────────────────
   it('clicks Save Settings button', async () => {
     render(<Settings />)
-    fireEvent.click(screen.getByText('Save Settings'))
+    await act(async () => {
+      fireEvent.click(screen.getByText('Save Settings'))
+    })
     // Save triggers i18n changeLanguage + localStorage; no API call to assert
     // But the button should still be present after click
     expect(screen.getByText('Save Settings')).toBeInTheDocument()
@@ -207,6 +234,18 @@ describe('Settings Page', () => {
         expect(dataSourceAPI.testConnection).toHaveBeenCalled()
       })
     }
+  })
+
+  it('clicks rebuild sync status on Tushare catalog', async () => {
+    render(<Settings />)
+    await openTushareManagementTab()
+
+    const rebuildButton = screen.getByRole('button', { name: /Sync/i })
+    fireEvent.click(rebuildButton)
+
+    await waitFor(() => {
+      expect(dataSourceAPI.rebuildSyncStatus).toHaveBeenCalledWith('tushare')
+    })
   })
 
   // ─── Trading preferences: editing fields ────────────────

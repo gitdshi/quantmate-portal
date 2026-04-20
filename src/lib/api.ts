@@ -5,6 +5,22 @@ import type { StrategyComparison, StrategyFile, StrategyFileContent, SyncResult 
 const API_URL = import.meta.env.VITE_API_URL || '/api/v1'
 const TUSHARE_BROWSER_TIMEOUT_MS = 30000
 
+export type SystemLogStreamEvent = {
+  type: 'meta' | 'log' | 'error'
+  module: string
+  container?: string
+  line?: string
+  message?: string
+  tail?: number
+}
+
+type StreamLogsOptions = {
+  module: string
+  tail?: number
+  signal?: AbortSignal
+  onEvent: (event: SystemLogStreamEvent) => void
+}
+
 export const api = axios.create({
   baseURL: API_URL,
   timeout: 8000,
@@ -354,6 +370,7 @@ export const analyticsAPI = {
 export const systemAPI = {
   syncStatus: () => api.get('/system/sync-status'),
   versionInfo: () => api.get('/system/version'),
+  listLogModules: () => api.get('/system/logs/modules'),
   listConfigs: (category?: string) => api.get('/system/configs', { params: { category } }),
   upsertConfig: (data: {
     config_key: string
@@ -362,6 +379,76 @@ export const systemAPI = {
     description?: string
     user_overridable?: boolean
   }) => api.put('/system/configs', data),
+  streamLogs: async ({ module, tail = 200, signal, onEvent }: StreamLogsOptions) => {
+    const params = new URLSearchParams({ module, tail: String(tail) })
+    const token = localStorage.getItem('access_token')
+    const response = await fetch(`${API_URL}/system/logs/stream?${params.toString()}`, {
+      method: 'GET',
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      signal,
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(errorText || `Log stream failed with status ${response.status}`)
+    }
+
+    if (!response.body) {
+      throw new Error('Browser does not expose a readable log stream body')
+    }
+
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+
+    const flushFrame = (frame: string) => {
+      const lines = frame.split('\n')
+      let eventName = 'message'
+      const dataParts: string[] = []
+
+      for (const line of lines) {
+        if (line.startsWith('event:')) {
+          eventName = line.slice('event:'.length).trim()
+          continue
+        }
+        if (line.startsWith('data:')) {
+          dataParts.push(line.slice('data:'.length).trim())
+        }
+      }
+
+      if (dataParts.length === 0) {
+        return
+      }
+
+      const payload = JSON.parse(dataParts.join('\n')) as SystemLogStreamEvent
+      onEvent({ ...payload, type: payload.type || (eventName as SystemLogStreamEvent['type']) })
+    }
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) {
+        buffer += decoder.decode()
+        break
+      }
+
+      buffer += decoder.decode(value, { stream: true })
+
+      let separatorIndex = buffer.indexOf('\n\n')
+      while (separatorIndex >= 0) {
+        const frame = buffer.slice(0, separatorIndex).trim()
+        buffer = buffer.slice(separatorIndex + 2)
+        if (frame) {
+          flushFrame(frame)
+        }
+        separatorIndex = buffer.indexOf('\n\n')
+      }
+    }
+
+    const trailingFrame = buffer.trim()
+    if (trailingFrame) {
+      flushFrame(trailingFrame)
+    }
+  },
 }
 
 // Portfolio API
@@ -469,6 +556,8 @@ export const dataSourceAPI = {
     api.get('/settings/datasource-items/permissions', { params: { source } }),
   testConnection: (source: string) =>
     api.post(`/settings/datasource-items/test/${source}`),
+  rebuildSyncStatus: (source: string) =>
+    api.post(`/settings/datasource-items/${source}/rebuild-sync-status`),
   listConfigs: () => api.get('/settings/datasource-configs'),
   updateConfig: (sourceKey: string, data: { enabled?: boolean; config_json?: Record<string, unknown> }) =>
     api.put(`/settings/datasource-configs/${sourceKey}`, data),

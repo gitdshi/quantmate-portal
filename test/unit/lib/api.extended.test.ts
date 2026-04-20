@@ -85,6 +85,7 @@ describe('Extended API — untested HTTP calls', () => {
   })
 
   afterEach(() => {
+    vi.unstubAllGlobals()
     vi.restoreAllMocks()
   })
 
@@ -121,6 +122,11 @@ describe('Extended API — untested HTTP calls', () => {
       expect(mockGet).toHaveBeenCalledWith('/system/version')
     })
 
+    it('listLogModules sends GET', () => {
+      systemAPI.listLogModules()
+      expect(mockGet).toHaveBeenCalledWith('/system/logs/modules')
+    })
+
     it('listConfigs sends GET with category', () => {
       systemAPI.listConfigs('trading')
       expect(mockGet).toHaveBeenCalledWith('/system/configs', { params: { category: 'trading' } })
@@ -130,6 +136,50 @@ describe('Extended API — untested HTTP calls', () => {
       const data = { config_key: 'k', config_value: 'v' }
       systemAPI.upsertConfig(data)
       expect(mockPut).toHaveBeenCalledWith('/system/configs', data)
+    })
+
+    it('streamLogs uses fetch and parses SSE frames', async () => {
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        body: new ReadableStream({
+          start(controller) {
+            const encoder = new TextEncoder()
+            controller.enqueue(
+              encoder.encode(
+                'event: meta\n' +
+                  'data: {"type":"meta","module":"api","container":"quantmate-api-1","tail":100}\n\n' +
+                  'event: log\n' +
+                  'data: {"type":"log","module":"api","line":"ready"}\n\n'
+              )
+            )
+            controller.close()
+          },
+        }),
+      })
+      vi.stubGlobal('fetch', fetchMock)
+      localStorage.setItem('access_token', 'secret-token')
+
+      const onEvent = vi.fn()
+      await systemAPI.streamLogs({ module: 'api', tail: 100, onEvent })
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/v1/system/logs/stream?module=api&tail=100',
+        expect.objectContaining({
+          method: 'GET',
+          headers: { Authorization: 'Bearer secret-token' },
+        })
+      )
+      expect(onEvent).toHaveBeenNthCalledWith(1, {
+        type: 'meta',
+        module: 'api',
+        container: 'quantmate-api-1',
+        tail: 100,
+      })
+      expect(onEvent).toHaveBeenNthCalledWith(2, {
+        type: 'log',
+        module: 'api',
+        line: 'ready',
+      })
     })
   })
 
@@ -256,6 +306,11 @@ describe('Extended API — untested HTTP calls', () => {
         { enabled: true },
         { params: { source: 'ts' } }
       )
+    })
+
+    it('rebuildSyncStatus sends POST', () => {
+      dataSourceAPI.rebuildSyncStatus('tushare')
+      expect(mockPost).toHaveBeenCalledWith('/settings/datasource-items/tushare/rebuild-sync-status')
     })
 
     it('batchUpdate sends PUT', () => {
