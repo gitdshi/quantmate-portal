@@ -2803,6 +2803,7 @@ describe('Strategies Page', () => {
   it('rejects save when parameters JSON is an array', async () => {
     render(<Strategies />)
     await screen.findByTestId('strategies-page')
+    await waitFor(() => expect(strategiesAPI.get).toHaveBeenCalled())
 
     fireEvent.click(screen.getByRole('button', { name: 'Parameters' }))
     const textarea = await screen.findByTestId('strategy-parameters-json')
