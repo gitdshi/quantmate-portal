@@ -163,8 +163,50 @@
     "systemManagement": {
       "datasourceHint": "只保留你真正信任的数据源，这样系统健康状态和同步覆盖范围才更容易解释。",
       "tabs": {
+        "systemConfig": "系统配置",
         "systemStatus": "系统状态",
         "systemLogs": "系统日志"
+      }
+    },
+    "systemConfig": {
+      "title": "系统配置",
+      "description": "由数据库管理的运行时配置会优先覆盖旧环境变量回退，并且无需重启 Web 应用即可生效。",
+      "loading": "正在加载系统配置...",
+      "loadError": "加载系统配置失败。",
+      "empty": "当前没有可用的数据库系统配置项。",
+      "save": "保存",
+      "saved": "系统配置已保存",
+      "defaultValue": "默认值",
+      "valueSource": {
+        "db": "数据库",
+        "legacy_env": "旧环境变量回退",
+        "env": "环境变量",
+        "default": "默认值"
+      },
+      "categories": {
+        "datasync": "数据同步",
+        "backtest": "回测",
+        "trading": "交易",
+        "market": "行情",
+        "worker": "Worker",
+        "jobs": "任务",
+        "rdagent": "RD-Agent"
+      },
+      "items": {
+        "datasync": {
+          "sync_hour": {
+            "label": "每日同步小时",
+            "description": "每日同步调度在本地时区下执行的小时数。"
+          },
+          "sync_minute": {
+            "label": "每日同步分钟",
+            "description": "每日同步调度在本地时区下执行的分钟数。"
+          },
+          "timezone": {
+            "label": "数据同步时区",
+            "description": "调度窗口和同步看板使用的时区。"
+          }
+        }
       }
     },
     "systemLogs": {

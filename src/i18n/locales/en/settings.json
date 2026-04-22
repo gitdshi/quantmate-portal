@@ -163,8 +163,50 @@
     "systemManagement": {
       "datasourceHint": "Only enable the feeds you trust, so sync coverage and system health remain explainable.",
       "tabs": {
+        "systemConfig": "System Configuration",
         "systemStatus": "System Status",
         "systemLogs": "System Logs"
+      }
+    },
+    "systemConfig": {
+      "title": "System Configuration",
+      "description": "DB-managed runtime behavior settings take precedence over legacy environment fallbacks and apply without restarting the web app.",
+      "loading": "Loading system configuration...",
+      "loadError": "Failed to load system configuration.",
+      "empty": "No DB-managed system configuration items are available.",
+      "save": "Save",
+      "saved": "System configuration saved",
+      "defaultValue": "Default",
+      "valueSource": {
+        "db": "Database",
+        "legacy_env": "Legacy env fallback",
+        "env": "Environment",
+        "default": "Default"
+      },
+      "categories": {
+        "datasync": "Data Sync",
+        "backtest": "Backtest",
+        "trading": "Trading",
+        "market": "Market",
+        "worker": "Worker",
+        "jobs": "Jobs",
+        "rdagent": "RD-Agent"
+      },
+      "items": {
+        "datasync": {
+          "sync_hour": {
+            "label": "Daily sync hour",
+            "description": "Daily sync schedule hour in 24-hour local time."
+          },
+          "sync_minute": {
+            "label": "Daily sync minute",
+            "description": "Daily sync schedule minute in local time."
+          },
+          "timezone": {
+            "label": "Data sync timezone",
+            "description": "Timezone used by scheduler windows and sync dashboards."
+          }
+        }
       }
     },
     "systemLogs": {

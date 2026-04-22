@@ -223,6 +223,97 @@
       "noFactors": "从因子库中添加因子以开始合成。"
     }
   },
+  "autoPilot": {
+    "tabs": {
+      "runs": "挖掘运行",
+      "catalog": "数据目录"
+    },
+    "title": "Auto Pilot",
+    "subtitle": "由 RD-Agent 驱动的 LLM 自主因子挖掘工作台。",
+    "fields": {
+      "scenario": "场景",
+      "maxIterations": "最大迭代次数",
+      "llmModel": "LLM 模型",
+      "universe": "股票池",
+      "startDate": "开始日期",
+      "endDate": "结束日期"
+    },
+    "scenarios": {
+      "fin_factor": "因子挖掘",
+      "fin_model": "模型优化",
+      "fin_quant": "因子 + 模型联合优化"
+    },
+    "universes": {
+      "csi300": "沪深 300",
+      "csi500": "中证 500",
+      "csi1000": "中证 1000"
+    },
+    "start": {
+      "title": "启动新的挖掘任务",
+      "description": "配置挖掘参数后启动 RD-Agent，让它自动迭代因子想法。",
+      "start": "开始挖掘",
+      "starting": "启动中..."
+    },
+    "runs": {
+      "title": "挖掘运行记录",
+      "empty": "暂无挖掘运行记录。",
+      "columns": {
+        "runId": "运行 ID",
+        "scenario": "场景",
+        "status": "状态",
+        "progress": "进度",
+        "created": "创建时间",
+        "actions": "操作"
+      }
+    },
+    "detail": {
+      "title": "运行详情：{{id}}",
+      "empty": "选择一个挖掘运行后，可查看迭代过程和发现的因子。",
+      "iterations": "迭代记录",
+      "iterationLabel": "第 {{number}} 次迭代",
+      "hypothesis": "假设",
+      "noIterations": "暂无迭代记录。"
+    },
+    "factors": {
+      "title": "发现的因子",
+      "empty": "暂未发现因子。",
+      "columns": {
+        "name": "名称",
+        "expression": "表达式",
+        "ic": "IC",
+        "icir": "ICIR",
+        "sharpe": "夏普",
+        "status": "状态",
+        "actions": "操作"
+      }
+    },
+    "catalog": {
+      "title": "数据目录",
+      "loading": "正在加载目录...",
+      "summary": "共 {{count}} 个数值字段，来源于 {{sources}}。",
+      "empty": "暂无目录数据。"
+    },
+    "actions": {
+      "cancelRun": "取消运行",
+      "import": "导入"
+    },
+    "toasts": {
+      "started": "挖掘任务已启动",
+      "startFailed": "启动挖掘任务失败",
+      "cancelled": "挖掘任务已取消",
+      "cancelFailed": "取消挖掘任务失败",
+      "imported": "因子已导入因子研究",
+      "importFailed": "导入因子失败"
+    },
+    "status": {
+      "queued": "排队中",
+      "running": "运行中",
+      "completed": "已完成",
+      "failed": "失败",
+      "cancelled": "已取消",
+      "imported": "已导入"
+    }
+  },
   "visualExplorer": {
     "title": "可视化探索",
     "subtitle": "数据可视化与探索",

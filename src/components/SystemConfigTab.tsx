@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Database, Loader2, Save } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import type { SystemConfigCatalogItem } from '../lib/api'
@@ -16,13 +16,6 @@ function formatCategoryLabel(category: string) {
     .join(' ')
 }
 
-function formatValueSource(source: SystemConfigCatalogItem['value_source']) {
-  if (source === 'db') return 'Database'
-  if (source === 'legacy_env') return 'Legacy env fallback'
-  if (source === 'env') return 'Environment'
-  return 'Default'
-}
-
 function isNumberType(valueType: SystemConfigCatalogItem['value_type']) {
   return valueType === 'int' || valueType === 'float'
 }
@@ -30,23 +23,12 @@ function isNumberType(valueType: SystemConfigCatalogItem['value_type']) {
 export default function SystemConfigTab() {
   const { t } = useTranslation('settings')
   const queryClient = useQueryClient()
-  const [drafts, setDrafts] = useState<Record<string, string>>({})
+  const [draftOverrides, setDraftOverrides] = useState<Record<string, string>>({})
 
   const { data, isLoading, error } = useQuery<{ configs: SystemConfigCatalogItem[] }>({
     queryKey: ['system-config-catalog'],
     queryFn: () => systemAPI.listConfigCatalog().then((response) => response.data),
   })
-
-  useEffect(() => {
-    if (!data?.configs) {
-      return
-    }
-    setDrafts(
-      Object.fromEntries(
-        data.configs.map((item) => [item.key, item.current_value ?? item.default_value ?? ''])
-      )
-    )
-  }, [data])
 
   const groupedConfigs = useMemo(() => {
     const groups = new Map<string, SystemConfigCatalogItem[]>()
@@ -62,7 +44,7 @@ export default function SystemConfigTab() {
     mutationFn: async (item: SystemConfigCatalogItem) =>
       systemAPI.upsertConfig({
         config_key: item.key,
-        config_value: drafts[item.key] ?? item.current_value ?? item.default_value ?? '',
+        config_value: draftOverrides[item.key] ?? item.current_value ?? item.default_value ?? '',
         category: item.category,
         description: item.description,
       }),
@@ -73,11 +55,24 @@ export default function SystemConfigTab() {
   })
 
   const updateDraft = (key: string, value: string) => {
-    setDrafts((current) => ({ ...current, [key]: value }))
+    setDraftOverrides((current) => ({ ...current, [key]: value }))
+  }
+
+  const formatValueSource = (source: SystemConfigCatalogItem['value_source']) => {
+    if (source === 'db') {
+      return t('page.systemConfig.valueSource.db', 'Database')
+    }
+    if (source === 'legacy_env') {
+      return t('page.systemConfig.valueSource.legacy_env', 'Legacy env fallback')
+    }
+    if (source === 'env') {
+      return t('page.systemConfig.valueSource.env', 'Environment')
+    }
+    return t('page.systemConfig.valueSource.default', 'Default')
   }
 
   const renderInput = (item: SystemConfigCatalogItem) => {
-    const value = drafts[item.key] ?? item.current_value ?? item.default_value ?? ''
+    const value = draftOverrides[item.key] ?? item.current_value ?? item.default_value ?? ''
 
     if (item.value_type === 'bool') {
       const checked = value === 'true'
@@ -137,14 +132,20 @@ export default function SystemConfigTab() {
             <section key={category} className="space-y-4">
               <div>
                 <h4 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                  {formatCategoryLabel(category)}
+                  {t(`page.systemConfig.categories.${category}`, formatCategoryLabel(category))}
                 </h4>
               </div>
               <div className="space-y-3">
                 {items.map((item) => {
-                  const draftValue = drafts[item.key] ?? item.current_value ?? item.default_value ?? ''
+                  const draftValue =
+                    draftOverrides[item.key] ?? item.current_value ?? item.default_value ?? ''
                   const isDirty = draftValue !== (item.current_value ?? '')
                   const canSave = isDirty || !item.is_overridden
+                  const translatedLabel = t(`page.systemConfig.items.${item.key}.label`, item.label)
+                  const translatedDescription = t(
+                    `page.systemConfig.items.${item.key}.description`,
+                    item.description
+                  )
                   return (
                     <div
                       key={item.key}
@@ -153,7 +154,7 @@ export default function SystemConfigTab() {
                       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                         <div className="space-y-1">
                           <div className="flex flex-wrap items-center gap-2">
-                            <h5 className="text-sm font-medium text-foreground">{item.label}</h5>
+                            <h5 className="text-sm font-medium text-foreground">{translatedLabel}</h5>
                             <span className="rounded-full border border-border px-2 py-0.5 text-[11px] text-muted-foreground">
                               {item.key}
                             </span>
@@ -161,7 +162,7 @@ export default function SystemConfigTab() {
                               {formatValueSource(item.value_source)}
                             </span>
                           </div>
-                          <p className="text-sm text-muted-foreground">{item.description}</p>
+                          <p className="text-sm text-muted-foreground">{translatedDescription}</p>
                           <p className="text-xs text-muted-foreground">
                             {t('page.systemConfig.defaultValue', 'Default')}: {item.default_value || '-'}
                           </p>

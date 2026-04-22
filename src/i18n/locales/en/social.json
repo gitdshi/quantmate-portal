@@ -223,6 +223,97 @@
       "noFactors": "Add factors from the library to start combining."
     }
   },
+  "autoPilot": {
+    "tabs": {
+      "runs": "Mining Runs",
+      "catalog": "Data Catalog"
+    },
+    "title": "Auto Pilot",
+    "subtitle": "LLM-driven autonomous factor mining powered by RD-Agent.",
+    "fields": {
+      "scenario": "Scenario",
+      "maxIterations": "Max Iterations",
+      "llmModel": "LLM Model",
+      "universe": "Universe",
+      "startDate": "Start Date",
+      "endDate": "End Date"
+    },
+    "scenarios": {
+      "fin_factor": "Factor Mining",
+      "fin_model": "Model Optimization",
+      "fin_quant": "Joint Factor + Model"
+    },
+    "universes": {
+      "csi300": "CSI 300",
+      "csi500": "CSI 500",
+      "csi1000": "CSI 1000"
+    },
+    "start": {
+      "title": "Start New Mining Run",
+      "description": "Configure a mining session and launch RD-Agent to iterate on factor ideas.",
+      "start": "Start Mining",
+      "starting": "Starting..."
+    },
+    "runs": {
+      "title": "Mining Runs",
+      "empty": "No mining runs yet.",
+      "columns": {
+        "runId": "Run ID",
+        "scenario": "Scenario",
+        "status": "Status",
+        "progress": "Progress",
+        "created": "Created",
+        "actions": "Actions"
+      }
+    },
+    "detail": {
+      "title": "Run Detail: {{id}}",
+      "empty": "Select a mining run to inspect iterations and discovered factors.",
+      "iterations": "Iterations",
+      "iterationLabel": "Iteration {{number}}",
+      "hypothesis": "Hypothesis",
+      "noIterations": "No iterations yet."
+    },
+    "factors": {
+      "title": "Discovered Factors",
+      "empty": "No factors discovered yet.",
+      "columns": {
+        "name": "Name",
+        "expression": "Expression",
+        "ic": "IC",
+        "icir": "ICIR",
+        "sharpe": "Sharpe",
+        "status": "Status",
+        "actions": "Actions"
+      }
+    },
+    "catalog": {
+      "title": "Data Catalog",
+      "loading": "Loading catalog...",
+      "summary": "{{count}} numeric fields available from {{sources}}.",
+      "empty": "No catalog data available."
+    },
+    "actions": {
+      "cancelRun": "Cancel run",
+      "import": "Import"
+    },
+    "toasts": {
+      "started": "Mining run started",
+      "startFailed": "Failed to start mining run",
+      "cancelled": "Mining run cancelled",
+      "cancelFailed": "Failed to cancel mining run",
+      "imported": "Factor imported to Factor Lab",
+      "importFailed": "Failed to import factor"
+    },
+    "status": {
+      "queued": "Queued",
+      "running": "Running",
+      "completed": "Completed",
+      "failed": "Failed",
+      "cancelled": "Cancelled",
+      "imported": "Imported"
+    }
+  },
   "visualExplorer": {
     "title": "Visual Explorer",
     "subtitle": "Data visualization and exploration",

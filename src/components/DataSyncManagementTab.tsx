@@ -12,7 +12,6 @@ import { useTranslation } from 'react-i18next'
 
 import { showToast } from './ui/toast-service'
 import { dataSourceAPI, datasyncAPI } from '../lib/api'
-import { dedupeCatalogItems } from '../lib/sourceCatalog'
 
 type SyncLatestItem = {
   source: string
@@ -72,6 +71,46 @@ type RepairSyncCoverageResponse = {
   items_reconciled?: number
   pending_records?: number
   backfill_jobs?: Array<{ source: string; item_key: string; job_id: string }>
+}
+
+function preferCoverageItem(current: SyncCoverageItem, candidate: SyncCoverageItem): SyncCoverageItem {
+  if (candidate.missing_sync_dates !== current.missing_sync_dates) {
+    return candidate.missing_sync_dates > current.missing_sync_dates ? candidate : current
+  }
+
+  if (candidate.total_sync_dates !== current.total_sync_dates) {
+    return candidate.total_sync_dates > current.total_sync_dates ? candidate : current
+  }
+
+  if ((candidate.latest_sync_date ?? '') !== (current.latest_sync_date ?? '')) {
+    return (candidate.latest_sync_date ?? '') > (current.latest_sync_date ?? '') ? candidate : current
+  }
+
+  const currentPendingWork = current.counts.pending + current.counts.error + current.counts.partial
+  const candidatePendingWork =
+    candidate.counts.pending + candidate.counts.error + candidate.counts.partial
+  if (candidatePendingWork !== currentPendingWork) {
+    return candidatePendingWork > currentPendingWork ? candidate : current
+  }
+
+  return current
+}
+
+function dedupeCoverageItems(items: SyncCoverageItem[]): SyncCoverageItem[] {
+  const deduped = new Map<string, SyncCoverageItem>()
+
+  for (const item of items) {
+    const itemId = `${item.source}/${item.item_key}`
+    const existing = deduped.get(itemId)
+    if (!existing) {
+      deduped.set(itemId, item)
+      continue
+    }
+
+    deduped.set(itemId, preferCoverageItem(existing, item))
+  }
+
+  return Array.from(deduped.values())
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -184,10 +223,7 @@ export default function DataSyncManagementTab() {
       ),
   })
 
-  const coverageItems = useMemo(
-    () => dedupeCatalogItems(coverageData?.items ?? []),
-    [coverageData?.items]
-  )
+  const coverageItems = useMemo(() => dedupeCoverageItems(coverageData?.items ?? []), [coverageData?.items])
   const repairCandidates = useMemo(
     () => coverageItems.filter((item) => item.missing_sync_dates > 0),
     [coverageItems]

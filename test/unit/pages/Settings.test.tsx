@@ -338,6 +338,63 @@ describe('Settings Page', () => {
     })
   })
 
+  it('keeps a repairable duplicate coverage row selectable', async () => {
+    vi.mocked(dataSourceAPI.syncCoverage).mockResolvedValue({
+      data: {
+        window_start: '2015-01-01',
+        window_end: '2026-04-22',
+        expected_trade_days: 100,
+        items: [
+          {
+            source: 'tushare',
+            source_name: 'Tushare Pro',
+            item_key: 'balancesheet',
+            item_name: 'Balance Sheet',
+            sync_priority: 1,
+            api_name: 'balancesheet',
+            supports_backfill: true,
+            expected_sync_dates: 100,
+            total_sync_dates: 100,
+            missing_sync_dates: 0,
+            latest_sync_date: '2026-04-22',
+            initialized_from: '2015-01-01',
+            initialized_to: '2026-04-22',
+            counts: { success: 100, error: 0, pending: 0, running: 0, partial: 0 },
+          },
+          {
+            source: 'tushare',
+            source_name: 'Tushare Pro',
+            item_key: 'balancesheet',
+            item_name: 'Balance Sheet',
+            sync_priority: 1,
+            api_name: 'balancesheet',
+            supports_backfill: true,
+            expected_sync_dates: 100,
+            total_sync_dates: 80,
+            missing_sync_dates: 20,
+            latest_sync_date: '2026-04-18',
+            initialized_from: '2015-01-01',
+            initialized_to: '2026-04-22',
+            counts: { success: 70, error: 5, pending: 5, running: 0, partial: 0 },
+          },
+        ],
+        summary: { items: 2, missing_items: 1, repairable_items: 1, unsupported_items: 0 },
+      },
+    } as never)
+
+    render(<Settings />)
+    await openDataSyncTab()
+
+    const row = screen.getByText('Balance Sheet').closest('tr')
+    expect(row).toBeTruthy()
+
+    const rowCheckbox = within(row as HTMLTableRowElement).getByRole('checkbox')
+    expect(rowCheckbox).toBeEnabled()
+
+    fireEvent.click(rowCheckbox)
+    expect(rowCheckbox).toBeChecked()
+  })
+
   it('shows trading preferences tab', () => {
     render(<Settings />)
     fireEvent.click(screen.getByRole('button', { name: 'Trading Preferences' }))
