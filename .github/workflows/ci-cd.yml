@@ -183,6 +183,9 @@ jobs:
             GITHUB_OWNER=$GITHUB_OWNER PORTAL_IMAGE_TAG=$PORTAL_IMAGE_TAG \
               docker compose -f docker-compose.staging.yml up -d portal --remove-orphans
 
+            echo "==> Restarting nginx to refresh upstream container IPs"
+            docker restart quantmate_nginx >/dev/null
+
             echo "==> Waiting for portal to start"
             sleep 10
             curl -sf http://localhost:80/ || curl -sf http://localhost:5173/ || exit 1
