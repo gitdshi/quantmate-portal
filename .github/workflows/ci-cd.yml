@@ -153,25 +153,42 @@ jobs:
         uses: appleboy/ssh-action@v1
         env:
           GITHUB_OWNER: ${{ github.repository_owner }}
-          IMAGE_TAG: sha-${{ github.sha }}
+          PORTAL_IMAGE_TAG: sha-${{ github.sha }}
         with:
           host: ${{ secrets.STAGING_HOST }}
           username: ${{ secrets.STAGING_USER }}
           key: ${{ secrets.STAGING_SSH_KEY }}
-          envs: GITHUB_OWNER,IMAGE_TAG
+          envs: GITHUB_OWNER,PORTAL_IMAGE_TAG
           script: |
             set -e
             cd /opt/quantmate
 
-            echo "==> Pulling portal image tag: $IMAGE_TAG"
-            GITHUB_OWNER=$GITHUB_OWNER IMAGE_TAG=$IMAGE_TAG \
+            ENV_FILE=.env
+
+            upsert_env_key() {
+              key="$1"
+              value="$2"
+              if grep -q "^${key}=" "$ENV_FILE"; then
+                sed -i "s|^${key}=.*|${key}=${value}|" "$ENV_FILE"
+              else
+                printf "\n%s=%s\n" "$key" "$value" >> "$ENV_FILE"
+              fi
+            }
+
+            echo "==> Pulling portal image tag: $PORTAL_IMAGE_TAG"
+            GITHUB_OWNER=$GITHUB_OWNER PORTAL_IMAGE_TAG=$PORTAL_IMAGE_TAG \
               docker compose -f docker-compose.staging.yml pull portal
 
             echo "==> Restarting portal service"
-            GITHUB_OWNER=$GITHUB_OWNER IMAGE_TAG=$IMAGE_TAG \
+            GITHUB_OWNER=$GITHUB_OWNER PORTAL_IMAGE_TAG=$PORTAL_IMAGE_TAG \
               docker compose -f docker-compose.staging.yml up -d portal --remove-orphans
 
             echo "==> Waiting for portal to start"
             sleep 10
             curl -sf http://localhost:80/ || curl -sf http://localhost:5173/ || exit 1
-            echo "Portal staging deploy successful: $IMAGE_TAG"
+
+            echo "==> Persisting deployed portal image tag into .env"
+            upsert_env_key GITHUB_OWNER "$GITHUB_OWNER"
+            upsert_env_key PORTAL_IMAGE_TAG "$PORTAL_IMAGE_TAG"
+
+            echo "Portal staging deploy successful: $PORTAL_IMAGE_TAG"
