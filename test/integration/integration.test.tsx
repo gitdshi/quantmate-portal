@@ -59,6 +59,17 @@ const mockUser = { id: 1, username: 'test', email: 'test@test.com' }
 const mockSetAuth = vi.fn()
 const mockLogout = vi.fn()
 
+function mockAuthState(overrides: Partial<Record<string, unknown>> = {}) {
+  vi.mocked(authStore.useAuthStore).mockReturnValue({
+    isAuthenticated: false,
+    hasHydrated: true,
+    user: null,
+    setAuth: mockSetAuth,
+    logout: mockLogout,
+    ...overrides,
+  } as never)
+}
+
 describe('App Integration', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -68,12 +79,7 @@ describe('App Integration', () => {
   })
 
   it('redirects to login when not authenticated', async () => {
-    vi.mocked(authStore.useAuthStore).mockReturnValue({
-      isAuthenticated: false,
-      user: null,
-      setAuth: mockSetAuth,
-      logout: mockLogout,
-    } as never)
+    mockAuthState()
 
     render(<App />)
 
@@ -87,12 +93,10 @@ describe('App Integration', () => {
     localStorage.setItem('refresh_token', 'test-refresh')
     mockMe.mockResolvedValue({ data: mockUser })
 
-    vi.mocked(authStore.useAuthStore).mockReturnValue({
+    mockAuthState({
       isAuthenticated: true,
       user: mockUser,
-      setAuth: mockSetAuth,
-      logout: mockLogout,
-    } as never)
+    })
 
     render(<App />)
 
@@ -106,12 +110,10 @@ describe('App Integration', () => {
     localStorage.setItem('refresh_token', 'test-refresh')
     mockMe.mockResolvedValue({ data: mockUser })
 
-    vi.mocked(authStore.useAuthStore).mockReturnValue({
+    mockAuthState({
       isAuthenticated: true,
       user: mockUser,
-      setAuth: mockSetAuth,
-      logout: mockLogout,
-    } as never)
+    })
 
     render(<App />)
 
@@ -122,12 +124,7 @@ describe('App Integration', () => {
 
   describe('Route Protection', () => {
     it('protects /strategies route', async () => {
-      vi.mocked(authStore.useAuthStore).mockReturnValue({
-        isAuthenticated: false,
-        user: null,
-        setAuth: mockSetAuth,
-        logout: mockLogout,
-      } as never)
+      mockAuthState()
 
       window.history.pushState({}, 'Strategies', '/strategies')
       render(<App />)
@@ -138,12 +135,7 @@ describe('App Integration', () => {
     })
 
     it('protects /backtest route', async () => {
-      vi.mocked(authStore.useAuthStore).mockReturnValue({
-        isAuthenticated: false,
-        user: null,
-        setAuth: mockSetAuth,
-        logout: mockLogout,
-      } as never)
+      mockAuthState()
 
       window.history.pushState({}, 'Backtest', '/backtest')
       render(<App />)
@@ -154,12 +146,7 @@ describe('App Integration', () => {
     })
 
     it('protects /analytics route', async () => {
-      vi.mocked(authStore.useAuthStore).mockReturnValue({
-        isAuthenticated: false,
-        user: null,
-        setAuth: mockSetAuth,
-        logout: mockLogout,
-      } as never)
+      mockAuthState()
 
       window.history.pushState({}, 'Analytics', '/analytics')
       render(<App />)
@@ -170,12 +157,7 @@ describe('App Integration', () => {
     })
 
     it('protects /portfolio route', async () => {
-      vi.mocked(authStore.useAuthStore).mockReturnValue({
-        isAuthenticated: false,
-        user: null,
-        setAuth: mockSetAuth,
-        logout: mockLogout,
-      } as never)
+      mockAuthState()
 
       window.history.pushState({}, 'Portfolio', '/portfolio')
       render(<App />)
@@ -188,12 +170,7 @@ describe('App Integration', () => {
 
   describe('Authentication Flow', () => {
     it('completes full authentication flow', async () => {
-      vi.mocked(authStore.useAuthStore).mockReturnValue({
-        isAuthenticated: false,
-        user: null,
-        setAuth: mockSetAuth,
-        logout: mockLogout,
-      } as never)
+      mockAuthState()
 
       const { unmount } = render(<App />)
       await waitFor(() => {
@@ -205,12 +182,10 @@ describe('App Integration', () => {
       localStorage.setItem('refresh_token', 'test-refresh')
       mockMe.mockResolvedValue({ data: mockUser })
 
-      vi.mocked(authStore.useAuthStore).mockReturnValue({
+      mockAuthState({
         isAuthenticated: true,
         user: mockUser,
-        setAuth: mockSetAuth,
-        logout: mockLogout,
-      } as never)
+      })
 
       window.history.pushState({}, '', '/')
       render(<App />)

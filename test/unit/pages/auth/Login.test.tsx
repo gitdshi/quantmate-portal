@@ -39,6 +39,7 @@ describe('Login Component', () => {
     ;(authStore.useAuthStore as any).mockReturnValue({
       setAuth: mockSetAuth,
       isAuthenticated: false,
+      hasHydrated: true,
     })
   })
 
@@ -122,14 +123,17 @@ describe('Login Component', () => {
     expect(screen.getByRole('button', { name: /中文/i })).toBeInTheDocument()
   })
 
-  it('redirects to / when already authenticated', () => {
+  it('redirects to /dashboard when already authenticated', async () => {
     ;(authStore.useAuthStore as any).mockReturnValue({
       setAuth: mockSetAuth,
       isAuthenticated: true,
+      hasHydrated: true,
     })
 
     render(<Login />)
-    expect(mockNavigate).toHaveBeenCalledWith('/')
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true })
+    })
   })
 
   it('falls back to error.message when detail is missing', async () => {
