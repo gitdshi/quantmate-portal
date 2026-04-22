@@ -21,6 +21,21 @@ type StreamLogsOptions = {
   onEvent: (event: SystemLogStreamEvent) => void
 }
 
+export type SystemConfigCatalogItem = {
+  key: string
+  category: string
+  label: string
+  description: string
+  value_type: 'string' | 'int' | 'float' | 'bool' | 'csv'
+  default_value: string
+  legacy_env_keys: string[]
+  current_value: string
+  stored_value: string | null
+  is_overridden: boolean
+  value_source: 'db' | 'legacy_env' | 'env' | 'default'
+  updated_at?: string | null
+}
+
 export const api = axios.create({
   baseURL: API_URL,
   timeout: 8000,
@@ -380,6 +395,7 @@ export const systemAPI = {
   syncStatus: () => api.get('/system/sync-status'),
   versionInfo: () => api.get('/system/version'),
   listLogModules: () => api.get('/system/logs/modules'),
+  listConfigCatalog: () => api.get('/system/configs/catalog'),
   listConfigs: (category?: string) => api.get('/system/configs', { params: { category } }),
   upsertConfig: (data: {
     config_key: string

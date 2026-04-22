@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next'
 
 import { showToast } from './ui/toast-service'
 import { dataSourceAPI, datasyncAPI } from '../lib/api'
+import { dedupeCatalogItems } from '../lib/sourceCatalog'
 
 type SyncLatestItem = {
   source: string
@@ -28,31 +29,6 @@ type SyncSummary = {
   days: number
   overall: Record<string, number>
   by_date: Record<string, Record<string, Record<string, number>>>
-}
-
-type SyncInitializationItem = {
-  source: string
-  item_key: string
-}
-
-type SyncInitializationCoverageItem = SyncInitializationItem & {
-  initialized_from: string
-  initialized_to: string
-  expected_rows: number
-  actual_rows: number
-}
-
-type SyncInitializationState = {
-  bootstrap_completed: boolean
-  sync_status_initialized: boolean
-  needs_initialization: boolean
-  sync_status_window_start: string
-  sync_status_window_end: string
-  trade_days_in_window: number
-  enabled_sync_items: number
-  sync_status_missing_items: SyncInitializationItem[]
-  sync_status_incomplete_items: SyncInitializationCoverageItem[]
-  sync_status_unsupported_enabled_items: SyncInitializationItem[]
 }
 
 type SyncCoverageItem = {
@@ -156,12 +132,6 @@ export default function DataSyncManagementTab() {
     refetchInterval: 60000,
   })
 
-  const { data: initState, isLoading: initLoading, error: initError } = useQuery<SyncInitializationState>({
-    queryKey: ['datasync', 'initialization'],
-    queryFn: () => datasyncAPI.initialization().then((response) => response.data),
-    refetchInterval: 60000,
-  })
-
   const { data: coverageData, isLoading: coverageLoading } = useQuery<SyncCoverageResponse>({
     queryKey: ['datasync', 'coverage'],
     queryFn: () => dataSourceAPI.syncCoverage().then((response) => response.data as SyncCoverageResponse),
@@ -171,7 +141,6 @@ export default function DataSyncManagementTab() {
   const invalidateSyncQueries = () => {
     void queryClient.invalidateQueries({ queryKey: ['datasync', 'latest'] })
     void queryClient.invalidateQueries({ queryKey: ['datasync', 'summary'] })
-    void queryClient.invalidateQueries({ queryKey: ['datasync', 'initialization'] })
     void queryClient.invalidateQueries({ queryKey: ['datasync', 'coverage'] })
   }
 
@@ -215,10 +184,22 @@ export default function DataSyncManagementTab() {
       ),
   })
 
-  const coverageItems = useMemo(() => coverageData?.items ?? [], [coverageData?.items])
+  const coverageItems = useMemo(
+    () => dedupeCatalogItems(coverageData?.items ?? []),
+    [coverageData?.items]
+  )
   const repairCandidates = useMemo(
     () => coverageItems.filter((item) => item.missing_sync_dates > 0),
     [coverageItems]
+  )
+  const coverageSummary = useMemo(
+    () => ({
+      items: coverageItems.length,
+      missing_items: repairCandidates.length,
+      repairable_items: coverageData?.summary?.repairable_items ?? 0,
+      unsupported_items: coverageData?.summary?.unsupported_items ?? 0,
+    }),
+    [coverageData?.summary?.repairable_items, coverageData?.summary?.unsupported_items, coverageItems.length, repairCandidates.length]
   )
   const repairCandidateIds = useMemo(
     () => new Set(repairCandidates.map((item) => `${item.source}/${item.item_key}`)),
@@ -286,7 +267,7 @@ export default function DataSyncManagementTab() {
     }
   }
 
-  if (latestLoading && summaryLoading && initLoading && coverageLoading) {
+  if (latestLoading && summaryLoading && coverageLoading) {
     return (
       <div className="flex items-center justify-center py-16">
         <Loader2 className="animate-spin text-muted-foreground" size={24} />
@@ -300,26 +281,9 @@ export default function DataSyncManagementTab() {
 
   const items = latestData?.items ?? []
   const overall = summaryData?.overall ?? {}
-  const missingItems = initState?.sync_status_missing_items ?? []
-  const incompleteItems = initState?.sync_status_incomplete_items ?? []
-  const unsupportedItems = initState?.sync_status_unsupported_enabled_items ?? []
-  const initHealthy = Boolean(initState && !initState.needs_initialization)
   const allSelected =
     repairCandidates.length > 0 &&
     repairCandidates.every((item) => selectedIds.has(`${item.source}/${item.item_key}`))
-
-  const renderInterfaceList = (entries: SyncInitializationItem[]) => (
-    <div className="mt-2 flex flex-wrap gap-2">
-      {entries.map((entry) => (
-        <span
-          key={`${entry.source}/${entry.item_key}`}
-          className="rounded border border-border bg-background px-2 py-1 text-xs text-foreground"
-        >
-          {entry.source}/{entry.item_key}
-        </span>
-      ))}
-    </div>
-  )
 
   return (
     <div className="space-y-4">
@@ -406,108 +370,9 @@ export default function DataSyncManagementTab() {
             {tSettings('page.dataSync.missingCoverage', 'Missing coverage')}
           </div>
           <div className="mt-1 text-lg font-semibold text-foreground">
-            {coverageData?.summary?.missing_items ?? 0}
+            {coverageSummary.missing_items}
           </div>
         </div>
-      </div>
-
-      <div
-        className={`rounded-lg border p-4 ${
-          initHealthy ? 'border-emerald-200 bg-emerald-50/60' : 'border-amber-200 bg-amber-50/60'
-        }`}
-      >
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-3">
-            {initHealthy ? (
-              <CheckCircle2 className="mt-0.5 text-emerald-600" size={18} />
-            ) : (
-              <XCircle className="mt-0.5 text-amber-700" size={18} />
-            )}
-            <div>
-              <h3 className="font-semibold text-foreground">{tMarket('page.sync.initializationTitle')}</h3>
-              <p className="text-sm text-muted-foreground">
-                {initHealthy
-                  ? tMarket('page.sync.initializationComplete')
-                  : tMarket('page.sync.initializationIncomplete')}
-              </p>
-            </div>
-          </div>
-          <span
-            className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-              initHealthy ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-900'
-            }`}
-          >
-            {initHealthy ? tMarket('page.sync.statusReady') : tMarket('page.sync.statusNeedsAttention')}
-          </span>
-        </div>
-
-        {initError ? (
-          <p className="mt-3 text-sm text-destructive">{tMarket('page.sync.initializationLoadFailed')}</p>
-        ) : initState ? (
-          <>
-            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-lg border border-border bg-background p-3">
-                <div className="text-xs text-muted-foreground">{tMarket('page.sync.enabledInterfaces')}</div>
-                <div className="mt-1 text-lg font-semibold text-foreground">{initState.enabled_sync_items}</div>
-              </div>
-              <div className="rounded-lg border border-border bg-background p-3">
-                <div className="text-xs text-muted-foreground">{tMarket('page.sync.tradeDays')}</div>
-                <div className="mt-1 text-lg font-semibold text-foreground">{initState.trade_days_in_window}</div>
-              </div>
-              <div className="rounded-lg border border-border bg-background p-3">
-                <div className="text-xs text-muted-foreground">{tMarket('page.sync.coverageWindow')}</div>
-                <div className="mt-1 text-sm font-semibold text-foreground">
-                  {initState.sync_status_window_start} - {initState.sync_status_window_end}
-                </div>
-              </div>
-              <div className="rounded-lg border border-border bg-background p-3">
-                <div className="text-xs text-muted-foreground">{tMarket('page.sync.bootstrapStatus')}</div>
-                <div className="mt-1 text-sm font-semibold text-foreground">
-                  {initState.bootstrap_completed
-                    ? tMarket('page.sync.bootstrapCompleted')
-                    : tMarket('page.sync.bootstrapPending')}
-                </div>
-              </div>
-            </div>
-
-            {!initHealthy && (
-              <div className="mt-4 space-y-3">
-                {missingItems.length > 0 && (
-                  <div>
-                    <div className="text-sm font-medium text-foreground">{tMarket('page.sync.missingItems')}</div>
-                    {renderInterfaceList(missingItems)}
-                  </div>
-                )}
-
-                {incompleteItems.length > 0 && (
-                  <div>
-                    <div className="text-sm font-medium text-foreground">{tMarket('page.sync.incompleteItems')}</div>
-                    <div className="mt-2 space-y-2">
-                      {incompleteItems.map((entry) => (
-                        <div
-                          key={`${entry.source}/${entry.item_key}`}
-                          className="rounded-lg border border-border bg-background px-3 py-2 text-xs text-foreground"
-                        >
-                          <div className="font-medium">{entry.source}/{entry.item_key}</div>
-                          <div className="mt-1 text-muted-foreground">
-                            {entry.initialized_from} - {entry.initialized_to} | {entry.actual_rows}/{entry.expected_rows}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {unsupportedItems.length > 0 && (
-                  <div>
-                    <div className="text-sm font-medium text-foreground">{tMarket('page.sync.unsupportedItems')}</div>
-                    {renderInterfaceList(unsupportedItems)}
-                  </div>
-                )}
-              </div>
-            )}
-          </>
-        ) : null}
       </div>
 
       <div className="rounded-lg border border-border bg-card">
@@ -518,8 +383,8 @@ export default function DataSyncManagementTab() {
             </h3>
             <p className="text-sm text-muted-foreground">
               {tSettings('page.dataSync.coverageSubtitle', {
-                count: coverageData?.summary?.items ?? 0,
-                missing: coverageData?.summary?.missing_items ?? 0,
+                count: coverageSummary.items,
+                missing: coverageSummary.missing_items,
                 defaultValue: '{{count}} enabled interfaces, {{missing}} with missing sync dates',
               })}
             </p>

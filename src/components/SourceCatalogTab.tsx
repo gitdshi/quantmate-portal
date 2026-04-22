@@ -4,7 +4,12 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { dataSourceAPI } from '../lib/api'
-import { formatPermissionLabel, requiresExplicitPermission, sortCatalogItems } from '../lib/sourceCatalog'
+import {
+  dedupeCatalogItems,
+  formatPermissionLabel,
+  requiresExplicitPermission,
+  sortCatalogItems,
+} from '../lib/sourceCatalog'
 import ToggleSwitch from './ui/ToggleSwitch'
 import { showToast } from './ui/toast-service'
 
@@ -160,7 +165,10 @@ export default function SourceCatalogTab({
 
   const config = configs.find((entry) => entry.source_key === source)
   const sourceLabel = config?.display_name || sourceName
-  const sortedItems = useMemo(() => sortCatalogItems(source, items), [items, source])
+  const sortedItems = useMemo(
+    () => sortCatalogItems(source, dedupeCatalogItems(items)),
+    [items, source]
+  )
   const enabledCount = useMemo(
     () => sortedItems.filter((item) => Boolean(item.enabled)).length,
     [sortedItems]

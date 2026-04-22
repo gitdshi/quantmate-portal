@@ -664,6 +664,9 @@ export default function TushareDataBrowserTab() {
   const tables = useMemo(
     () =>
       tableCatalog.filter((table) => {
+        if (!table.table_created) {
+          return false
+        }
         if (categoryFilter && (table.category?.trim() ?? '') !== categoryFilter) {
           return false
         }

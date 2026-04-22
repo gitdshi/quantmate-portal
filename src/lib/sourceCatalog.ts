@@ -1,5 +1,6 @@
 export interface CatalogItemLike {
   id?: number | null
+  source?: string | null
   item_key: string
   display_name?: string | null
   api_name?: string | null
@@ -83,6 +84,28 @@ export function formatPermissionLabel(
     return null
   }
   return `${Number(matched[0])}积分`
+}
+
+export function dedupeCatalogItems<T extends CatalogItemLike>(items: T[]): T[] {
+  const deduped: T[] = []
+  const seen = new Set<string>()
+
+  for (const item of items) {
+    const itemKey = normalizeCatalogValue(item.item_key)
+    if (!itemKey) {
+      continue
+    }
+
+    const key = `${normalizeCatalogValue(item.source)}/${itemKey}`
+    if (seen.has(key)) {
+      continue
+    }
+
+    seen.add(key)
+    deduped.push(item)
+  }
+
+  return deduped
 }
 
 export function sortCatalogItems<T extends CatalogItemLike>(source: string, items: T[]): T[] {

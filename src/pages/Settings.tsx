@@ -6,6 +6,7 @@ import { useSearchParams } from 'react-router-dom'
 
 import AkshareTab from '../components/AkshareTab'
 import DataSyncManagementTab from '../components/DataSyncManagementTab'
+import SystemConfigTab from '../components/SystemConfigTab'
 import SystemLogsTab from '../components/SystemLogsTab'
 import TushareProTab from '../components/TushareProTab'
 import DataTable, { type Column } from '../components/ui/DataTable'
@@ -95,6 +96,11 @@ export default function Settings() {
 
   const systemManagementTabs = useMemo(
     () => [
+      {
+        key: 'system-config',
+        label: t('page.systemManagement.tabs.systemConfig', 'System Configuration'),
+        icon: <Database size={16} />,
+      },
       {
         key: 'system-status',
         label: t('page.systemManagement.tabs.systemStatus', 'System Status'),
@@ -583,6 +589,7 @@ export default function Settings() {
           <div className="space-y-4">
             <TabPanel tabs={systemManagementTabs} activeTab={activeSystemTab} onChange={setActiveSystemTab}>
 
+              {activeSystemTab === 'system-config' && <SystemConfigTab />}
 
               {activeSystemTab === 'system-status' && (
                 <div className="rounded-lg border border-border bg-card p-6">

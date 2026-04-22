@@ -1,6 +1,6 @@
 import i18n from '@/i18n'
 import Settings from '@/pages/Settings'
-import { act, fireEvent, render, screen, waitFor } from '@test/support/utils'
+import { act, fireEvent, render, screen, waitFor, within } from '@test/support/utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/components/ui/toast-service', () => ({
@@ -24,18 +24,27 @@ vi.mock('@/lib/api', () => ({
   dataSourceAPI: {
     listConfigs: vi.fn(),
     listItems: vi.fn(),
+    syncCoverage: vi.fn(),
+    repairSyncCoverage: vi.fn(),
     updateConfig: vi.fn(),
     updateItem: vi.fn(),
     batchUpdate: vi.fn(),
     testConnection: vi.fn(),
   },
+  datasyncAPI: {
+    latest: vi.fn(),
+    summary: vi.fn(),
+    trigger: vi.fn(),
+  },
   systemAPI: {
     syncStatus: vi.fn(),
+    listConfigCatalog: vi.fn(),
+    upsertConfig: vi.fn(),
     streamLogs: vi.fn(),
   },
 }))
 
-import { dataSourceAPI, systemAPI } from '@/lib/api'
+import { dataSourceAPI, datasyncAPI, systemAPI } from '@/lib/api'
 
 async function openDataSourceManagementTab() {
   fireEvent.click(screen.getByRole('button', { name: 'Data Source Management' }))
@@ -48,10 +57,22 @@ async function openTushareManagementTab() {
   await screen.findByRole('heading', { name: 'Tushare Pro API Catalog' })
 }
 
+async function openDataSyncTab() {
+  await openDataSourceManagementTab()
+  fireEvent.click(screen.getByRole('button', { name: 'Data Sync' }))
+  await screen.findByRole('heading', { name: 'Data Sync' })
+}
+
 async function openSystemStatusTab() {
   fireEvent.click(screen.getByRole('button', { name: 'System Management' }))
   fireEvent.click(screen.getByRole('button', { name: 'System Status' }))
   await screen.findByRole('heading', { name: 'System status' })
+}
+
+async function openSystemConfigTab() {
+  fireEvent.click(screen.getByRole('button', { name: 'System Management' }))
+  fireEvent.click(screen.getByRole('button', { name: 'System Configuration' }))
+  await screen.findByRole('heading', { name: 'System Configuration' })
 }
 
 async function openSystemLogsTab() {
@@ -127,7 +148,57 @@ describe('Settings Page', () => {
       }) as never
     )
     vi.mocked(systemAPI.syncStatus).mockResolvedValue({ data: { status: 'ok', version: 'v1.2.0' } } as never)
+    vi.mocked(systemAPI.listConfigCatalog).mockResolvedValue({
+      data: {
+        configs: [
+          {
+            key: 'datasync.sync_hour',
+            category: 'datasync',
+            label: 'Daily sync hour',
+            description: 'Daily sync schedule hour in 24-hour local time.',
+            value_type: 'int',
+            default_value: '2',
+            legacy_env_keys: ['SYNC_HOUR'],
+            current_value: '5',
+            stored_value: '5',
+            is_overridden: true,
+            value_source: 'db',
+          },
+        ],
+      },
+    } as never)
+    vi.mocked(systemAPI.upsertConfig).mockResolvedValue({ data: { message: 'Config saved' } } as never)
     vi.mocked(systemAPI.streamLogs).mockResolvedValue(undefined as never)
+    vi.mocked(datasyncAPI.latest).mockResolvedValue({
+      data: {
+        latest_date: '2026-04-22',
+        items: [],
+      },
+    } as never)
+    vi.mocked(datasyncAPI.summary).mockResolvedValue({
+      data: {
+        days: 7,
+        overall: { success: 0, error: 0, pending: 0, running: 0 },
+        by_date: {},
+      },
+    } as never)
+    vi.mocked(datasyncAPI.trigger).mockResolvedValue({ data: { job_id: 'job-123' } } as never)
+    vi.mocked(dataSourceAPI.syncCoverage).mockResolvedValue({
+      data: {
+        window_start: '2015-01-01',
+        window_end: '2026-04-22',
+        expected_trade_days: 100,
+        items: [],
+        summary: { items: 0, missing_items: 0, repairable_items: 0, unsupported_items: 0 },
+      },
+    } as never)
+    vi.mocked(dataSourceAPI.repairSyncCoverage).mockResolvedValue({
+      data: {
+        items_reconciled: 1,
+        pending_records: 10,
+        backfill_jobs: [{ source: 'tushare', item_key: 'stock_daily', job_id: 'job-456' }],
+      },
+    } as never)
   })
 
   it('renders heading', () => {
@@ -162,6 +233,109 @@ describe('Settings Page', () => {
     await openDataSourceManagementTab()
     expect(await screen.findByRole('heading', { name: 'AkShare API Catalog' })).toBeInTheDocument()
     expect(await screen.findByRole('button', { name: 'Tushare Pro' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Data Sync' })).toBeInTheDocument()
+  })
+
+  it('shows system configuration tab and saves a db-managed runtime config', async () => {
+    render(<Settings />)
+
+    await openSystemConfigTab()
+
+    expect(await screen.findByText('Daily sync hour')).toBeInTheDocument()
+    const input = screen.getByDisplayValue('5')
+    fireEvent.change(input, { target: { value: '6' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() =>
+      expect(systemAPI.upsertConfig).toHaveBeenCalledWith({
+        config_key: 'datasync.sync_hour',
+        config_value: '6',
+        category: 'datasync',
+        description: 'Daily sync schedule hour in 24-hour local time.',
+      })
+    )
+  })
+
+  it('removes initialization coverage section from data sync tab', async () => {
+    render(<Settings />)
+
+    await openDataSyncTab()
+
+    expect(screen.getByRole('heading', { name: 'Data Sync' })).toBeInTheDocument()
+    expect(screen.queryByText('Initialization Coverage')).not.toBeInTheDocument()
+  })
+
+  it('deduplicates coverage rows and enables repairing selected missing rows', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    vi.mocked(dataSourceAPI.syncCoverage).mockResolvedValue({
+      data: {
+        window_start: '2015-01-01',
+        window_end: '2026-04-22',
+        expected_trade_days: 100,
+        items: [
+          {
+            source: 'tushare',
+            source_name: 'Tushare Pro',
+            item_key: 'stock_daily',
+            item_name: 'Stock Daily',
+            sync_priority: 1,
+            api_name: 'daily',
+            supports_backfill: true,
+            expected_sync_dates: 100,
+            total_sync_dates: 80,
+            missing_sync_dates: 20,
+            latest_sync_date: '2026-04-22',
+            initialized_from: '2015-01-01',
+            initialized_to: '2026-04-22',
+            counts: { success: 70, error: 5, pending: 5, running: 0, partial: 0 },
+          },
+          {
+            source: 'tushare',
+            source_name: 'Tushare Pro',
+            item_key: 'stock_daily',
+            item_name: 'Stock Daily',
+            sync_priority: 1,
+            api_name: 'daily',
+            supports_backfill: true,
+            expected_sync_dates: 100,
+            total_sync_dates: 80,
+            missing_sync_dates: 20,
+            latest_sync_date: '2026-04-22',
+            initialized_from: '2015-01-01',
+            initialized_to: '2026-04-22',
+            counts: { success: 70, error: 5, pending: 5, running: 0, partial: 0 },
+          },
+        ],
+        summary: { items: 2, missing_items: 2, repairable_items: 2, unsupported_items: 0 },
+      },
+    } as never)
+
+    render(<Settings />)
+    await openDataSyncTab()
+
+    expect(screen.getAllByText('Stock Daily')).toHaveLength(1)
+
+    const row = screen.getByText('Stock Daily').closest('tr')
+    expect(row).toBeTruthy()
+
+    const rowCheckbox = within(row as HTMLTableRowElement).getByRole('checkbox')
+    expect(rowCheckbox).toBeEnabled()
+
+    const repairSelectedButton = screen.getByRole('button', { name: 'Repair Selected' })
+    expect(repairSelectedButton).toBeDisabled()
+
+    fireEvent.click(rowCheckbox)
+    expect(rowCheckbox).toBeChecked()
+    expect(repairSelectedButton).toBeEnabled()
+
+    fireEvent.click(repairSelectedButton)
+
+    await waitFor(() => {
+      expect(dataSourceAPI.repairSyncCoverage).toHaveBeenCalledWith({
+        items: [{ source: 'tushare', item_key: 'stock_daily' }],
+        only_missing: false,
+      })
+    })
   })
 
   it('shows trading preferences tab', () => {

@@ -132,6 +132,11 @@ describe('Extended API — untested HTTP calls', () => {
       expect(mockGet).toHaveBeenCalledWith('/system/configs', { params: { category: 'trading' } })
     })
 
+    it('listConfigCatalog sends GET', () => {
+      systemAPI.listConfigCatalog()
+      expect(mockGet).toHaveBeenCalledWith('/system/configs/catalog')
+    })
+
     it('upsertConfig sends PUT', () => {
       const data = { config_key: 'k', config_value: 'v' }
       systemAPI.upsertConfig(data)
