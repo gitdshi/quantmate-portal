@@ -565,8 +565,13 @@ export const dataSourceAPI = {
     api.get('/settings/datasource-items/permissions', { params: { source } }),
   testConnection: (source: string) =>
     api.post(`/settings/datasource-items/test/${source}`),
-  rebuildSyncStatus: (source: string) =>
-    api.post(`/settings/datasource-items/${source}/rebuild-sync-status`),
+  syncCoverage: (params?: { source?: string }) =>
+    api.get('/settings/datasource-items/sync-coverage', { params }),
+  repairSyncCoverage: (data?: {
+    source?: string
+    items?: Array<{ source: string; item_key: string }>
+    only_missing?: boolean
+  }) => api.post('/settings/datasource-items/sync-coverage/repair', data),
   listConfigs: () => api.get('/settings/datasource-configs'),
   updateConfig: (sourceKey: string, data: { enabled?: boolean; config_json?: Record<string, unknown> }) =>
     api.put(`/settings/datasource-configs/${sourceKey}`, data),

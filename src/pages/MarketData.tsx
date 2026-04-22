@@ -1,15 +1,12 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import {
   Calendar,
-  CheckCircle2,
   Database,
   Gauge,
   LineChart as LineChartIcon,
   List,
   Loader2,
-  Play,
   RefreshCw,
-  XCircle,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -17,8 +14,7 @@ import { useTranslation } from 'react-i18next'
 import CandlestickChart from '../components/charts/CandlestickChart'
 import TushareDataBrowserTab from '../components/TushareDataBrowserTab'
 import TabPanel from '../components/ui/TabPanel'
-import { showToast } from '../components/ui/toast-service'
-import { calendarAPI, datasyncAPI, marketDataAPI, multiMarketAPI, sentimentAPI } from '../lib/api'
+import { calendarAPI, marketDataAPI, multiMarketAPI, sentimentAPI } from '../lib/api'
 import type { MarketSymbol, OHLCBar } from '../types'
 
 type QuoteMarket = 'CN' | 'HK' | 'US' | 'CRYPTO' | 'FUTURES' | 'CN_INDEX'
@@ -241,73 +237,6 @@ function formatPrice(value: number | null): string {
   return value.toFixed(4)
 }
 
-// ---------------------------------------------------------------------------
-// SyncStatusPanel — Data Synchronization tab
-// ---------------------------------------------------------------------------
-
-type SyncLatestItem = {
-  source: string
-  interface_key: string
-  status: string
-  rows_synced: number
-  error_message: string | null
-  retry_count: number
-  started_at: string | null
-  finished_at: string | null
-}
-
-type SyncSummary = {
-  days: number
-  overall: Record<string, number>
-  by_date: Record<string, Record<string, Record<string, number>>>
-}
-
-type SyncInitializationItem = {
-  source: string
-  item_key: string
-}
-
-type SyncInitializationCoverageItem = SyncInitializationItem & {
-  initialized_from: string
-  initialized_to: string
-  expected_rows: number
-  actual_rows: number
-}
-
-type SyncInitializationState = {
-  bootstrap_completed: boolean
-  sync_status_initialized: boolean
-  needs_initialization: boolean
-  sync_status_window_start: string
-  sync_status_window_end: string
-  trade_days_in_window: number
-  enabled_sync_items: number
-  sync_status_missing_items: SyncInitializationItem[]
-  sync_status_incomplete_items: SyncInitializationCoverageItem[]
-  sync_status_unsupported_enabled_items: SyncInitializationItem[]
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const cls: Record<string, string> = {
-    success: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400',
-    error: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400',
-    pending: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400',
-    running: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400',
-    partial: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400',
-  }
-  const icon: Record<string, React.ReactNode> = {
-    success: <CheckCircle2 size={12} />,
-    error: <XCircle size={12} />,
-    running: <Loader2 size={12} className="animate-spin" />,
-  }
-  return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${cls[status] || 'bg-muted text-muted-foreground'}`}>
-      {icon[status]}
-      {status}
-    </span>
-  )
-}
-
 // ── Calendar Panel ─────────────────────────────────────────────────────
 type CalendarEvent = { type: string; date: string; title: string; symbol?: string; detail?: string; time?: string; country?: string; importance?: string; price?: string }
 
@@ -500,273 +429,6 @@ function SentimentPanel() {
   )
 }
 
-function SyncStatusPanel() {
-  const { t } = useTranslation('market')
-
-  const { data: latestData, isLoading: latestLoading, refetch: refetchLatest, error: latestError } = useQuery<{
-    latest_date: string | null
-    items: SyncLatestItem[]
-  }>({
-    queryKey: ['datasync', 'latest'],
-    queryFn: () => datasyncAPI.latest().then((r) => r.data),
-    refetchInterval: 30000,
-  })
-
-  const { data: summaryData, isLoading: summaryLoading } = useQuery<SyncSummary>({
-    queryKey: ['datasync', 'summary'],
-    queryFn: () => datasyncAPI.summary(7).then((r) => r.data),
-    refetchInterval: 60000,
-  })
-
-  const {
-    data: initState,
-    isLoading: initLoading,
-    error: initError,
-  } = useQuery<SyncInitializationState>({
-    queryKey: ['datasync', 'initialization'],
-    queryFn: () => datasyncAPI.initialization().then((r) => r.data),
-    refetchInterval: 60000,
-  })
-
-  const triggerMutation = useMutation({
-    mutationFn: () => datasyncAPI.trigger(),
-    onSuccess: (response) => {
-      const jobId = (response.data as { job_id?: string })?.job_id
-      if (jobId) {
-        showToast(`${t('page.sync.triggered')} (Job: ${jobId.slice(0, 8)}...)`, 'success')
-      } else {
-        showToast(t('page.sync.triggered'), 'success')
-      }
-      void refetchLatest()
-    },
-    onError: () => showToast(t('page.sync.triggerFailed'), 'error'),
-  })
-
-  const handleTrigger = () => {
-    if (window.confirm(t('page.sync.triggerConfirm'))) {
-      triggerMutation.mutate()
-    }
-  }
-
-  if (latestLoading && summaryLoading && initLoading) {
-    return (
-      <div className="flex items-center justify-center py-16">
-        <Loader2 className="animate-spin text-muted-foreground" size={24} />
-      </div>
-    )
-  }
-
-  if (latestError) {
-    return <p className="py-8 text-center text-destructive">{t('page.sync.loadFailed')}</p>
-  }
-
-  const items = latestData?.items ?? []
-  const overall = summaryData?.overall ?? {}
-  const missingItems = initState?.sync_status_missing_items ?? []
-  const incompleteItems = initState?.sync_status_incomplete_items ?? []
-  const unsupportedItems = initState?.sync_status_unsupported_enabled_items ?? []
-  const initHealthy = Boolean(initState && !initState.needs_initialization)
-
-  const renderInterfaceList = (entries: SyncInitializationItem[]) => (
-    <div className="mt-2 flex flex-wrap gap-2">
-      {entries.map((entry) => (
-        <span
-          key={`${entry.source}/${entry.item_key}`}
-          className="rounded border border-border bg-background px-2 py-1 text-xs text-foreground"
-        >
-          {entry.source}/{entry.item_key}
-        </span>
-      ))}
-    </div>
-  )
-
-  return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-foreground">{t('page.sync.title')}</h2>
-          <p className="text-sm text-muted-foreground">{t('page.sync.subtitle')}</p>
-        </div>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm hover:bg-muted"
-            onClick={() => void refetchLatest()}
-          >
-            <RefreshCw size={14} />
-          </button>
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm text-white hover:opacity-90 disabled:opacity-50"
-            onClick={handleTrigger}
-            disabled={triggerMutation.isPending}
-          >
-            {triggerMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
-            {t('page.sync.triggerSync')}
-          </button>
-        </div>
-      </div>
-
-      {/* Summary cards */}
-      <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-5">
-        <div className="rounded-lg border border-border bg-card p-3">
-          <div className="text-xs text-muted-foreground">{t('page.sync.latestDate')}</div>
-          <div className="mt-1 text-lg font-semibold text-foreground">{latestData?.latest_date ?? '--'}</div>
-        </div>
-        {(['success', 'error', 'pending', 'running'] as const).map((s) => (
-          <div key={s} className="rounded-lg border border-border bg-card p-3">
-            <div className="text-xs text-muted-foreground">{t(`page.sync.${s}`)}</div>
-            <div className="mt-1 text-lg font-semibold text-foreground">{overall[s] ?? 0}</div>
-          </div>
-        ))}
-      </div>
-
-      <div
-        className={`rounded-lg border p-4 ${
-          initHealthy
-            ? 'border-emerald-200 bg-emerald-50/60'
-            : 'border-amber-200 bg-amber-50/60'
-        }`}
-      >
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-3">
-            {initHealthy ? (
-              <CheckCircle2 className="mt-0.5 text-emerald-600" size={18} />
-            ) : (
-              <XCircle className="mt-0.5 text-amber-700" size={18} />
-            )}
-            <div>
-              <h3 className="font-semibold text-foreground">{t('page.sync.initializationTitle')}</h3>
-              <p className="text-sm text-muted-foreground">
-                {initHealthy
-                  ? t('page.sync.initializationComplete')
-                  : t('page.sync.initializationIncomplete')}
-              </p>
-            </div>
-          </div>
-          <span
-            className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-              initHealthy
-                ? 'bg-emerald-100 text-emerald-800'
-                : 'bg-amber-100 text-amber-900'
-            }`}
-          >
-            {initHealthy ? t('page.sync.statusReady') : t('page.sync.statusNeedsAttention')}
-          </span>
-        </div>
-
-        {initError ? (
-          <p className="mt-3 text-sm text-destructive">{t('page.sync.initializationLoadFailed')}</p>
-        ) : initState ? (
-          <>
-            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-lg border border-border bg-background p-3">
-                <div className="text-xs text-muted-foreground">{t('page.sync.enabledInterfaces')}</div>
-                <div className="mt-1 text-lg font-semibold text-foreground">{initState.enabled_sync_items}</div>
-              </div>
-              <div className="rounded-lg border border-border bg-background p-3">
-                <div className="text-xs text-muted-foreground">{t('page.sync.tradeDays')}</div>
-                <div className="mt-1 text-lg font-semibold text-foreground">{initState.trade_days_in_window}</div>
-              </div>
-              <div className="rounded-lg border border-border bg-background p-3">
-                <div className="text-xs text-muted-foreground">{t('page.sync.coverageWindow')}</div>
-                <div className="mt-1 text-sm font-semibold text-foreground">
-                  {initState.sync_status_window_start} - {initState.sync_status_window_end}
-                </div>
-              </div>
-              <div className="rounded-lg border border-border bg-background p-3">
-                <div className="text-xs text-muted-foreground">{t('page.sync.bootstrapStatus')}</div>
-                <div className="mt-1 text-sm font-semibold text-foreground">
-                  {initState.bootstrap_completed
-                    ? t('page.sync.bootstrapCompleted')
-                    : t('page.sync.bootstrapPending')}
-                </div>
-              </div>
-            </div>
-
-            {!initHealthy && (
-              <div className="mt-4 space-y-3">
-                {missingItems.length > 0 && (
-                  <div>
-                    <div className="text-sm font-medium text-foreground">{t('page.sync.missingItems')}</div>
-                    {renderInterfaceList(missingItems)}
-                  </div>
-                )}
-
-                {incompleteItems.length > 0 && (
-                  <div>
-                    <div className="text-sm font-medium text-foreground">{t('page.sync.incompleteItems')}</div>
-                    <div className="mt-2 space-y-2">
-                      {incompleteItems.map((entry) => (
-                        <div
-                          key={`${entry.source}/${entry.item_key}`}
-                          className="rounded-lg border border-border bg-background px-3 py-2 text-xs text-foreground"
-                        >
-                          <div className="font-medium">{entry.source}/{entry.item_key}</div>
-                          <div className="mt-1 text-muted-foreground">
-                            {entry.initialized_from} - {entry.initialized_to} | {entry.actual_rows}/{entry.expected_rows}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {unsupportedItems.length > 0 && (
-                  <div>
-                    <div className="text-sm font-medium text-foreground">{t('page.sync.unsupportedItems')}</div>
-                    {renderInterfaceList(unsupportedItems)}
-                  </div>
-                )}
-              </div>
-            )}
-          </>
-        ) : null}
-      </div>
-
-      {/* Latest sync table */}
-      {items.length === 0 ? (
-        <p className="py-8 text-center text-muted-foreground">{t('page.sync.noRecords')}</p>
-      ) : (
-        <div className="overflow-auto rounded-lg border border-border">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50 text-left text-xs text-muted-foreground">
-              <tr>
-                <th className="px-3 py-2">{t('page.sync.source')}</th>
-                <th className="px-3 py-2">{t('page.sync.interface')}</th>
-                <th className="px-3 py-2">{t('common:status')}</th>
-                <th className="px-3 py-2 text-right">{t('page.sync.rows')}</th>
-                <th className="px-3 py-2 text-right">{t('page.sync.retries')}</th>
-                <th className="px-3 py-2">{t('page.sync.finishedAt')}</th>
-                <th className="px-3 py-2">{t('page.sync.errorMessage')}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {items.map((item) => (
-                <tr key={`${item.source}/${item.interface_key}`} className="hover:bg-muted/30">
-                  <td className="px-3 py-2 font-medium">{item.source}</td>
-                  <td className="px-3 py-2">{item.interface_key}</td>
-                  <td className="px-3 py-2"><StatusBadge status={item.status} /></td>
-                  <td className="px-3 py-2 text-right tabular-nums">{item.rows_synced.toLocaleString()}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{item.retry_count}</td>
-                  <td className="px-3 py-2 text-xs text-muted-foreground">
-                    {item.finished_at ? new Date(item.finished_at).toLocaleString() : '--'}
-                  </td>
-                  <td className="max-w-[200px] truncate px-3 py-2 text-xs text-destructive" title={item.error_message ?? ''}>
-                    {item.error_message ?? ''}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  )
-}
-
-
 // ---------------------------------------------------------------------------
 // Main MarketData page
 // ---------------------------------------------------------------------------
@@ -781,7 +443,6 @@ export default function MarketData() {
       { key: 'quotes', label: t('page.tabs.quotes'), icon: <List size={16} /> },
       { key: 'kline', label: t('page.tabs.kline'), icon: <LineChartIcon size={16} /> },
       { key: 'tushare-browser', label: t('page.tabs.tushareBrowser'), icon: <Database size={16} /> },
-      { key: 'sync', label: t('page.tabs.sync'), icon: <RefreshCw size={16} /> },
       { key: 'calendar', label: t('page.tabs.calendar'), icon: <Calendar size={16} /> },
       { key: 'sentiment', label: t('page.tabs.sentiment'), icon: <Gauge size={16} /> },
     ],
@@ -1174,8 +835,6 @@ export default function MarketData() {
         )}
 
         {activeTab === 'tushare-browser' && <TushareDataBrowserTab />}
-
-        {activeTab === 'sync' && <SyncStatusPanel />}
 
         {activeTab === 'calendar' && <CalendarPanel />}
 

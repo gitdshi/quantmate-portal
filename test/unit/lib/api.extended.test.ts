@@ -316,11 +316,6 @@ describe('Extended API — untested HTTP calls', () => {
       )
     })
 
-    it('rebuildSyncStatus sends POST', () => {
-      dataSourceAPI.rebuildSyncStatus('tushare')
-      expect(mockPost).toHaveBeenCalledWith('/settings/datasource-items/tushare/rebuild-sync-status')
-    })
-
     it('batchUpdate sends PUT', () => {
       const data = { items: [{ source: 'ts', item_key: 'k', enabled: true }] }
       dataSourceAPI.batchUpdate(data)

@@ -126,7 +126,38 @@
     "dataSourceManagement": {
       "tabs": {
         "akshare": "AkShare",
-        "tusharePro": "Tushare Pro"
+        "tusharePro": "Tushare Pro",
+        "dataSync": "Data Sync"
+      }
+    },
+    "dataSync": {
+      "title": "Data Sync",
+      "subtitle": "Inspect enabled interface coverage and repair missing trade-date status rows.",
+      "window": "Coverage window: {{start}} - {{end}} ({{total}} trade days)",
+      "refresh": "Refresh",
+      "missingCoverage": "Missing coverage",
+      "coverageTitle": "Interface coverage",
+      "coverageSubtitle": "{{count}} enabled interfaces, {{missing}} with missing sync dates",
+      "noCoverage": "No enabled sync interfaces found",
+      "selectAllMissing": "Select all missing",
+      "snapshotOnly": "Snapshot",
+      "latestRuns": "Latest sync run",
+      "repair": "Repair",
+      "repairSelected": "Repair Selected",
+      "repairAllMissing": "Repair All Missing",
+      "repairSelectedConfirm": "Repair missing sync dates for {{count}} interfaces?",
+      "repairAllConfirm": "Repair all {{count}} interfaces with missing sync dates?",
+      "repairSuccess": "Repaired {{repaired}} interfaces, added {{pending}} pending dates, queued {{jobs}} jobs",
+      "repairFailed": "Failed to repair sync coverage",
+      "columns": {
+        "select": "Select",
+        "source": "Source",
+        "interface": "Interface",
+        "syncDates": "Sync dates",
+        "missing": "Missing",
+        "statusCounts": "Status counts",
+        "latest": "Latest date",
+        "actions": "Actions"
       }
     },
     "systemManagement": {

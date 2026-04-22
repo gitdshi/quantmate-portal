@@ -27,7 +27,6 @@ vi.mock('@/lib/api', () => ({
     updateConfig: vi.fn(),
     updateItem: vi.fn(),
     batchUpdate: vi.fn(),
-    rebuildSyncStatus: vi.fn(),
     testConnection: vi.fn(),
   },
   systemAPI: {
@@ -128,9 +127,6 @@ describe('Settings Page', () => {
       }) as never
     )
     vi.mocked(systemAPI.syncStatus).mockResolvedValue({ data: { status: 'ok', version: 'v1.2.0' } } as never)
-    vi.mocked(dataSourceAPI.rebuildSyncStatus).mockResolvedValue({
-      data: { pending_records: 12, items_reconciled: 1, backfill_jobs: [] },
-    } as never)
     vi.mocked(systemAPI.streamLogs).mockResolvedValue(undefined as never)
   })
 
@@ -237,18 +233,6 @@ describe('Settings Page', () => {
         expect(dataSourceAPI.testConnection).toHaveBeenCalled()
       })
     }
-  })
-
-  it('clicks rebuild sync status on Tushare catalog', async () => {
-    render(<Settings />)
-    await openTushareManagementTab()
-
-    const rebuildButton = screen.getByRole('button', { name: /Sync/i })
-    fireEvent.click(rebuildButton)
-
-    await waitFor(() => {
-      expect(dataSourceAPI.rebuildSyncStatus).toHaveBeenCalledWith('tushare')
-    })
   })
 
   // ─── Trading preferences: editing fields ────────────────

@@ -126,7 +126,38 @@
     "dataSourceManagement": {
       "tabs": {
         "akshare": "AkShare",
-        "tusharePro": "Tushare Pro"
+        "tusharePro": "Tushare Pro",
+        "dataSync": "数据同步"
+      }
+    },
+    "dataSync": {
+      "title": "数据同步",
+      "subtitle": "查看启用接口的同步覆盖情况，并补齐缺失的 trade date 状态。",
+      "window": "覆盖窗口：{{start}} - {{end}}（{{total}} 个交易日）",
+      "refresh": "刷新",
+      "missingCoverage": "缺失覆盖",
+      "coverageTitle": "接口覆盖情况",
+      "coverageSubtitle": "共 {{count}} 个启用接口，{{missing}} 个存在缺失同步日期",
+      "noCoverage": "暂无启用的数据同步接口",
+      "selectAllMissing": "全选缺失项",
+      "snapshotOnly": "单日快照",
+      "latestRuns": "最近一次同步",
+      "repair": "补齐",
+      "repairSelected": "补齐选中项",
+      "repairAllMissing": "补齐全部缺失项",
+      "repairSelectedConfirm": "确认补齐 {{count}} 个接口缺失的同步日期？",
+      "repairAllConfirm": "确认补齐全部 {{count}} 个存在缺失的接口？",
+      "repairSuccess": "已补齐 {{repaired}} 个接口，新增 {{pending}} 条待同步日期，提交 {{jobs}} 个任务",
+      "repairFailed": "补齐同步状态失败",
+      "columns": {
+        "select": "选择",
+        "source": "数据源",
+        "interface": "数据接口",
+        "syncDates": "同步日期",
+        "missing": "缺失",
+        "statusCounts": "状态计数",
+        "latest": "最近日期",
+        "actions": "操作"
       }
     },
     "systemManagement": {

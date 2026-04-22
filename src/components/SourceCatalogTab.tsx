@@ -63,12 +63,6 @@ interface PermissionGroup {
   items: SourceCatalogItem[]
 }
 
-interface SyncRebuildResponse {
-  pending_records?: number
-  items_reconciled?: number
-  backfill_jobs?: Array<{ source: string; item_key: string; job_id: string }>
-}
-
 function hasVisiblePermissionLabel(value: string | null | undefined): boolean {
   return Boolean(value)
 }
@@ -253,23 +247,6 @@ export default function SourceCatalogTab({
     onError: () => showToast(t('catalog.batchFail', '批量操作失败'), 'error'),
   })
 
-  const rebuildSyncMutation = useMutation({
-    mutationFn: () => dataSourceAPI.rebuildSyncStatus(source),
-    onSuccess: (response) => {
-      invalidateCatalogQueries()
-      const payload = (response.data as SyncRebuildResponse | undefined) ?? {}
-      showToast(
-        t('catalog.rebuildSyncOk', '已重整 {{items}} 个接口，新增 {{pending}} 条待回补记录，提交 {{jobs}} 个任务', {
-          items: payload.items_reconciled ?? 0,
-          pending: payload.pending_records ?? 0,
-          jobs: payload.backfill_jobs?.length ?? 0,
-        }),
-        'success'
-      )
-    },
-    onError: () => showToast(t('catalog.rebuildSyncFail', '重整同步状态失败'), 'error'),
-  })
-
   const toggleCategory = (category: string) => {
     setExpandedCategories((previous) => {
       const next = new Set(previous)
@@ -334,16 +311,6 @@ export default function SourceCatalogTab({
             >
               {t('page.datasource.testBtn', '测试连接')}
             </button>
-            {source === 'tushare' && (
-              <button
-                type="button"
-                className="rounded border border-border px-3 py-1.5 text-xs text-foreground transition-colors hover:bg-muted disabled:opacity-50"
-                onClick={() => rebuildSyncMutation.mutate()}
-                disabled={rebuildSyncMutation.isPending}
-              >
-                {t('catalog.rebuildSyncBtn', '重整 Sync 状态')}
-              </button>
-            )}
             {config && (
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <span>{t('catalog.sourceSwitch', '数据源开关')}</span>

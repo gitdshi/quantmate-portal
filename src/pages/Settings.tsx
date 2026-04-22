@@ -1,10 +1,11 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { Bell, Database, Monitor, Palette, Server, Settings2, SquareTerminal } from 'lucide-react'
+import { Bell, Database, Monitor, Palette, RefreshCw, Server, Settings2, SquareTerminal } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 
 import AkshareTab from '../components/AkshareTab'
+import DataSyncManagementTab from '../components/DataSyncManagementTab'
 import SystemLogsTab from '../components/SystemLogsTab'
 import TushareProTab from '../components/TushareProTab'
 import DataTable, { type Column } from '../components/ui/DataTable'
@@ -82,6 +83,11 @@ export default function Settings() {
         key: 'tushare-pro',
         label: t('page.dataSourceManagement.tabs.tusharePro', 'Tushare Pro'),
         icon: <Database size={16} />,
+      },
+      {
+        key: 'data-sync',
+        label: t('page.dataSourceManagement.tabs.dataSync', 'Data Sync'),
+        icon: <RefreshCw size={16} />,
       },
     ],
     [t]
@@ -567,6 +573,8 @@ export default function Settings() {
               {activeDataSourceTab === 'akshare' && <AkshareTab />}
 
               {activeDataSourceTab === 'tushare-pro' && <TushareProTab />}
+
+              {activeDataSourceTab === 'data-sync' && <DataSyncManagementTab />}
             </TabPanel>
           </div>
         )}
