@@ -14,13 +14,13 @@ export default function ChangePassword() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const navigate = useNavigate()
-  const { isAuthenticated, setAuth, logout } = useAuthStore()
+  const { isAuthenticated, hasHydrated, setAuth, logout } = useAuthStore()
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (hasHydrated && !isAuthenticated) {
       navigate('/login', { replace: true })
     }
-  }, [isAuthenticated, navigate])
+  }, [hasHydrated, isAuthenticated, navigate])
 
   const mutation = useMutation({
     mutationFn: () => authAPI.changePassword(currentPassword, newPassword),

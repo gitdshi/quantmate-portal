@@ -148,6 +148,8 @@ function TushareTableContent({ tableInfo }: { tableInfo: TushareTableInfo }) {
     queryKey: ['market', 'tushare', 'schema', selectedTable],
     enabled: !!selectedTable,
     queryFn: () => marketDataAPI.tushareTableSchema(selectedTable).then((response) => response.data as TushareSchema),
+    retry: false,
+    staleTime: 5 * 60 * 1000,
   })
 
   const rowsPayload = useMemo(
@@ -166,6 +168,8 @@ function TushareTableContent({ tableInfo }: { tableInfo: TushareTableInfo }) {
     enabled: !!selectedTable,
     queryFn: () =>
       marketDataAPI.tushareTableRows(selectedTable, rowsPayload).then((response) => response.data as TushareRowsResponse),
+    retry: false,
+    placeholderData: (previousData) => previousData,
   })
 
   const schemaColumns = useMemo(() => schema?.columns ?? [], [schema?.columns])
@@ -246,8 +250,11 @@ function TushareTableContent({ tableInfo }: { tableInfo: TushareTableInfo }) {
     'inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50'
   const modalInfoCardClass = 'rounded-lg border border-border bg-background px-4 py-3'
   const resolvedTotalRows = rowsData?.meta.total ?? t('page.browser.info.notLoaded')
+  const schemaPrimaryKeys = schemaColumns.filter((column) => column.primary_key).map((column) => column.name)
   const resolvedPrimaryKeys = tableInfo.primary_keys?.length
     ? tableInfo.primary_keys.join(', ')
+    : schemaPrimaryKeys.length > 0
+      ? schemaPrimaryKeys.join(', ')
     : t('page.browser.info.primaryKeysEmpty')
   const resolvedSort = rowsData?.meta.sort_by
     ? `${rowsData.meta.sort_by} · ${rowsData.meta.sort_dir}`
@@ -506,7 +513,9 @@ function TushareTableContent({ tableInfo }: { tableInfo: TushareTableInfo }) {
           </div>
           <div className={modalInfoCardClass}>
             <div className="text-xs text-muted-foreground">{t('page.browser.columnCount')}</div>
-            <div className="mt-1 text-base font-semibold text-foreground">{tableInfo.column_count ?? schemaColumns.length}</div>
+            <div className="mt-1 text-base font-semibold text-foreground">
+              {tableInfo.column_count && tableInfo.column_count > 0 ? tableInfo.column_count : schemaColumns.length}
+            </div>
           </div>
           <div className={modalInfoCardClass}>
             <div className="text-xs text-muted-foreground">{t('page.browser.totalRows')}</div>
@@ -600,12 +609,18 @@ export default function TushareDataBrowserTab() {
   const [subCategoryFilter, setSubCategoryFilter] = useState('')
   const [selectedTable, setSelectedTable] = useState('')
 
-  const { data: tableCatalog = [] } = useQuery<TushareTableInfo[]>({
+  const {
+    data: tableCatalog = [],
+    isLoading: tableCatalogLoading,
+    error: tableCatalogError,
+  } = useQuery<TushareTableInfo[]>({
     queryKey: ['market', 'tushare', 'tables', 'catalog'],
     queryFn: () =>
       marketDataAPI
         .tushareTables()
         .then((response) => (response.data as { data: TushareTableInfo[] }).data ?? []),
+    retry: false,
+    staleTime: 5 * 60 * 1000,
   })
 
   const categoryOptions = useMemo(
@@ -645,17 +660,26 @@ export default function TushareDataBrowserTab() {
     [subCategoryFilter, subCategoryOptions]
   )
 
-  const { data: tables = [], isLoading: tablesLoading, error: tablesError } = useQuery<TushareTableInfo[]>({
-    queryKey: ['market', 'tushare', 'tables', tableKeyword, categoryFilter, activeSubCategoryFilter],
-    queryFn: () =>
-      marketDataAPI
-        .tushareTables({
-          keyword: tableKeyword || undefined,
-          category: categoryFilter || undefined,
-          sub_category: activeSubCategoryFilter || undefined,
-        })
-        .then((response) => (response.data as { data: TushareTableInfo[] }).data ?? []),
-  })
+  const normalizedKeyword = tableKeyword.trim().toLowerCase()
+  const tables = useMemo(
+    () =>
+      tableCatalog.filter((table) => {
+        if (categoryFilter && (table.category?.trim() ?? '') !== categoryFilter) {
+          return false
+        }
+        if (activeSubCategoryFilter && (table.sub_category?.trim() ?? '') !== activeSubCategoryFilter) {
+          return false
+        }
+        if (!normalizedKeyword) {
+          return true
+        }
+        const itemName = table.item_name?.toLowerCase() ?? ''
+        return table.name.toLowerCase().includes(normalizedKeyword) || itemName.includes(normalizedKeyword)
+      }),
+    [activeSubCategoryFilter, categoryFilter, normalizedKeyword, tableCatalog]
+  )
+  const tablesLoading = tableCatalogLoading
+  const tablesError = tableCatalogError
 
   const activeTable = useMemo(() => {
     if (tables.some((table) => table.name === selectedTable)) {
@@ -666,12 +690,16 @@ export default function TushareDataBrowserTab() {
 
   const tableOptions = useMemo(
     () =>
-      tables.map((table) => ({
-        value: table.name,
-        label: table.item_name
-          ? `${table.name} · ${table.item_name} (${table.column_count})`
-          : `${table.name} (${table.column_count})`,
-      })),
+        tables.map((table) => ({
+          value: table.name,
+          label: table.item_name
+          ? table.column_count > 0
+            ? `${table.name} · ${table.item_name} (${table.column_count})`
+            : `${table.name} · ${table.item_name}`
+          : table.column_count > 0
+            ? `${table.name} (${table.column_count})`
+            : table.name,
+        })),
     [tables]
   )
 

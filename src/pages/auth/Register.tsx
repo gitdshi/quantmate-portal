@@ -15,11 +15,11 @@ export default function Register() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const navigate = useNavigate()
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, hasHydrated } = useAuthStore()
 
   useEffect(() => {
-    if (isAuthenticated) navigate('/')
-  }, [isAuthenticated, navigate])
+    if (hasHydrated && isAuthenticated) navigate('/dashboard', { replace: true })
+  }, [hasHydrated, isAuthenticated, navigate])
 
   const registerMutation = useMutation({
     mutationFn: () => authAPI.register(username, email, password),
@@ -157,4 +157,3 @@ export default function Register() {
     </div>
   )
 }
-

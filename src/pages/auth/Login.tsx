@@ -1,4 +1,4 @@
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Globe } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -13,21 +13,22 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const navigate = useNavigate()
-  const { setAuth } = useAuthStore()
-  const { isAuthenticated } = useAuthStore()
+  const queryClient = useQueryClient()
+  const { setAuth, isAuthenticated, hasHydrated } = useAuthStore()
 
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/')
+    if (hasHydrated && isAuthenticated) {
+      navigate('/dashboard', { replace: true })
     }
-  }, [isAuthenticated, navigate])
+  }, [hasHydrated, isAuthenticated, navigate])
 
   const loginMutation = useMutation({
     mutationFn: () => authAPI.login(username, password),
-    onSuccess: (response) => {
+    onSuccess: async (response) => {
       const { user, access_token, refresh_token } = response.data
       setAuth(user, access_token, refresh_token)
-      navigate('/')
+      queryClient.clear()
+      navigate('/dashboard', { replace: true })
     },
     onError: (err: unknown) => {
       const responseError = err as {

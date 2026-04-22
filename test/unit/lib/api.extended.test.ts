@@ -218,7 +218,7 @@ describe('Extended API — untested HTTP calls', () => {
       marketDataAPI.tushareTables()
       expect(mockGet).toHaveBeenCalledWith('/data/tushare/tables', {
         params: undefined,
-        timeout: 30000,
+        timeout: 60000,
       })
     })
 
@@ -226,7 +226,7 @@ describe('Extended API — untested HTTP calls', () => {
       marketDataAPI.tushareTables({ keyword: 'daily', category: '股票数据', sub_category: '行情数据' })
       expect(mockGet).toHaveBeenCalledWith('/data/tushare/tables', {
         params: { keyword: 'daily', category: '股票数据', sub_category: '行情数据' },
-        timeout: 30000,
+        timeout: 60000,
       })
     })
 
@@ -234,7 +234,7 @@ describe('Extended API — untested HTTP calls', () => {
       const payload = { page: 2, page_size: 25, filters: [] }
       marketDataAPI.tushareTableRows('stock daily', payload)
       expect(mockPost).toHaveBeenCalledWith('/data/tushare/tables/stock%20daily/rows', payload, {
-        timeout: 30000,
+        timeout: 60000,
       })
     })
   })

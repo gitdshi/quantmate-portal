@@ -324,14 +324,14 @@ describe('API Client - HTTP Calls', () => {
       marketDataAPI.tushareTables({ keyword: 'daily' })
       expect(mockGet).toHaveBeenCalledWith('/data/tushare/tables', {
         params: { keyword: 'daily' },
-        timeout: 30000,
+        timeout: 60000,
       })
     })
 
     it('tushareTableSchema sends GET', () => {
       marketDataAPI.tushareTableSchema('stock_daily')
       expect(mockGet).toHaveBeenCalledWith('/data/tushare/tables/stock_daily/schema', {
-        timeout: 30000,
+        timeout: 60000,
       })
     })
 
@@ -345,7 +345,7 @@ describe('API Client - HTTP Calls', () => {
       }
       marketDataAPI.tushareTableRows('stock_daily', payload)
       expect(mockPost).toHaveBeenCalledWith('/data/tushare/tables/stock_daily/rows', payload, {
-        timeout: 30000,
+        timeout: 60000,
       })
     })
   })
@@ -654,4 +654,3 @@ describe('API Client - Interceptors', () => {
     expect(result.headers.Authorization).toBeUndefined()
   })
 })
-

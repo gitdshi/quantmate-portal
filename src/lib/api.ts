@@ -3,7 +3,7 @@ import { useAuthStore } from '../stores/auth'
 import type { StrategyComparison, StrategyFile, StrategyFileContent, SyncResult } from '../types'
 
 const API_URL = import.meta.env.VITE_API_URL || '/api/v1'
-const TUSHARE_BROWSER_TIMEOUT_MS = 30000
+const TUSHARE_BROWSER_TIMEOUT_MS = 60000
 
 export type SystemLogStreamEvent = {
   type: 'meta' | 'log' | 'error'

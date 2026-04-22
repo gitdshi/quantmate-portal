@@ -39,22 +39,31 @@ function RouteFallback() {
 }
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, setAuth, logout } = useAuthStore()
+  const { isAuthenticated, hasHydrated, setAuth, logout } = useAuthStore()
   const { t } = useTranslation('auth')
   const accessToken = localStorage.getItem('access_token')
   const refreshToken = localStorage.getItem('refresh_token')
-  const [checking, setChecking] = useState(!!accessToken)
+  const [checking, setChecking] = useState(!hasHydrated || (!!accessToken && !isAuthenticated))
   const [mustChangePassword, setMustChangePassword] = useState(
     sessionStorage.getItem('force_change_password') === '1'
   )
 
   useEffect(() => {
+    if (!hasHydrated) {
+      setChecking(true)
+      return
+    }
     if (!accessToken) {
       if (isAuthenticated) {
         logout()
       }
       setChecking(false)
       return
+    }
+
+    const shouldBlock = !isAuthenticated
+    if (shouldBlock) {
+      setChecking(true)
     }
 
     let cancelled = false
@@ -72,7 +81,9 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
         const user = response.data
         setAuth(user, accessToken, refreshToken || '')
         setMustChangePassword(false)
-        setChecking(false)
+        if (shouldBlock) {
+          setChecking(false)
+        }
       })
       .catch((err: any) => {
         if (cancelled) {
@@ -94,7 +105,7 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
       cancelled = true
       window.clearTimeout(timeoutId)
     }
-  }, [accessToken, refreshToken, isAuthenticated, setAuth, logout])
+  }, [accessToken, refreshToken, hasHydrated, isAuthenticated, setAuth, logout])
 
   if (checking) {
     return (
