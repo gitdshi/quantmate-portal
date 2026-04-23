@@ -1,13 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  Bot,
-  ChevronRight,
-  Database,
-  Download,
-  Loader2,
-  Play,
-  Square,
-  TrendingUp,
+    Bot,
+    ChevronRight,
+    Database,
+    Download,
+    Loader2,
+    Play,
+    Square,
+    TrendingUp,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'

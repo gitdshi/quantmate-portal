@@ -1,17 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  CheckCircle2,
-  Loader2,
-  Play,
-  RefreshCw,
-  Wrench,
-  XCircle,
+    CheckCircle2,
+    Loader2,
+    Play,
+    RefreshCw,
+    Wrench,
+    XCircle,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { showToast } from './ui/toast-service'
 import { dataSourceAPI, datasyncAPI } from '../lib/api'
+import { showToast } from './ui/toast-service'
 
 type SyncLatestItem = {
   source: string
