@@ -132,7 +132,7 @@
     },
     "dataSync": {
       "title": "数据同步",
-      "subtitle": "查看启用接口的同步覆盖情况，并补齐缺失的 trade date 状态。",
+      "subtitle": "查看启用接口的同步覆盖情况、同步模式，并补齐缺失的 trade date 状态。",
       "window": "覆盖窗口：{{start}} - {{end}}（{{total}} 个交易日）",
       "refresh": "刷新",
       "missingCoverage": "缺失覆盖",
@@ -141,6 +141,16 @@
       "noCoverage": "暂无启用的数据同步接口",
       "selectAllMissing": "全选缺失项",
       "snapshotOnly": "单日快照",
+      "modes": {
+        "backfill": {
+          "label": "Backfill",
+          "description": "按覆盖窗口同步全部 backfill 日期"
+        },
+        "latestOnly": {
+          "label": "Latest only",
+          "description": "只同步最新可用日期"
+        }
+      },
       "latestRuns": "最近一次同步",
       "repair": "补齐",
       "repairSelected": "补齐选中项",
@@ -153,6 +163,7 @@
         "select": "选择",
         "source": "数据源",
         "interface": "数据接口",
+        "mode": "同步模式",
         "syncDates": "同步日期",
         "missing": "缺失",
         "statusCounts": "状态计数",

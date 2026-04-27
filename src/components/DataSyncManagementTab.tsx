@@ -37,6 +37,7 @@ type SyncCoverageItem = {
   item_name: string
   sync_priority: number
   api_name: string | null
+  sync_mode: string
   supports_backfill: boolean
   expected_sync_dates: number
   total_sync_dates: number
@@ -147,6 +148,39 @@ function StatusCountPill({ status, count }: { status: string; count: number }) {
       <StatusBadge status={status} />
       <span className="tabular-nums">{count}</span>
     </span>
+  )
+}
+
+function getSyncModeLabel(syncMode: string, tSettings: (key: string, defaultValue?: string) => string) {
+  return syncMode === 'latest_only'
+    ? tSettings('page.dataSync.modes.latestOnly.label', 'Latest only')
+    : tSettings('page.dataSync.modes.backfill.label', 'Backfill')
+}
+
+function getSyncModeDescription(syncMode: string, tSettings: (key: string, defaultValue?: string) => string) {
+  return syncMode === 'latest_only'
+    ? tSettings('page.dataSync.modes.latestOnly.description', 'Only sync the latest available date')
+    : tSettings('page.dataSync.modes.backfill.description', 'Sync the full configured backfill window')
+}
+
+function SyncModeBadge({ syncMode, tSettings }: { syncMode: string; tSettings: (key: string, defaultValue?: string) => string }) {
+  const isLatestOnly = syncMode === 'latest_only'
+
+  return (
+    <div>
+      <span
+        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+          isLatestOnly
+            ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
+            : 'bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300'
+        }`}
+      >
+        {getSyncModeLabel(syncMode, tSettings)}
+      </span>
+      <div className="mt-1 text-xs text-muted-foreground">
+        {getSyncModeDescription(syncMode, tSettings)}
+      </div>
+    </div>
   )
 }
 
@@ -442,12 +476,13 @@ export default function DataSyncManagementTab() {
           </p>
         ) : (
           <div className="overflow-auto">
-            <table className="w-full min-w-[1100px] text-sm">
+            <table className="w-full min-w-[1240px] text-sm">
               <thead className="bg-muted/50 text-left text-xs text-muted-foreground">
                 <tr>
                   <th className="px-3 py-2">{tSettings('page.dataSync.columns.select', 'Select')}</th>
                   <th className="px-3 py-2">{tSettings('page.dataSync.columns.source', 'Source')}</th>
                   <th className="px-3 py-2">{tSettings('page.dataSync.columns.interface', 'Interface')}</th>
+                  <th className="px-3 py-2">{tSettings('page.dataSync.columns.mode', 'Sync mode')}</th>
                   <th className="px-3 py-2 text-right">{tSettings('page.dataSync.columns.syncDates', 'Sync dates')}</th>
                   <th className="px-3 py-2 text-right">{tSettings('page.dataSync.columns.missing', 'Missing')}</th>
                   <th className="px-3 py-2">{tSettings('page.dataSync.columns.statusCounts', 'Status counts')}</th>
@@ -480,12 +515,10 @@ export default function DataSyncManagementTab() {
                           {item.api_name && (
                             <span className="rounded border border-border px-1.5 py-px">{item.api_name}</span>
                           )}
-                          {!item.supports_backfill && (
-                            <span className="rounded border border-border px-1.5 py-px">
-                              {tSettings('page.dataSync.snapshotOnly', 'Snapshot')}
-                            </span>
-                          )}
                         </div>
+                      </td>
+                      <td className="px-3 py-3">
+                        <SyncModeBadge syncMode={item.sync_mode} tSettings={tSettings} />
                       </td>
                       <td className="px-3 py-3 text-right tabular-nums">
                         <div className="font-medium text-foreground">

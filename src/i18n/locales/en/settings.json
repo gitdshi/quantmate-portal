@@ -132,7 +132,7 @@
     },
     "dataSync": {
       "title": "Data Sync",
-      "subtitle": "Inspect enabled interface coverage and repair missing trade-date status rows.",
+      "subtitle": "Inspect enabled interface coverage, sync mode, and repair missing trade-date status rows.",
       "window": "Coverage window: {{start}} - {{end}} ({{total}} trade days)",
       "refresh": "Refresh",
       "missingCoverage": "Missing coverage",
@@ -141,6 +141,16 @@
       "noCoverage": "No enabled sync interfaces found",
       "selectAllMissing": "Select all missing",
       "snapshotOnly": "Snapshot",
+      "modes": {
+        "backfill": {
+          "label": "Backfill",
+          "description": "Sync the full configured backfill window"
+        },
+        "latestOnly": {
+          "label": "Latest only",
+          "description": "Sync only the latest available date"
+        }
+      },
       "latestRuns": "Latest sync run",
       "repair": "Repair",
       "repairSelected": "Repair Selected",
@@ -153,6 +163,7 @@
         "select": "Select",
         "source": "Source",
         "interface": "Interface",
+        "mode": "Sync mode",
         "syncDates": "Sync dates",
         "missing": "Missing",
         "statusCounts": "Status counts",
