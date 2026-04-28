@@ -59,6 +59,20 @@ interface CatalogSummary {
   sources: string[]
 }
 
+function formatDateInput(date: Date): string {
+  return date.toISOString().split('T')[0]
+}
+
+function getDefaultDateRange(): { startDate: string; endDate: string } {
+  const end = new Date()
+  const start = new Date(end)
+  start.setFullYear(start.getFullYear() - 1)
+  return {
+    startDate: formatDateInput(start),
+    endDate: formatDateInput(end),
+  }
+}
+
 function badgeVariantForStatus(status: string): BadgeVariant {
   switch (status) {
     case 'completed':
@@ -86,8 +100,7 @@ export default function AutoPilot() {
   const [maxIterations, setMaxIterations] = useState(10)
   const [llmModel, setLlmModel] = useState('gpt-4o-mini')
   const [universe, setUniverse] = useState('csi300')
-  const [startDate, setStartDate] = useState('2018-01-01')
-  const [endDate, setEndDate] = useState('2024-12-31')
+  const [{ startDate, endDate }, setDateRange] = useState(getDefaultDateRange)
 
   const tabs = [
     { key: 'runs', label: t('autoPilot.tabs.runs', { ns: 'social' }), icon: <Bot className="h-4 w-4" /> },
@@ -350,7 +363,7 @@ export default function AutoPilot() {
                   <input
                     type="date"
                     value={startDate}
-                    onChange={(event) => setStartDate(event.target.value)}
+                    onChange={(event) => setDateRange((prev) => ({ ...prev, startDate: event.target.value }))}
                     className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
                   />
                 </div>
@@ -359,7 +372,7 @@ export default function AutoPilot() {
                   <input
                     type="date"
                     value={endDate}
-                    onChange={(event) => setEndDate(event.target.value)}
+                    onChange={(event) => setDateRange((prev) => ({ ...prev, endDate: event.target.value }))}
                     className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
                   />
                 </div>
