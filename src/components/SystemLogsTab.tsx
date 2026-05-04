@@ -2,7 +2,7 @@ import { RefreshCcw, RotateCcw, SquareTerminal } from 'lucide-react'
 import { startTransition, useDeferredValue, useEffect, useEffectEvent, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { systemAPI, type SystemLogStreamError, type SystemLogStreamEvent } from '../lib/api'
+import { systemAPI, type StreamLogsError, type SystemLogStreamEvent } from '../lib/api'
 
 const MAX_RENDERED_LINES = 500
 const AUTO_RECONNECT_BASE_DELAY_MS = 1000
@@ -33,7 +33,7 @@ function shouldRetryStream(error: unknown): boolean {
     return false
   }
 
-  const streamError = error as SystemLogStreamError | undefined
+  const streamError = error as StreamLogsError | undefined
   if (typeof streamError?.status === 'number') {
     return streamError.status >= 500
   }
