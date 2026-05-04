@@ -7,6 +7,7 @@ import { systemAPI, type StreamLogsError, type SystemLogStreamEvent } from '../l
 const MAX_RENDERED_LINES = 500
 const AUTO_RECONNECT_BASE_DELAY_MS = 1000
 const AUTO_RECONNECT_MAX_DELAY_MS = 10000
+const MAX_AUTO_RECONNECT_ATTEMPTS = 5
 
 const LOG_MODULES = [
   { key: 'api', label: 'API', description: 'FastAPI application and request logs' },
@@ -66,7 +67,20 @@ export default function SystemLogsTab() {
 
   const scheduleReconnect = useEffectEvent((message?: string) => {
     clearReconnectTimer()
-    reconnectAttemptRef.current += 1
+    const nextAttempt = reconnectAttemptRef.current + 1
+    if (nextAttempt > MAX_AUTO_RECONNECT_ATTEMPTS) {
+      setStatus('error')
+      setErrorMessage(
+        t(
+          'page.systemLogs.reconnectStopped',
+          'Log stream unavailable. Automatic reconnect stopped after {{attempts}} attempts. Use Reconnect to try again.',
+          { attempts: MAX_AUTO_RECONNECT_ATTEMPTS, reason: message || defaultStreamError },
+        ),
+      )
+      return
+    }
+
+    reconnectAttemptRef.current = nextAttempt
     const delay = Math.min(
       AUTO_RECONNECT_BASE_DELAY_MS * (2 ** (reconnectAttemptRef.current - 1)),
       AUTO_RECONNECT_MAX_DELAY_MS,
@@ -134,7 +148,7 @@ export default function SystemLogsTab() {
     setLines([])
 
     return () => clearReconnectTimer()
-  }, [clearReconnectTimer, refreshKey, selectedModule, tail])
+  }, [refreshKey, selectedModule, tail])
 
   useEffect(() => {
     const viewport = logViewportRef.current
@@ -182,7 +196,7 @@ export default function SystemLogsTab() {
       })
 
     return () => abortController.abort()
-  }, [defaultStreamError, handleLogEvent, retryKey, scheduleReconnect, selectedModule, tail])
+  }, [defaultStreamError, retryKey, selectedModule, tail])
 
   return (
     <div className="space-y-4">
