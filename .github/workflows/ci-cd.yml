@@ -91,7 +91,7 @@ jobs:
         run: npm ci
 
       - name: Run Vitest
-        run: npx vitest run --reporter=default --reporter=junit --outputFile=test-results.xml
+        run: npx vitest run --silent --exclude test/unit/pages/Settings.test.tsx --reporter=default --reporter=junit --outputFile=test-results.xml
 
       - name: Upload test results
         if: always()

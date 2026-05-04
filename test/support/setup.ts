@@ -2,6 +2,7 @@ import * as matchers from '@testing-library/jest-dom/matchers'
 import { cleanup } from '@testing-library/react'
 import { afterEach, expect, vi } from 'vitest'
 import '@/i18n'
+import { cleanupTestQueryClients } from './utils'
 
 // Extend Vitest's expect method with methods from react-testing-library
 expect.extend(matchers)
@@ -9,6 +10,7 @@ expect.extend(matchers)
 // Cleanup after each test case
 afterEach(() => {
   cleanup()
+  cleanupTestQueryClients()
 })
 
 // Mock window.matchMedia

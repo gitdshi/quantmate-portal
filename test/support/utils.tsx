@@ -1,12 +1,14 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render } from '@testing-library/react'
 import type { RenderOptions } from '@testing-library/react'
-import type { ReactElement } from 'react'
+import { useState, type ReactElement } from 'react'
 import { BrowserRouter } from 'react-router-dom'
+
+const testQueryClients = new Set<QueryClient>()
 
 // Create a new QueryClient for each test
 export function createTestQueryClient() {
-  return new QueryClient({
+  const client = new QueryClient({
     defaultOptions: {
       queries: {
         retry: false,
@@ -17,6 +19,17 @@ export function createTestQueryClient() {
       },
     },
   })
+
+  testQueryClients.add(client)
+  return client
+}
+
+export function cleanupTestQueryClients() {
+  for (const client of testQueryClients) {
+    client.cancelQueries()
+    client.clear()
+  }
+  testQueryClients.clear()
 }
 
 interface AllTheProvidersProps {
@@ -24,7 +37,7 @@ interface AllTheProvidersProps {
 }
 
 export function AllTheProviders({ children }: AllTheProvidersProps) {
-  const testQueryClient = createTestQueryClient()
+  const [testQueryClient] = useState(() => createTestQueryClient())
 
   return (
     <QueryClientProvider client={testQueryClient}>

@@ -91,7 +91,9 @@ describe('Settings Page', () => {
   beforeEach(async () => {
     vi.clearAllMocks()
     localStorage.setItem('quantmate-lang', 'en')
-    await i18n.changeLanguage('en')
+    if (!i18n.resolvedLanguage?.startsWith('en') && !i18n.language.startsWith('en')) {
+      await i18n.changeLanguage('en')
+    }
     // Reset URL search params to avoid tab state leaking between tests
     window.history.replaceState({}, '', window.location.pathname)
 

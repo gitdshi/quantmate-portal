@@ -189,6 +189,7 @@ export default function DataSyncManagementTab() {
   const { t: tMarket } = useTranslation('market')
   const queryClient = useQueryClient()
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const isTestEnvironment = import.meta.env.MODE === 'test'
 
   const { data: latestData, isLoading: latestLoading, refetch: refetchLatest, error: latestError } = useQuery<{
     latest_date: string | null
@@ -196,19 +197,19 @@ export default function DataSyncManagementTab() {
   }>({
     queryKey: ['datasync', 'latest'],
     queryFn: () => datasyncAPI.latest().then((response) => response.data),
-    refetchInterval: 30000,
+    refetchInterval: isTestEnvironment ? false : 30000,
   })
 
   const { data: summaryData, isLoading: summaryLoading } = useQuery<SyncSummary>({
     queryKey: ['datasync', 'summary'],
     queryFn: () => datasyncAPI.summary(7).then((response) => response.data),
-    refetchInterval: 60000,
+    refetchInterval: isTestEnvironment ? false : 60000,
   })
 
   const { data: coverageData, isLoading: coverageLoading } = useQuery<SyncCoverageResponse>({
     queryKey: ['datasync', 'coverage'],
     queryFn: () => dataSourceAPI.syncCoverage().then((response) => response.data as SyncCoverageResponse),
-    refetchInterval: 60000,
+    refetchInterval: isTestEnvironment ? false : 60000,
   })
 
   const invalidateSyncQueries = () => {
