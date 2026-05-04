@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next'
 import { systemAPI, type SystemLogStreamEvent } from '../lib/api'
 
 const MAX_RENDERED_LINES = 500
+const AUTO_RECONNECT_BASE_DELAY_MS = 1000
+const AUTO_RECONNECT_MAX_DELAY_MS = 10000
 
 const LOG_MODULES = [
   { key: 'api', label: 'API', description: 'FastAPI application and request logs' },
@@ -31,21 +33,60 @@ export default function SystemLogsTab() {
   const [selectedModule, setSelectedModule] = useState<string>('api')
   const [tail, setTail] = useState<number>(200)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [retryKey, setRetryKey] = useState(0)
   const [lines, setLines] = useState<string[]>([])
   const deferredLines = useDeferredValue(lines)
   const [status, setStatus] = useState<'connecting' | 'streaming' | 'error'>('connecting')
   const [containerName, setContainerName] = useState<string>('')
   const [errorMessage, setErrorMessage] = useState<string>('')
   const logViewportRef = useRef<HTMLDivElement | null>(null)
+  const reconnectTimerRef = useRef<number | null>(null)
+  const reconnectAttemptRef = useRef(0)
   const defaultStreamError = t('page.systemLogs.streamFailed', 'Log stream failed')
+
+  const clearReconnectTimer = useEffectEvent(() => {
+    if (reconnectTimerRef.current !== null) {
+      window.clearTimeout(reconnectTimerRef.current)
+      reconnectTimerRef.current = null
+    }
+  })
+
+  const scheduleReconnect = useEffectEvent((message?: string) => {
+    clearReconnectTimer()
+    reconnectAttemptRef.current += 1
+    const delay = Math.min(
+      AUTO_RECONNECT_BASE_DELAY_MS * (2 ** (reconnectAttemptRef.current - 1)),
+      AUTO_RECONNECT_MAX_DELAY_MS,
+    )
+    const seconds = Math.ceil(delay / 1000)
+    setStatus('connecting')
+    setErrorMessage(
+      t(
+        'page.systemLogs.reconnecting',
+        'Connection lost. Reconnecting in {{seconds}}s.',
+        { seconds, reason: message || defaultStreamError },
+      ),
+    )
+    reconnectTimerRef.current = window.setTimeout(() => {
+      reconnectTimerRef.current = null
+      setRetryKey((value) => value + 1)
+    }, delay)
+  })
 
   const activeModule = LOG_MODULES.find((item) => item.key === selectedModule) ?? LOG_MODULES[0]
 
   const handleLogEvent = useEffectEvent((event: SystemLogStreamEvent) => {
     if (event.type === 'meta') {
+      clearReconnectTimer()
+      reconnectAttemptRef.current = 0
       setStatus('streaming')
       setContainerName(event.container || '')
       setErrorMessage('')
+      return
+    }
+
+    if (event.type === 'heartbeat') {
+      setStatus('streaming')
       return
     }
 
@@ -71,6 +112,18 @@ export default function SystemLogsTab() {
   })
 
   useEffect(() => {
+    clearReconnectTimer()
+    reconnectAttemptRef.current = 0
+    setRetryKey(0)
+    setStatus('connecting')
+    setContainerName('')
+    setErrorMessage('')
+    setLines([])
+
+    return () => clearReconnectTimer()
+  }, [clearReconnectTimer, refreshKey, selectedModule, tail])
+
+  useEffect(() => {
     const viewport = logViewportRef.current
     if (!viewport) {
       return
@@ -80,10 +133,7 @@ export default function SystemLogsTab() {
 
   useEffect(() => {
     const abortController = new AbortController()
-    setStatus('connecting')
-    setContainerName('')
-    setErrorMessage('')
-    setLines([])
+    setStatus((previous) => (previous === 'streaming' ? previous : 'connecting'))
 
     void systemAPI
       .streamLogs({
@@ -91,6 +141,12 @@ export default function SystemLogsTab() {
         tail,
         signal: abortController.signal,
         onEvent: handleLogEvent,
+      })
+      .then(() => {
+        if (abortController.signal.aborted) {
+          return
+        }
+        scheduleReconnect(t('page.systemLogs.streamEnded', 'Log stream ended.'))
       })
       .catch((error) => {
         if (abortController.signal.aborted) {
@@ -107,10 +163,11 @@ export default function SystemLogsTab() {
 
         setStatus('error')
         setErrorMessage(message)
+        scheduleReconnect(message)
       })
 
     return () => abortController.abort()
-  }, [defaultStreamError, refreshKey, selectedModule, tail])
+  }, [defaultStreamError, handleLogEvent, retryKey, scheduleReconnect, selectedModule, tail])
 
   return (
     <div className="space-y-4">

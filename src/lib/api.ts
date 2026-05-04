@@ -6,7 +6,7 @@ const API_URL = import.meta.env.VITE_API_URL || '/api/v1'
 const TUSHARE_BROWSER_TIMEOUT_MS = 60000
 
 export type SystemLogStreamEvent = {
-  type: 'meta' | 'log' | 'error'
+  type: 'meta' | 'log' | 'error' | 'heartbeat'
   module: string
   container?: string
   line?: string
@@ -425,6 +425,7 @@ export const systemAPI = {
     const reader = response.body.getReader()
     const decoder = new TextDecoder()
     let buffer = ''
+    let streamError: Error | null = null
 
     const flushFrame = (frame: string) => {
       const lines = frame.split('\n')
@@ -447,6 +448,9 @@ export const systemAPI = {
 
       const payload = JSON.parse(dataParts.join('\n')) as SystemLogStreamEvent
       onEvent({ ...payload, type: payload.type || (eventName as SystemLogStreamEvent['type']) })
+      if (payload.type === 'error') {
+        streamError = new Error(payload.message || 'Log stream failed')
+      }
     }
 
     while (true) {
@@ -465,6 +469,9 @@ export const systemAPI = {
         if (frame) {
           flushFrame(frame)
         }
+        if (streamError) {
+          throw streamError
+        }
         separatorIndex = buffer.indexOf('\n\n')
       }
     }
@@ -472,6 +479,9 @@ export const systemAPI = {
     const trailingFrame = buffer.trim()
     if (trailingFrame) {
       flushFrame(trailingFrame)
+    }
+    if (streamError) {
+      throw streamError
     }
   },
 }

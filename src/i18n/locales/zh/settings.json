@@ -224,6 +224,8 @@
       "title": "系统日志",
       "subtitle": "查看当前部署中的容器 stdout 和 stderr 实时输出。",
       "streamFailed": "日志流连接失败",
+      "streamEnded": "日志流已结束。",
+      "reconnecting": "连接已断开，将在 {{seconds}} 秒后自动重连。",
       "tailLabel": "初始尾部行数",
       "tailAria": "初始尾部行数",
       "clear": "清空",

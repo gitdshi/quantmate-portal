@@ -224,6 +224,8 @@
       "title": "System Logs",
       "subtitle": "Tail live container stdout and stderr from the current deployment.",
       "streamFailed": "Log stream failed",
+      "streamEnded": "Log stream ended.",
+      "reconnecting": "Connection lost. Reconnecting in {{seconds}}s.",
       "tailLabel": "Initial tail size",
       "tailAria": "Initial tail size",
       "clear": "Clear",
