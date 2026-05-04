@@ -21,6 +21,11 @@ type StreamLogsOptions = {
   onEvent: (event: SystemLogStreamEvent) => void
 }
 
+export type StreamLogsError = Error & {
+  status?: number
+  retryAfterSeconds?: number
+}
+
 export type SystemConfigCatalogItem = {
   key: string
   category: string
@@ -415,7 +420,27 @@ export const systemAPI = {
 
     if (!response.ok) {
       const errorText = await response.text()
-      throw new Error(errorText || `Log stream failed with status ${response.status}`)
+      let message = errorText || `Log stream failed with status ${response.status}`
+
+      try {
+        const payload = JSON.parse(errorText) as { error?: { message?: string } }
+        message = payload.error?.message || message
+      } catch {
+        // Keep the raw text when the response is not JSON.
+      }
+
+      const streamError = new Error(message) as StreamLogsError
+      streamError.status = response.status
+
+      const retryAfterHeader = response.headers.get('Retry-After')
+      if (retryAfterHeader) {
+        const retryAfterSeconds = Number.parseInt(retryAfterHeader, 10)
+        if (!Number.isNaN(retryAfterSeconds) && retryAfterSeconds > 0) {
+          streamError.retryAfterSeconds = retryAfterSeconds
+        }
+      }
+
+      throw streamError
     }
 
     if (!response.body) {

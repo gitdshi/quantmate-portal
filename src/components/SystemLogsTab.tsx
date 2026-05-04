@@ -2,7 +2,7 @@ import { RefreshCcw, RotateCcw, SquareTerminal } from 'lucide-react'
 import { startTransition, useDeferredValue, useEffect, useEffectEvent, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { systemAPI, type SystemLogStreamEvent } from '../lib/api'
+import { systemAPI, type SystemLogStreamError, type SystemLogStreamEvent } from '../lib/api'
 
 const MAX_RENDERED_LINES = 500
 const AUTO_RECONNECT_BASE_DELAY_MS = 1000
@@ -26,6 +26,19 @@ function formatStreamError(error: unknown, fallback: string): string {
     return error.message
   }
   return fallback
+}
+
+function shouldRetryStream(error: unknown): boolean {
+  if (error instanceof DOMException && error.name === 'AbortError') {
+    return false
+  }
+
+  const streamError = error as SystemLogStreamError | undefined
+  if (typeof streamError?.status === 'number') {
+    return streamError.status >= 500
+  }
+
+  return true
 }
 
 export default function SystemLogsTab() {
@@ -163,7 +176,9 @@ export default function SystemLogsTab() {
 
         setStatus('error')
         setErrorMessage(message)
-        scheduleReconnect(message)
+        if (shouldRetryStream(error)) {
+          scheduleReconnect(message)
+        }
       })
 
     return () => abortController.abort()
