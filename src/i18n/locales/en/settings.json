@@ -159,11 +159,20 @@
       "repairAllConfirm": "Repair all {{count}} interfaces with missing sync dates?",
       "repairSuccess": "Repaired {{repaired}} interfaces, added {{pending}} pending dates, queued {{jobs}} jobs",
       "repairFailed": "Failed to repair sync coverage",
+      "backfillModes": {
+        "date": "Per trade date",
+        "range": "Date range",
+        "code": "Per symbol",
+        "codeDate": "Per symbol and date",
+        "other": "Custom strategy",
+        "none": "--"
+      },
       "columns": {
         "select": "Select",
         "source": "Source",
         "interface": "Interface",
         "mode": "Sync mode",
+        "backfillMode": "Backfill mode",
         "syncDates": "Sync dates",
         "missing": "Missing",
         "statusCounts": "Status counts",

@@ -159,11 +159,20 @@
       "repairAllConfirm": "确认补齐全部 {{count}} 个存在缺失的接口？",
       "repairSuccess": "已补齐 {{repaired}} 个接口，新增 {{pending}} 条待同步日期，提交 {{jobs}} 个任务",
       "repairFailed": "补齐同步状态失败",
+      "backfillModes": {
+        "date": "按交易日",
+        "range": "按日期区间",
+        "code": "按标的",
+        "codeDate": "按标的和日期",
+        "other": "自定义策略",
+        "none": "--"
+      },
       "columns": {
         "select": "选择",
         "source": "数据源",
         "interface": "数据接口",
         "mode": "同步模式",
+        "backfillMode": "回补模式",
         "syncDates": "同步日期",
         "missing": "缺失",
         "statusCounts": "状态计数",

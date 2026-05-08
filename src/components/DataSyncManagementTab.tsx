@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import type { TFunction } from 'i18next'
 import {
     CheckCircle2,
     Loader2,
@@ -12,6 +13,8 @@ import { useTranslation } from 'react-i18next'
 
 import { dataSourceAPI, datasyncAPI } from '../lib/api'
 import { showToast } from './ui/toast-service'
+
+type SettingsTFunction = TFunction<'settings'>
 
 type SyncLatestItem = {
   source: string
@@ -38,6 +41,7 @@ type SyncCoverageItem = {
   sync_priority: number
   api_name: string | null
   sync_mode: string
+  backfill_mode: string | null
   supports_backfill: boolean
   expected_sync_dates: number
   total_sync_dates: number
@@ -151,19 +155,39 @@ function StatusCountPill({ status, count }: { status: string; count: number }) {
   )
 }
 
-function getSyncModeLabel(syncMode: string, tSettings: (key: string, defaultValue?: string) => string) {
+function getSyncModeLabel(syncMode: string, tSettings: SettingsTFunction) {
   return syncMode === 'latest_only'
     ? tSettings('page.dataSync.modes.latestOnly.label', 'Latest only')
     : tSettings('page.dataSync.modes.backfill.label', 'Backfill')
 }
 
-function getSyncModeDescription(syncMode: string, tSettings: (key: string, defaultValue?: string) => string) {
+function getSyncModeDescription(syncMode: string, tSettings: SettingsTFunction) {
   return syncMode === 'latest_only'
     ? tSettings('page.dataSync.modes.latestOnly.description', 'Only sync the latest available date')
     : tSettings('page.dataSync.modes.backfill.description', 'Sync the full configured backfill window')
 }
 
-function SyncModeBadge({ syncMode, tSettings }: { syncMode: string; tSettings: (key: string, defaultValue?: string) => string }) {
+function getBackfillModeLabel(
+  backfillMode: string | null,
+  tSettings: SettingsTFunction
+) {
+  switch (backfillMode) {
+    case 'date':
+      return tSettings('page.dataSync.backfillModes.date', 'Per trade date')
+    case 'range':
+      return tSettings('page.dataSync.backfillModes.range', 'Date range')
+    case 'code':
+      return tSettings('page.dataSync.backfillModes.code', 'Per symbol')
+    case 'code_date':
+      return tSettings('page.dataSync.backfillModes.codeDate', 'Per symbol and date')
+    case 'other':
+      return tSettings('page.dataSync.backfillModes.other', 'Custom strategy')
+    default:
+      return tSettings('page.dataSync.backfillModes.none', '--')
+  }
+}
+
+function SyncModeBadge({ syncMode, tSettings }: { syncMode: string; tSettings: SettingsTFunction }) {
   const isLatestOnly = syncMode === 'latest_only'
 
   return (
@@ -477,13 +501,14 @@ export default function DataSyncManagementTab() {
           </p>
         ) : (
           <div className="overflow-auto">
-            <table className="w-full min-w-[1240px] text-sm">
+            <table className="w-full min-w-[1360px] text-sm">
               <thead className="bg-muted/50 text-left text-xs text-muted-foreground">
                 <tr>
                   <th className="px-3 py-2">{tSettings('page.dataSync.columns.select', 'Select')}</th>
                   <th className="px-3 py-2">{tSettings('page.dataSync.columns.source', 'Source')}</th>
                   <th className="px-3 py-2">{tSettings('page.dataSync.columns.interface', 'Interface')}</th>
                   <th className="px-3 py-2">{tSettings('page.dataSync.columns.mode', 'Sync mode')}</th>
+                  <th className="px-3 py-2">{tSettings('page.dataSync.columns.backfillMode', 'Backfill mode')}</th>
                   <th className="px-3 py-2 text-right">{tSettings('page.dataSync.columns.syncDates', 'Sync dates')}</th>
                   <th className="px-3 py-2 text-right">{tSettings('page.dataSync.columns.missing', 'Missing')}</th>
                   <th className="px-3 py-2">{tSettings('page.dataSync.columns.statusCounts', 'Status counts')}</th>
@@ -520,6 +545,14 @@ export default function DataSyncManagementTab() {
                       </td>
                       <td className="px-3 py-3">
                         <SyncModeBadge syncMode={item.sync_mode} tSettings={tSettings} />
+                      </td>
+                      <td className="px-3 py-3">
+                        <div className="font-medium text-foreground">
+                          {getBackfillModeLabel(item.backfill_mode, tSettings)}
+                        </div>
+                        {item.backfill_mode && (
+                          <div className="mt-1 text-xs text-muted-foreground">{item.backfill_mode}</div>
+                        )}
                       </td>
                       <td className="px-3 py-3 text-right tabular-nums">
                         <div className="font-medium text-foreground">
