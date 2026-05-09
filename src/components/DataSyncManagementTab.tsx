@@ -55,6 +55,7 @@ type SyncCoverageItem = {
     pending: number
     running: number
     partial: number
+    rate_limited: number
   }
 }
 
@@ -91,9 +92,9 @@ function preferCoverageItem(current: SyncCoverageItem, candidate: SyncCoverageIt
     return (candidate.latest_sync_date ?? '') > (current.latest_sync_date ?? '') ? candidate : current
   }
 
-  const currentPendingWork = current.counts.pending + current.counts.error + current.counts.partial
+  const currentPendingWork = current.counts.pending + current.counts.error + current.counts.partial + current.counts.rate_limited
   const candidatePendingWork =
-    candidate.counts.pending + candidate.counts.error + candidate.counts.partial
+    candidate.counts.pending + candidate.counts.error + candidate.counts.partial + candidate.counts.rate_limited
   if (candidatePendingWork !== currentPendingWork) {
     return candidatePendingWork > currentPendingWork ? candidate : current
   }
@@ -125,6 +126,7 @@ function StatusBadge({ status }: { status: string }) {
     pending: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400',
     running: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400',
     partial: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400',
+    rate_limited: 'bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-900/40 dark:text-fuchsia-300',
   }
   const icon: Record<string, React.ReactNode> = {
     success: <CheckCircle2 size={12} />,
@@ -454,7 +456,7 @@ export default function DataSyncManagementTab() {
           <div className="text-xs text-muted-foreground">{tMarket('page.sync.latestDate')}</div>
           <div className="mt-1 text-lg font-semibold text-foreground">{latestData?.latest_date ?? '--'}</div>
         </div>
-        {(['success', 'error', 'pending', 'running'] as const).map((statusKey) => (
+        {(['success', 'error', 'pending', 'running', 'rate_limited'] as const).map((statusKey) => (
           <div key={statusKey} className="rounded-lg border border-border bg-card p-3">
             <div className="text-xs text-muted-foreground">{tMarket(`page.sync.${statusKey}`)}</div>
             <div className="mt-1 text-lg font-semibold text-foreground">{overall[statusKey] ?? 0}</div>
@@ -577,7 +579,7 @@ export default function DataSyncManagementTab() {
                       </td>
                       <td className="px-3 py-3">
                         <div className="flex flex-wrap gap-1.5">
-                          {(['success', 'error', 'pending', 'running', 'partial'] as const).map((statusKey) => (
+                          {(['success', 'error', 'pending', 'running', 'partial', 'rate_limited'] as const).map((statusKey) => (
                             <StatusCountPill
                               key={statusKey}
                               status={statusKey}

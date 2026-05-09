@@ -59,6 +59,7 @@
       "error": "失败",
       "pending": "等待中",
       "running": "同步中",
+      "rate_limited": "限流",
       "partial": "部分完成",
       "source": "数据源",
       "interface": "接口",

@@ -59,6 +59,7 @@
       "error": "Error",
       "pending": "Pending",
       "running": "Running",
+      "rate_limited": "Rate Limited",
       "partial": "Partial",
       "source": "Source",
       "interface": "Interface",
