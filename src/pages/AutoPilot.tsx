@@ -9,7 +9,7 @@ import {
     Square,
     TrendingUp,
 } from 'lucide-react'
-import { useState } from 'react'
+  import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import Badge, { type BadgeVariant } from '../components/ui/Badge'
@@ -89,6 +89,13 @@ function badgeVariantForStatus(status: string): BadgeVariant {
   }
 }
 
+const LLM_MODEL_OPTIONS = [
+  { value: 'minimax-m2.5-free', label: 'OpenCode AI / MiniMax M2.5 Free' },
+  { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
+  { value: 'gpt-4o', label: 'GPT-4o' },
+  { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
+]
+
 export default function AutoPilot() {
   const { t, i18n } = useTranslation(['social', 'common'])
   const queryClient = useQueryClient()
@@ -98,9 +105,10 @@ export default function AutoPilot() {
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null)
   const [scenario, setScenario] = useState('fin_factor')
   const [maxIterations, setMaxIterations] = useState(10)
-  const [llmModel, setLlmModel] = useState('gpt-4o-mini')
+  const [llmModel, setLlmModel] = useState('minimax-m2.5-free')
   const [universe, setUniverse] = useState('csi300')
   const [{ startDate, endDate }, setDateRange] = useState(getDefaultDateRange)
+  const detailSectionRef = useRef<HTMLDivElement | null>(null)
 
   const tabs = [
     { key: 'runs', label: t('autoPilot.tabs.runs', { ns: 'social' }), icon: <Bot className="h-4 w-4" /> },
@@ -125,6 +133,23 @@ export default function AutoPilot() {
 
   const formatStatus = (status: string) =>
     t(`autoPilot.status.${status}`, { ns: 'social', defaultValue: status })
+
+  useEffect(() => {
+    if (!selectedRunId) {
+      return
+    }
+
+    detailSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [selectedRunId])
+
+  const handleRunSelection = (runId: string) => {
+    if (selectedRunId === runId) {
+      detailSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      return
+    }
+
+    setSelectedRunId(runId)
+  }
 
   const { data: runsData = [], isLoading: runsLoading } = useQuery<MiningRun[]>({
     queryKey: ['rdagent-runs'],
@@ -207,8 +232,13 @@ export default function AutoPilot() {
       render: (row) => (
         <button
           type="button"
-          className="text-primary hover:underline text-xs font-mono"
-          onClick={() => setSelectedRunId(row.run_id)}
+          className={[
+            'text-xs font-mono transition-colors hover:underline',
+            selectedRunId === row.run_id ? 'text-foreground underline' : 'text-primary',
+          ].join(' ')}
+          title={row.run_id}
+          aria-pressed={selectedRunId === row.run_id}
+          onClick={() => handleRunSelection(row.run_id)}
         >
           {row.run_id.slice(0, 8)}...
         </button>
@@ -341,9 +371,9 @@ export default function AutoPilot() {
                     onChange={(event) => setLlmModel(event.target.value)}
                     className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
                   >
-                    <option value="gpt-4o-mini">GPT-4o Mini</option>
-                    <option value="gpt-4o">GPT-4o</option>
-                    <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                    {LLM_MODEL_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
                   </select>
                 </div>
                 <div>
@@ -411,12 +441,13 @@ export default function AutoPilot() {
             </div>
 
             {selectedRunId ? (
-              <div className="space-y-4 rounded-lg border border-border bg-card p-5">
+              <div ref={detailSectionRef} className="space-y-4 rounded-lg border border-border bg-card p-5">
                 <div>
                   <h3 className="text-lg font-semibold flex items-center gap-2 text-card-foreground">
                     <TrendingUp className="h-5 w-5 text-primary" />
                     {t('autoPilot.detail.title', { ns: 'social', id: `${selectedRunId.slice(0, 8)}...` })}
                   </h3>
+                  <p className="mt-1 text-xs font-mono text-muted-foreground">{selectedRunId}</p>
                 </div>
 
                 <div className="space-y-3">
