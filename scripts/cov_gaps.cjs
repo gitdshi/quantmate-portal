@@ -1,4 +1,4 @@
-const cov = require('../coverage/coverage-final.json');
+const cov = require('../tmp/coverage/coverage-final.json');
 const files = ['PaperTrading','FactorLab','BacktestForm','Marketplace','Monitoring','EquityCurveChart','PortfolioManagement','Strategies','Dashboard','StrategyParameterForm','AccountSecurity','Settings','App'];
 for (const name of files) {
   const entry = Object.entries(cov).find(([k]) => k.includes(name + '.tsx'));

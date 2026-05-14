@@ -36,10 +36,10 @@ run_test_suite() {
     
     echo -e "${YELLOW}Running $name...${NC}"
     if eval "$command"; then
-        echo -e "${GREEN}�?$name passed${NC}"
+        echo -e "${GREEN}�?$name passed${NC}"
         return 0
     else
-        echo -e "${RED}�?$name failed${NC}"
+        echo -e "${RED}�?$name failed${NC}"
         return 1
     fi
     echo ""
@@ -70,7 +70,7 @@ echo ""
 TOTAL_TESTS=$((TOTAL_TESTS + 1))
 if run_test_suite "Coverage" "npm run test:coverage"; then
     PASSED_TESTS=$((PASSED_TESTS + 1))
-    echo -e "${GREEN}📈 Coverage report generated in ./coverage/${NC}"
+    echo -e "${GREEN}📈 Coverage report generated in ./tmp/coverage/${NC}"
 else
     FAILED_TESTS="$FAILED_TESTS\n- Coverage"
 fi
@@ -126,19 +126,19 @@ echo -e "${RED}Failed: $((TOTAL_TESTS - PASSED_TESTS))${NC}"
 echo ""
 
 if [ $PASSED_TESTS -eq $TOTAL_TESTS ]; then
-    echo -e "${GREEN}╔═══════════════════════════════════════�?{NC}"
-    echo -e "${GREEN}�?                                      �?{NC}"
-    echo -e "${GREEN}�?   �?All Tests Passed! 🎉           �?{NC}"
-    echo -e "${GREEN}�?                                      �?{NC}"
-    echo -e "${GREEN}╚═══════════════════════════════════════�?{NC}"
+    echo -e "${GREEN}╔═══════════════════════════════════════�?{NC}"
+    echo -e "${GREEN}�?                                      �?{NC}"
+    echo -e "${GREEN}�?   �?All Tests Passed! 🎉           �?{NC}"
+    echo -e "${GREEN}�?                                      �?{NC}"
+    echo -e "${GREEN}╚═══════════════════════════════════════�?{NC}"
     echo ""
     exit 0
 else
-    echo -e "${RED}╔═══════════════════════════════════════�?{NC}"
-    echo -e "${RED}�?                                      �?{NC}"
-    echo -e "${RED}�?   �?Some Tests Failed               �?{NC}"
-    echo -e "${RED}�?                                      �?{NC}"
-    echo -e "${RED}╚═══════════════════════════════════════�?{NC}"
+    echo -e "${RED}╔═══════════════════════════════════════�?{NC}"
+    echo -e "${RED}�?                                      �?{NC}"
+    echo -e "${RED}�?   �?Some Tests Failed               �?{NC}"
+    echo -e "${RED}�?                                      �?{NC}"
+    echo -e "${RED}╚═══════════════════════════════════════�?{NC}"
     echo ""
     echo -e "${RED}Failed Test Suites:${NC}"
     echo -e "${RED}$FAILED_TESTS${NC}"

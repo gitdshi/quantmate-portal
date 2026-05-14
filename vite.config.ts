@@ -125,6 +125,7 @@ export default defineConfig(({ mode }) => {
       __TUSHARE_CATALOG_ORDER__: JSON.stringify(tushareCatalogOrder),
     },
     build: {
+      outDir: 'tmp/dist',
       chunkSizeWarningLimit: 600,
       rollupOptions: {
         output: {

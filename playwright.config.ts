@@ -55,10 +55,11 @@ export default defineConfig({
   timeout: 90000,
   retries: process.env.CI ? 2 : 0,
   workers: 1,
+  outputDir: 'tmp/playwright-artifacts',
   reporter: [
-    ['html'],
-    ['json', { outputFile: 'test-results/results.json' }],
-    ['junit', { outputFile: 'test-results/junit.xml' }],
+    ['html', { outputFolder: 'tmp/playwright-report' }],
+    ['json', { outputFile: 'tmp/test-results/results.json' }],
+    ['junit', { outputFile: 'tmp/test-results/junit.xml' }],
   ],
   use: {
     baseURL: process.env.BASE_URL || env.baseURL,

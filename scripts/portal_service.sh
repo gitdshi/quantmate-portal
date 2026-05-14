@@ -3,11 +3,11 @@ set -euo pipefail
 
 # Start/stop/restart frontend dev server with Vite HMR enabled.
 # Uses polling so file edits under WSL/NTFS mounts are picked up reliably.
-# Logs are stored under quantmate-portal/logs.
+# Logs are stored under quantmate-portal/tmp/logs.
 
 BASE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$BASE_DIR"
-LOG_DIR="$BASE_DIR/logs"
+LOG_DIR="$BASE_DIR/tmp/logs"
 mkdir -p "$LOG_DIR"
 PID_FILE="$LOG_DIR/frontend.pid"
 OUT_FILE="$LOG_DIR/frontend.out"

@@ -18,6 +18,7 @@ export default defineConfig({
     exclude: ['node_modules', 'dist', 'test/e2e/**'],
     coverage: {
       provider: 'v8',
+      reportsDirectory: 'tmp/coverage',
       reporter: ['text', 'json', 'html'],
       exclude: [
         'node_modules/',
@@ -25,6 +26,7 @@ export default defineConfig({
         '**/*.d.ts',
         '**/*.config.*',
         '**/mockData',
+        'tmp/dist/',
         'dist/',
         'src/i18n/locales/**',
       ],

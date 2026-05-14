@@ -11,5 +11,6 @@ playwright-report
 test-results
 .env
 .env.*
+tmp
 tmp_utf8_test.txt
 test
