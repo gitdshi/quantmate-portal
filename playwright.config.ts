@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
 import { existsSync, readFileSync, readdirSync } from 'fs'
-import { resolve } from 'path'
 import { homedir } from 'os'
+import { resolve } from 'path'
 
 /**
  * Environment configuration for E2E tests.

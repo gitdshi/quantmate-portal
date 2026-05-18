@@ -113,6 +113,7 @@
     },
     "columns": {
       "strategy": "Strategy",
+      "source": "Source",
       "status": "Status",
       "capital": "Initial Capital",
       "pnl": "P&L",
@@ -140,9 +141,21 @@
       "title": "Create Paper Deployment",
       "cancel": "Cancel",
       "submit": "Create Deployment",
+      "sourceType": "Strategy Source",
       "strategy": "Select Strategy",
       "strategyPlaceholder": "Select strategy...",
+      "compositeStrategy": "Select Composite Strategy",
+      "compositeStrategyPlaceholder": "Select composite strategy...",
+      "vtSymbolHint": "Optional for composite strategies with explicit universe symbols. Use comma-separated symbols when needed.",
       "capital": "Initial Capital"
+    },
+    "source": {
+      "strategy": "CTA Strategy",
+      "composite": "Composite Strategy"
+    },
+    "mode": {
+      "auto": "Auto (signal → order)",
+      "semiAuto": "Semi-auto (confirm signals)"
     },
     "deployment": {
       "running": "Running",

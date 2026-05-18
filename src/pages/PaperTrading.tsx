@@ -23,12 +23,14 @@ import Modal from '../components/ui/Modal'
 import StatCard from '../components/ui/StatCard'
 import TabPanel from '../components/ui/TabPanel'
 import { showToast } from '../components/ui/toast-service'
-import { paperTradingAPI, paperAccountAPI, strategiesAPI } from '../lib/api'
+import { compositeStrategiesAPI, paperTradingAPI, paperAccountAPI, strategiesAPI } from '../lib/api'
 import type { PaperAccount, PaperSignal } from '../types'
 
 interface Deployment {
   id: string
   strategy_name: string
+  strategy_source_type?: string
+  composite_strategy_id?: number
   status: string
   capital: number
   pnl: number
@@ -36,6 +38,7 @@ interface Deployment {
   positions: number
   paper_account_id?: number
   execution_mode?: string
+  started_at?: string
   created_at: string
 }
 
@@ -82,7 +85,7 @@ export default function PaperTrading() {
   const [search, setSearch] = useState('')
   const [accountForm, setAccountForm] = useState({ name: '', capital: '1000000', market: 'CN' })
   const [orderForm, setOrderForm] = useState({ paper_account_id: '', symbol: '', direction: 'buy', order_type: 'market', quantity: '100', price: '' })
-  const [deployForm, setDeployForm] = useState({ strategy: '', vt_symbol: '', paper_account_id: '', execution_mode: 'auto' })
+  const [deployForm, setDeployForm] = useState({ strategy_source_type: 'strategy', strategy_id: '', composite_strategy_id: '', vt_symbol: '', paper_account_id: '', execution_mode: 'auto' })
 
   const tabs = [
     { key: 'accounts', label: t('paper.tabs.accounts', 'Accounts'), icon: <Wallet size={16} /> },
@@ -142,13 +145,24 @@ export default function PaperTrading() {
       const d = r.data
       return Array.isArray(d) ? d : d?.data ?? []
     }),
-    enabled: deployModal,
+    enabled: deployModal && deployForm.strategy_source_type === 'strategy',
+  })
+
+  const { data: compositeStrategies = [] } = useQuery<{ id: number; name: string }[]>({
+    queryKey: ['composite-strategies-paper'],
+    queryFn: () => compositeStrategiesAPI.list().then((r) => {
+      const d = r.data
+      return Array.isArray(d) ? d : d?.items ?? d?.data ?? []
+    }),
+    enabled: deployModal && deployForm.strategy_source_type === 'composite',
   })
 
   const deployMutation = useMutation({
     mutationFn: () => paperTradingAPI.deployStrategy({
-      strategy_id: Number(deployForm.strategy),
-      vt_symbol: deployForm.vt_symbol,
+      strategy_source_type: deployForm.strategy_source_type,
+      strategy_id: deployForm.strategy_source_type === 'strategy' && deployForm.strategy_id ? Number(deployForm.strategy_id) : undefined,
+      composite_strategy_id: deployForm.strategy_source_type === 'composite' && deployForm.composite_strategy_id ? Number(deployForm.composite_strategy_id) : undefined,
+      vt_symbol: deployForm.vt_symbol.trim() || undefined,
       parameters: {},
       paper_account_id: deployForm.paper_account_id ? Number(deployForm.paper_account_id) : undefined,
       execution_mode: deployForm.execution_mode,
@@ -156,6 +170,7 @@ export default function PaperTrading() {
     onSuccess: () => {
       showToast(t('paper.createSuccess'), 'success')
       setDeployModal(false)
+      setDeployForm({ strategy_source_type: 'strategy', strategy_id: '', composite_strategy_id: '', vt_symbol: '', paper_account_id: '', execution_mode: 'auto' })
       queryClient.invalidateQueries({ queryKey: ['paper-deployments'] })
     },
     onError: () => showToast(t('paper.createFailed'), 'error'),
@@ -277,9 +292,20 @@ export default function PaperTrading() {
 
   const depCols: Column<Deployment>[] = [
     { key: 'strategy_name', label: t('paper.columns.strategy') },
+    {
+      key: 'strategy_source_type',
+      label: t('paper.columns.source', 'Source'),
+      render: (d) => (
+        <Badge variant={d.strategy_source_type === 'composite' ? 'warning' : 'primary'}>
+          {d.strategy_source_type === 'composite'
+            ? t('paper.source.composite', 'Composite Strategy')
+            : t('paper.source.strategy', 'CTA Strategy')}
+        </Badge>
+      ),
+    },
     { key: 'status', label: t('paper.columns.status'), render: (d) => <Badge variant={d.status === 'running' ? 'success' : d.status === 'stopped' ? 'muted' : 'warning'}>{d.status}</Badge> },
     { key: 'execution_mode', label: t('paper.columns.mode', 'Mode'), render: (d) => <Badge variant={d.execution_mode === 'auto' ? 'primary' : 'warning'}>{d.execution_mode === 'auto' ? 'Auto' : 'Semi-auto'}</Badge> },
-    { key: 'created_at', label: t('paper.columns.createdAt'), render: (d) => new Date(d.created_at).toLocaleDateString() },
+    { key: 'created_at', label: t('paper.columns.createdAt'), render: (d) => new Date(d.started_at || d.created_at).toLocaleDateString() },
     { key: 'id', label: t('paper.columns.actions'), render: (d) => d.status === 'running' ? <button onClick={() => stopMutation.mutate(d.id)} className="text-red-500 hover:text-red-700 text-xs"><Square size={12} className="inline mr-0.5" />{t('paper.deployment.stop')}</button> : null },
   ]
 
@@ -465,17 +491,44 @@ export default function PaperTrading() {
       <Modal open={deployModal} onClose={() => setDeployModal(false)} title={t('paper.modal.title')} footer={
         <>
           <button onClick={() => setDeployModal(false)} className="px-4 py-2 text-sm rounded-md border border-border hover:bg-muted">{t('paper.modal.cancel')}</button>
-          <button onClick={() => deployMutation.mutate()} disabled={!deployForm.strategy} className="px-4 py-2 text-sm rounded-md bg-primary text-white hover:opacity-90 disabled:opacity-50">{t('paper.modal.submit')}</button>
+          <button
+            onClick={() => deployMutation.mutate()}
+            disabled={deployForm.strategy_source_type === 'strategy' ? !deployForm.strategy_id : !deployForm.composite_strategy_id}
+            className="px-4 py-2 text-sm rounded-md bg-primary text-white hover:opacity-90 disabled:opacity-50"
+          >
+            {t('paper.modal.submit')}
+          </button>
         </>
       }>
         <div className="flex flex-col gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">{t('paper.modal.strategy')}</label>
-            <select value={deployForm.strategy} onChange={(e) => setDeployForm({ ...deployForm, strategy: e.target.value })} className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background">
-              <option value="">{t('paper.modal.strategyPlaceholder')}</option>
-              {strategies.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            <label className="block text-sm font-medium mb-1">{t('paper.modal.sourceType', 'Strategy Source')}</label>
+            <select
+              value={deployForm.strategy_source_type}
+              onChange={(e) => setDeployForm({ ...deployForm, strategy_source_type: e.target.value, strategy_id: '', composite_strategy_id: '' })}
+              className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background"
+            >
+              <option value="strategy">{t('paper.source.strategy', 'CTA Strategy')}</option>
+              <option value="composite">{t('paper.source.composite', 'Composite Strategy')}</option>
             </select>
           </div>
+          {deployForm.strategy_source_type === 'strategy' ? (
+            <div>
+              <label className="block text-sm font-medium mb-1">{t('paper.modal.strategy')}</label>
+              <select value={deployForm.strategy_id} onChange={(e) => setDeployForm({ ...deployForm, strategy_id: e.target.value })} className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background">
+                <option value="">{t('paper.modal.strategyPlaceholder')}</option>
+                {strategies.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm font-medium mb-1">{t('paper.modal.compositeStrategy', 'Composite Strategy')}</label>
+              <select value={deployForm.composite_strategy_id} onChange={(e) => setDeployForm({ ...deployForm, composite_strategy_id: e.target.value })} className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background">
+                <option value="">{t('paper.modal.compositeStrategyPlaceholder', 'Select composite strategy...')}</option>
+                {compositeStrategies.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium mb-1">{t('paper.modal.account', 'Paper Account')}</label>
             <select value={deployForm.paper_account_id} onChange={(e) => setDeployForm({ ...deployForm, paper_account_id: e.target.value })} className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background">
@@ -485,7 +538,8 @@ export default function PaperTrading() {
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">{t('paper.modal.vtSymbol', 'VT Symbol')}</label>
-            <input value={deployForm.vt_symbol} onChange={(e) => setDeployForm({ ...deployForm, vt_symbol: e.target.value })} placeholder="600519.SSE" className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background" />
+            <input value={deployForm.vt_symbol} onChange={(e) => setDeployForm({ ...deployForm, vt_symbol: e.target.value })} placeholder={deployForm.strategy_source_type === 'composite' ? '600519.SH,000858.SZ' : '600519.SSE'} className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background" />
+            <p className="mt-1 text-xs text-muted-foreground">{t('paper.modal.vtSymbolHint', 'Optional for composite strategies with explicit universe symbols. Use comma-separated symbols when needed.')}</p>
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">{t('paper.modal.executionMode', 'Execution Mode')}</label>

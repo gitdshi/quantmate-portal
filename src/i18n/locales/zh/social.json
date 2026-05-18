@@ -228,7 +228,7 @@
       "runs": "挖掘运行",
       "catalog": "数据目录"
     },
-    "title": "Auto Pilot",
+    "title": "策略领航",
     "subtitle": "由 RD-Agent 驱动的 LLM 自主因子挖掘工作台。",
     "fields": {
       "scenario": "场景",

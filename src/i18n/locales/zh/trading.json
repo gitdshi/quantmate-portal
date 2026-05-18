@@ -113,6 +113,7 @@
     },
     "columns": {
       "strategy": "策略",
+      "source": "来源",
       "status": "状态",
       "capital": "初始资金",
       "pnl": "盈亏",
@@ -140,9 +141,21 @@
       "title": "新建模拟部署",
       "cancel": "取消",
       "submit": "创建部署",
+      "sourceType": "策略来源",
       "strategy": "选择策略",
       "strategyPlaceholder": "请选择策略...",
+      "compositeStrategy": "选择组合策略",
+      "compositeStrategyPlaceholder": "请选择组合策略...",
+      "vtSymbolHint": "若组合策略已配置显式股票池，此项可留空；否则请填写逗号分隔的交易标的。",
       "capital": "初始资金"
+    },
+    "source": {
+      "strategy": "CTA 策略",
+      "composite": "组合策略"
+    },
+    "mode": {
+      "auto": "自动执行（信号直连委托）",
+      "semiAuto": "半自动（确认信号后执行）"
     },
     "deployment": {
       "running": "运行中",

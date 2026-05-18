@@ -100,6 +100,15 @@ export default function AutoPilot() {
   const { t, i18n } = useTranslation(['social', 'common'])
   const queryClient = useQueryClient()
   const currentLanguage = i18n.resolvedLanguage ?? i18n.language
+  const zhT = i18n.getFixedT('zh')
+  const enT = i18n.getFixedT('en')
+
+  const bilingual = (key: string, options?: Record<string, unknown>, ns: 'social' | 'common' = 'social') => {
+    const zhLabel = zhT(key, { ns, ...options })
+    const enLabel = enT(key, { ns, ...options })
+
+    return zhLabel === enLabel ? zhLabel : `${zhLabel} / ${enLabel}`
+  }
 
   const [activeTab, setActiveTab] = useState('runs')
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null)
@@ -111,8 +120,8 @@ export default function AutoPilot() {
   const detailSectionRef = useRef<HTMLDivElement | null>(null)
 
   const tabs = [
-    { key: 'runs', label: t('autoPilot.tabs.runs', { ns: 'social' }), icon: <Bot className="h-4 w-4" /> },
-    { key: 'catalog', label: t('autoPilot.tabs.catalog', { ns: 'social' }), icon: <Database className="h-4 w-4" /> },
+    { key: 'runs', label: bilingual('autoPilot.tabs.runs'), icon: <Bot className="h-4 w-4" /> },
+    { key: 'catalog', label: bilingual('autoPilot.tabs.catalog'), icon: <Database className="h-4 w-4" /> },
   ]
 
   const formatDateTime = (value?: string) => {
@@ -132,7 +141,7 @@ export default function AutoPilot() {
   }
 
   const formatStatus = (status: string) =>
-    t(`autoPilot.status.${status}`, { ns: 'social', defaultValue: status })
+    bilingual(`autoPilot.status.${status}`, { defaultValue: status })
 
   useEffect(() => {
     if (!selectedRunId) {
@@ -246,33 +255,33 @@ export default function AutoPilot() {
     },
     {
       key: 'scenario',
-      label: t('autoPilot.runs.columns.scenario', { ns: 'social' }),
-      render: (row) => t(`autoPilot.scenarios.${row.scenario}`, { ns: 'social', defaultValue: row.scenario }),
+      label: bilingual('autoPilot.runs.columns.scenario'),
+      render: (row) => bilingual(`autoPilot.scenarios.${row.scenario}`, { defaultValue: row.scenario }),
     },
     {
       key: 'status',
-      label: t('autoPilot.runs.columns.status', { ns: 'social' }),
+      label: bilingual('autoPilot.runs.columns.status'),
       render: (row) => <Badge variant={badgeVariantForStatus(row.status)}>{formatStatus(row.status)}</Badge>,
     },
     {
       key: 'current_iteration',
-      label: t('autoPilot.runs.columns.progress', { ns: 'social' }),
+      label: bilingual('autoPilot.runs.columns.progress'),
       render: (row) => `${row.current_iteration}/${row.total_iterations}`,
     },
     {
       key: 'created_at',
-      label: t('autoPilot.runs.columns.created', { ns: 'social' }),
+      label: bilingual('autoPilot.runs.columns.created'),
       render: (row) => formatDateTime(row.created_at),
     },
     {
       key: 'actions',
-      label: t('autoPilot.runs.columns.actions', { ns: 'social' }),
+      label: bilingual('autoPilot.runs.columns.actions'),
       render: (row) =>
         row.status === 'queued' || row.status === 'running' ? (
           <button
             type="button"
             className="inline-flex items-center rounded-md p-1 text-destructive hover:bg-destructive/10"
-            aria-label={t('autoPilot.actions.cancelRun', { ns: 'social' })}
+            aria-label={bilingual('autoPilot.actions.cancelRun')}
             onClick={() => cancelRun.mutate(row.run_id)}
           >
             <Square className="h-4 w-4" />
@@ -282,31 +291,31 @@ export default function AutoPilot() {
   ]
 
   const factorColumns: Column<DiscoveredFactor>[] = [
-    { key: 'factor_name', label: t('autoPilot.factors.columns.name', { ns: 'social' }) },
-    { key: 'expression', label: t('autoPilot.factors.columns.expression', { ns: 'social' }) },
+    { key: 'factor_name', label: bilingual('autoPilot.factors.columns.name') },
+    { key: 'expression', label: bilingual('autoPilot.factors.columns.expression') },
     {
       key: 'ic_mean',
-      label: t('autoPilot.factors.columns.ic', { ns: 'social' }),
+      label: bilingual('autoPilot.factors.columns.ic'),
       render: (row) => row.ic_mean?.toFixed(4) ?? '-',
     },
     {
       key: 'icir',
-      label: t('autoPilot.factors.columns.icir', { ns: 'social' }),
+      label: bilingual('autoPilot.factors.columns.icir'),
       render: (row) => row.icir?.toFixed(4) ?? '-',
     },
     {
       key: 'sharpe',
-      label: t('autoPilot.factors.columns.sharpe', { ns: 'social' }),
+      label: bilingual('autoPilot.factors.columns.sharpe'),
       render: (row) => row.sharpe?.toFixed(4) ?? '-',
     },
     {
       key: 'status',
-      label: t('autoPilot.factors.columns.status', { ns: 'social' }),
+      label: bilingual('autoPilot.factors.columns.status'),
       render: (row) => <Badge variant={badgeVariantForStatus(row.status)}>{formatStatus(row.status)}</Badge>,
     },
     {
       key: 'actions',
-      label: t('autoPilot.factors.columns.actions', { ns: 'social' }),
+      label: bilingual('autoPilot.factors.columns.actions'),
       render: (row) =>
         row.status !== 'imported' && selectedRunId ? (
           <button
@@ -315,7 +324,7 @@ export default function AutoPilot() {
             onClick={() => importFactor.mutate({ runId: selectedRunId, factorId: row.id })}
           >
             <Download className="h-3 w-3" />
-            {t('autoPilot.actions.import', { ns: 'social' })}
+            {bilingual('autoPilot.actions.import')}
           </button>
         ) : null,
     },
@@ -324,8 +333,8 @@ export default function AutoPilot() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">{t('autoPilot.title', { ns: 'social' })}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{t('autoPilot.subtitle', { ns: 'social' })}</p>
+        <h1 className="text-2xl font-bold text-foreground">{bilingual('autoPilot.title')}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{bilingual('autoPilot.subtitle')}</p>
       </div>
 
       <TabPanel tabs={tabs} activeTab={activeTab} onChange={setActiveTab}>
@@ -335,26 +344,26 @@ export default function AutoPilot() {
               <div>
                 <h2 className="text-lg font-semibold flex items-center gap-2 text-card-foreground">
                   <Play className="h-5 w-5 text-primary" />
-                  {t('autoPilot.start.title', { ns: 'social' })}
+                  {bilingual('autoPilot.start.title')}
                 </h2>
-                <p className="mt-1 text-sm text-muted-foreground">{t('autoPilot.start.description', { ns: 'social' })}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{bilingual('autoPilot.start.description')}</p>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 <div>
-                  <label className="mb-1 block text-sm font-medium">{t('autoPilot.fields.scenario', { ns: 'social' })}</label>
+                  <label className="mb-1 block text-sm font-medium">{bilingual('autoPilot.fields.scenario')}</label>
                   <select
                     value={scenario}
                     onChange={(event) => setScenario(event.target.value)}
                     className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
                   >
-                    <option value="fin_factor">{t('autoPilot.scenarios.fin_factor', { ns: 'social' })}</option>
-                    <option value="fin_model">{t('autoPilot.scenarios.fin_model', { ns: 'social' })}</option>
-                    <option value="fin_quant">{t('autoPilot.scenarios.fin_quant', { ns: 'social' })}</option>
+                    <option value="fin_factor">{bilingual('autoPilot.scenarios.fin_factor')}</option>
+                    <option value="fin_model">{bilingual('autoPilot.scenarios.fin_model')}</option>
+                    <option value="fin_quant">{bilingual('autoPilot.scenarios.fin_quant')}</option>
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium">{t('autoPilot.fields.maxIterations', { ns: 'social' })}</label>
+                  <label className="mb-1 block text-sm font-medium">{bilingual('autoPilot.fields.maxIterations')}</label>
                   <input
                     type="number"
                     min={1}
@@ -365,7 +374,7 @@ export default function AutoPilot() {
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium">{t('autoPilot.fields.llmModel', { ns: 'social' })}</label>
+                  <label className="mb-1 block text-sm font-medium">{bilingual('autoPilot.fields.llmModel')}</label>
                   <select
                     value={llmModel}
                     onChange={(event) => setLlmModel(event.target.value)}
@@ -377,19 +386,19 @@ export default function AutoPilot() {
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium">{t('autoPilot.fields.universe', { ns: 'social' })}</label>
+                  <label className="mb-1 block text-sm font-medium">{bilingual('autoPilot.fields.universe')}</label>
                   <select
                     value={universe}
                     onChange={(event) => setUniverse(event.target.value)}
                     className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
                   >
-                    <option value="csi300">{t('autoPilot.universes.csi300', { ns: 'social' })}</option>
-                    <option value="csi500">{t('autoPilot.universes.csi500', { ns: 'social' })}</option>
-                    <option value="csi1000">{t('autoPilot.universes.csi1000', { ns: 'social' })}</option>
+                    <option value="csi300">{bilingual('autoPilot.universes.csi300')}</option>
+                    <option value="csi500">{bilingual('autoPilot.universes.csi500')}</option>
+                    <option value="csi1000">{bilingual('autoPilot.universes.csi1000')}</option>
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium">{t('autoPilot.fields.startDate', { ns: 'social' })}</label>
+                  <label className="mb-1 block text-sm font-medium">{bilingual('autoPilot.fields.startDate')}</label>
                   <input
                     type="date"
                     value={startDate}
@@ -398,7 +407,7 @@ export default function AutoPilot() {
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium">{t('autoPilot.fields.endDate', { ns: 'social' })}</label>
+                  <label className="mb-1 block text-sm font-medium">{bilingual('autoPilot.fields.endDate')}</label>
                   <input
                     type="date"
                     value={endDate}
@@ -416,26 +425,26 @@ export default function AutoPilot() {
               >
                 {startMining.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
                 {startMining.isPending
-                  ? t('autoPilot.start.starting', { ns: 'social' })
-                  : t('autoPilot.start.start', { ns: 'social' })}
+                  ? bilingual('autoPilot.start.starting')
+                  : bilingual('autoPilot.start.start')}
               </button>
             </div>
 
             <div className="rounded-lg border border-border bg-card">
               <div className="border-b border-border px-5 py-4">
-                <h2 className="text-lg font-semibold text-card-foreground">{t('autoPilot.runs.title', { ns: 'social' })}</h2>
+                <h2 className="text-lg font-semibold text-card-foreground">{bilingual('autoPilot.runs.title')}</h2>
               </div>
               {runsLoading ? (
                 <div className="flex items-center gap-2 px-5 py-8 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  {t('common:loading')}
+                  {bilingual('loading', undefined, 'common')}
                 </div>
               ) : (
                 <DataTable
                   columns={runColumns}
                   data={runsData}
                   keyField="run_id"
-                  emptyText={t('autoPilot.runs.empty', { ns: 'social' })}
+                  emptyText={bilingual('autoPilot.runs.empty')}
                 />
               )}
             </div>
@@ -445,17 +454,17 @@ export default function AutoPilot() {
                 <div>
                   <h3 className="text-lg font-semibold flex items-center gap-2 text-card-foreground">
                     <TrendingUp className="h-5 w-5 text-primary" />
-                    {t('autoPilot.detail.title', { ns: 'social', id: `${selectedRunId.slice(0, 8)}...` })}
+                    {bilingual('autoPilot.detail.title', { id: `${selectedRunId.slice(0, 8)}...` })}
                   </h3>
                   <p className="mt-1 text-xs font-mono text-muted-foreground">{selectedRunId}</p>
                 </div>
 
                 <div className="space-y-3">
-                  <h4 className="font-medium text-card-foreground">{t('autoPilot.detail.iterations', { ns: 'social' })}</h4>
+                  <h4 className="font-medium text-card-foreground">{bilingual('autoPilot.detail.iterations')}</h4>
                   {iterationsLoading ? (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      {t('common:loading')}
+                      {bilingual('loading', undefined, 'common')}
                     </div>
                   ) : iterationsData.length > 0 ? (
                     <div className="space-y-2">
@@ -464,16 +473,13 @@ export default function AutoPilot() {
                           <div className="mb-1 flex items-center gap-2">
                             <ChevronRight className="h-4 w-4 text-muted-foreground" />
                             <span className="font-medium">
-                              {t('autoPilot.detail.iterationLabel', {
-                                ns: 'social',
-                                number: iteration.iteration_number,
-                              })}
+                              {bilingual('autoPilot.detail.iterationLabel', { number: iteration.iteration_number })}
                             </span>
                             <Badge variant={badgeVariantForStatus(iteration.status)}>{formatStatus(iteration.status)}</Badge>
                           </div>
                           {iteration.hypothesis && (
                             <p className="ml-6 mb-1 text-muted-foreground">
-                              <strong>{t('autoPilot.detail.hypothesis', { ns: 'social' })}:</strong> {iteration.hypothesis}
+                              <strong>{bilingual('autoPilot.detail.hypothesis')}:</strong> {iteration.hypothesis}
                             </p>
                           )}
                           {iteration.feedback && (
@@ -483,30 +489,30 @@ export default function AutoPilot() {
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground">{t('autoPilot.detail.noIterations', { ns: 'social' })}</p>
+                    <p className="text-sm text-muted-foreground">{bilingual('autoPilot.detail.noIterations')}</p>
                   )}
                 </div>
 
                 <div className="space-y-3">
-                  <h4 className="font-medium text-card-foreground">{t('autoPilot.factors.title', { ns: 'social' })}</h4>
+                  <h4 className="font-medium text-card-foreground">{bilingual('autoPilot.factors.title')}</h4>
                   {factorsLoading ? (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      {t('common:loading')}
+                      {bilingual('loading', undefined, 'common')}
                     </div>
                   ) : (
                     <DataTable
                       columns={factorColumns}
                       data={discoveredData}
                       keyField="id"
-                      emptyText={t('autoPilot.factors.empty', { ns: 'social' })}
+                      emptyText={bilingual('autoPilot.factors.empty')}
                     />
                   )}
                 </div>
               </div>
             ) : (
               <div className="rounded-lg border border-dashed border-border bg-card/60 p-5 text-sm text-muted-foreground">
-                {t('autoPilot.detail.empty', { ns: 'social' })}
+                {bilingual('autoPilot.detail.empty')}
               </div>
             )}
           </div>
@@ -516,18 +522,17 @@ export default function AutoPilot() {
           <div className="rounded-lg border border-border bg-card p-6">
             <h2 className="mb-4 text-lg font-semibold flex items-center gap-2 text-card-foreground">
               <Database className="h-5 w-5 text-primary" />
-              {t('autoPilot.catalog.title', { ns: 'social' })}
+              {bilingual('autoPilot.catalog.title')}
             </h2>
             {catalogLoading ? (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                {t('autoPilot.catalog.loading', { ns: 'social' })}
+                {bilingual('autoPilot.catalog.loading')}
               </div>
             ) : catalogData ? (
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  {t('autoPilot.catalog.summary', {
-                    ns: 'social',
+                  {bilingual('autoPilot.catalog.summary', {
                     count: catalogData.total_fields,
                     sources: catalogData.sources.join(', '),
                   })}

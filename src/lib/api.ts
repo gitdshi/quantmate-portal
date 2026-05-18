@@ -705,7 +705,8 @@ export const tradingAPI = {
 // Paper Trading API (simulation environment)
 export const paperTradingAPI = {
   deployStrategy: (data: {
-    strategy_id: number; vt_symbol: string; parameters?: Record<string, unknown>;
+    strategy_id?: number; composite_strategy_id?: number; strategy_source_type?: string;
+    vt_symbol?: string; parameters?: Record<string, unknown>;
     paper_account_id?: number; execution_mode?: string
   }) => api.post('/paper-trade/deploy', data),
   listDeployments: () => api.get('/paper-trade/deployments'),
