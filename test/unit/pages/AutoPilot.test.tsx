@@ -48,9 +48,9 @@ describe('AutoPilot Page', () => {
   it('renders English copy and controls', async () => {
     render(<AutoPilot />)
 
-    expect(screen.getByRole('heading', { name: 'Auto Pilot' })).toBeInTheDocument()
-    expect(await screen.findByRole('heading', { name: 'Mining Runs' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Start Mining' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Auto Pilot/ })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /Mining Runs/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Start Mining/ })).toBeInTheDocument()
     expect(screen.getByDisplayValue('OpenCode AI / MiniMax M2.5 Free')).toBeInTheDocument()
   })
 
@@ -60,9 +60,10 @@ describe('AutoPilot Page', () => {
 
     render(<AutoPilot />)
 
-    expect(screen.getByText('挖掘运行记录')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '数据目录' }))
-    expect(await screen.findByText('共 2 个数值字段，来源于 tushare。')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /策略领航|Auto Pilot/ })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /挖掘运行记录|Mining Runs/ })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /数据目录|Data Catalog/ }))
+    expect(await screen.findByText(/共 2 个数值字段.*tushare|2 numeric fields.*tushare/i)).toBeInTheDocument()
   })
 
   it('scrolls to run details after selecting a run id', async () => {

@@ -21,6 +21,9 @@ vi.mock('@/lib/api', () => ({
     get: vi.fn(),
     interceptors: { request: { use: vi.fn() }, response: { use: vi.fn() } },
   },
+  compositeStrategiesAPI: {
+    list: vi.fn(),
+  },
   paperAccountAPI: {
     list: vi.fn(),
     create: vi.fn(),
@@ -44,7 +47,7 @@ vi.mock('@/lib/api', () => ({
   },
 }))
 
-import { paperAccountAPI, paperTradingAPI, strategiesAPI } from '@/lib/api'
+import { compositeStrategiesAPI, paperAccountAPI, paperTradingAPI, strategiesAPI } from '@/lib/api'
 
 const mockAccounts = [
   { id: 1, user_id: 1, name: 'Test Account', market: 'CN', initial_capital: 1000000, balance: 990000, frozen: 0, market_value: 500000, total_pnl: -10000, total_equity: 1490000, return_pct: -1.0, status: 'active', currency: 'CNY', created_at: '2025-01-01T00:00:00Z', updated_at: '2025-01-01T00:00:00Z' },
@@ -79,6 +82,7 @@ describe('PaperTrading Page', () => {
     vi.mocked(paperTradingAPI.confirmSignal).mockResolvedValue({ data: {} } as never)
     vi.mocked(paperTradingAPI.rejectSignal).mockResolvedValue({ data: {} } as never)
     vi.mocked(strategiesAPI.list).mockResolvedValue({ data: [{ id: 1, name: 'DualMA' }] } as never)
+    vi.mocked(compositeStrategiesAPI.list).mockResolvedValue({ data: [{ id: 10, name: 'Composite Alpha' }] } as never)
   })
 
   it('renders heading', () => {
@@ -263,17 +267,12 @@ describe('PaperTrading Page', () => {
     const modals = document.querySelectorAll('.fixed')
     const modal = modals[modals.length - 1]
 
-    // Select strategy (first real option)
     const selects = modal.querySelectorAll('select')
-    selects.forEach(s => {
-      const opts = s.querySelectorAll('option')
-      if (opts.length > 1) fireEvent.change(s, { target: { value: opts[1].value } })
-    })
+    fireEvent.change(selects[1], { target: { value: '1' } })
+    fireEvent.change(selects[2], { target: { value: '1' } })
 
     const inputs = modal.querySelectorAll('input')
-    inputs.forEach(input => {
-      fireEvent.change(input, { target: { value: '600519.SH' } })
-    })
+    fireEvent.change(inputs[0], { target: { value: '600519.SH' } })
 
     const submitBtn = Array.from(modal.querySelectorAll('button')).find(b => b.textContent?.match(/create deployment/i))
     expect(submitBtn).toBeTruthy()
@@ -281,6 +280,12 @@ describe('PaperTrading Page', () => {
     await waitFor(() => {
       expect(paperTradingAPI.deployStrategy).toHaveBeenCalled()
     })
+    expect(paperTradingAPI.deployStrategy).toHaveBeenCalledWith(expect.objectContaining({
+      strategy_source_type: 'strategy',
+      strategy_id: 1,
+      paper_account_id: 1,
+      vt_symbol: '600519.SH',
+    }))
   })
 
   // ─── Deploy failure ─────────────────────────────────────
@@ -297,19 +302,20 @@ describe('PaperTrading Page', () => {
     const modal = modals[modals.length - 1]
 
     const selects = modal.querySelectorAll('select')
-    selects.forEach(s => {
-      const opts = s.querySelectorAll('option')
-      if (opts.length > 1) fireEvent.change(s, { target: { value: opts[1].value } })
-    })
+    fireEvent.change(selects[1], { target: { value: '1' } })
+    fireEvent.change(selects[2], { target: { value: '1' } })
 
     const inputs = modal.querySelectorAll('input')
-    inputs.forEach(input => fireEvent.change(input, { target: { value: '600519.SH' } }))
+    fireEvent.change(inputs[0], { target: { value: '600519.SH' } })
 
     const submitBtn = Array.from(modal.querySelectorAll('button')).find(b => b.textContent?.match(/deploy|submit|create deployment/i))
     expect(submitBtn).toBeTruthy()
     fireEvent.click(submitBtn!)
     await waitFor(() => {
       expect(paperTradingAPI.deployStrategy).toHaveBeenCalled()
+    })
+    await waitFor(() => {
+      expect(mockShowToast).toHaveBeenCalledWith('Create failed', 'error')
     })
   })
 
