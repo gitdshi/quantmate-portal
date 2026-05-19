@@ -60,10 +60,11 @@ describe('AutoPilot Page', () => {
 
     render(<AutoPilot />)
 
-    expect(screen.getByRole('heading', { name: /策略领航|Auto Pilot/ })).toBeInTheDocument()
-    expect(await screen.findByRole('heading', { name: /挖掘运行记录|Mining Runs/ })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /数据目录|Data Catalog/ }))
-    expect(await screen.findByText(/共 2 个数值字段.*tushare|2 numeric fields.*tushare/i)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '策略领航' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Auto Pilot' })).not.toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '挖掘运行记录' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '数据目录' }))
+    expect(await screen.findByText(/共 2 个数值字段，来源于 tushare/i)).toBeInTheDocument()
   })
 
   it('scrolls to run details after selecting a run id', async () => {

@@ -1,16 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  AlertCircle,
-  BarChart3,
-  CheckCircle2,
-  ListOrdered,
-  Play,
-  Plus,
-  ShoppingCart,
-  Square,
-  TrendingUp,
-  Wallet,
-  XCircle,
+    AlertCircle,
+    CheckCircle2,
+    ListOrdered,
+    Play,
+    Plus,
+    ShoppingCart,
+    Square,
+    TrendingUp,
+    Wallet,
+    XCircle
 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -23,7 +22,7 @@ import Modal from '../components/ui/Modal'
 import StatCard from '../components/ui/StatCard'
 import TabPanel from '../components/ui/TabPanel'
 import { showToast } from '../components/ui/toast-service'
-import { compositeStrategiesAPI, paperTradingAPI, paperAccountAPI, strategiesAPI } from '../lib/api'
+import { compositeStrategiesAPI, paperAccountAPI, paperTradingAPI, strategiesAPI } from '../lib/api'
 import type { PaperAccount, PaperSignal } from '../types'
 
 interface Deployment {
