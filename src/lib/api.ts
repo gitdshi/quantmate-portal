@@ -958,7 +958,13 @@ export const teamAPI = {
   removeMember: (workspaceId: number, userId: number) =>
     api.delete(`/teams/workspaces/${workspaceId}/members/${userId}`),
   listSharedWithMe: () => api.get('/teams/shares/received'),
-  shareStrategy: (data: { strategy_id: number; shared_with_user_id: number; permission?: string }) =>
+  listSentShares: () => api.get('/teams/shares/sent'),
+  shareStrategy: (data: {
+    strategy_id: number
+    shared_with_user_id?: number
+    shared_with_team_id?: number
+    permission?: string
+  }) =>
     api.post('/teams/shares', data),
   revokeShare: (id: number) => api.delete(`/teams/shares/${id}`),
 }

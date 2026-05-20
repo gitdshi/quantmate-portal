@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { navigateToPage, waitForPageLoad } from './helpers'
+import { navigateToPage } from './helpers'
 
 test.describe('Team Space', () => {
   test.beforeEach(async ({ page }) => {
@@ -8,52 +8,55 @@ test.describe('Team Space', () => {
 
   test('should display team space page', async ({ page }) => {
     await expect(page.getByTestId('team-space-page')).toBeVisible({ timeout: 15000 })
+    await expect(page.getByRole('heading', { name: /team space/i })).toBeVisible({ timeout: 15000 })
   })
 
-  test('should have new workspace button', async ({ page }) => {
-    await expect(page.locator('button').filter({ hasText: /new workspace/i }).first()).toBeVisible({ timeout: 15000 })
+  test('should default to the workspaces tab', async ({ page }) => {
+    await expect(page.getByRole('button', { name: /^workspaces$/i })).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('h2').filter({ hasText: /^workspaces$/i }).first()).toBeVisible({ timeout: 15000 })
   })
 
-  test('should have share strategy button', async ({ page }) => {
-    await expect(page.locator('button').filter({ hasText: /share/i }).first()).toBeVisible({ timeout: 15000 })
+  test('should switch between workspaces and sharing tabs', async ({ page }) => {
+    await page.getByRole('button', { name: /^strategy sharing$/i }).click()
+
+    await expect(page.locator('h2').filter({ hasText: /shared with me/i }).first()).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('h2').filter({ hasText: /sent shares/i }).first()).toBeVisible({ timeout: 15000 })
+    await expect(page).toHaveURL(/tab=sharing/)
+
+    await page.getByRole('button', { name: /^workspaces$/i }).click()
+    await expect(page.locator('h2').filter({ hasText: /^workspaces$/i }).first()).toBeVisible({ timeout: 15000 })
   })
 
-  test('should display workspaces section', async ({ page }) => {
-    await expect(page.locator('h2').filter({ hasText: /workspaces/i }).first()).toBeVisible({ timeout: 15000 })
-  })
+  test('should respect sharing tab in the URL', async ({ page }) => {
+    await navigateToPage(page, '/team-space?tab=sharing')
 
-  test('should display shared with me section', async ({ page }) => {
-    await expect(page.locator('h2').filter({ hasText: /shared with me/i })).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('h2').filter({ hasText: /shared with me/i }).first()).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('h2').filter({ hasText: /sent shares/i }).first()).toBeVisible({ timeout: 15000 })
   })
 
   test('should open create workspace modal', async ({ page }) => {
-    test.slow() // Modal interaction needs extra time
-    const newBtn = page.locator('button').filter({ hasText: /new workspace/i }).first()
-    await expect(newBtn).toBeVisible({ timeout: 15000 })
-    await newBtn.click()
-    await page.waitForTimeout(500)
-    // Modal should appear with name and description fields
-    const nameField = page.getByLabel(/name/i).first()
-      .or(page.getByPlaceholder(/name/i).first())
-    await expect(nameField).toBeVisible({ timeout: 5000 })
+    await page.getByRole('button', { name: /create workspace/i }).click()
+
+    await expect(page.getByRole('heading', { name: /create workspace/i })).toBeVisible({ timeout: 15000 })
+    await expect(page.getByPlaceholder(/quant research team/i)).toBeVisible({ timeout: 15000 })
+    await expect(page.getByPlaceholder(/describe this workspace/i)).toBeVisible({ timeout: 15000 })
   })
 
   test('should open share strategy modal', async ({ page }) => {
-    test.slow() // Modal interaction needs extra time
-    const shareBtn = page.locator('button').filter({ hasText: /share/i }).first()
-    await expect(shareBtn).toBeVisible({ timeout: 15000 })
-    await shareBtn.click()
-    await page.waitForTimeout(500)
-    // Share modal should show strategy ID and permission fields
-    const shareContent = page.getByText(/strategy|permission|share/i).first()
-    await expect(shareContent).toBeVisible({ timeout: 5000 }).catch(() => {})
+    await navigateToPage(page, '/team-space?tab=sharing')
+
+    await page.getByRole('button', { name: /share strategy/i }).first().click()
+
+    await expect(page.getByRole('heading', { name: /share strategy/i })).toBeVisible({ timeout: 15000 })
+    await expect(page.getByText(/share target/i).first()).toBeVisible({ timeout: 15000 })
+    await expect(page.getByText(/permission/i).first()).toBeVisible({ timeout: 15000 })
   })
 
-  test('should show empty states', async ({ page }) => {
-    // Check for empty workspace list or shared items
-    const emptyState = page.getByText(/no workspaces|no shared/i).first()
-    await expect(emptyState).toBeVisible({ timeout: 15000 }).catch(() => {
-      // Not empty means there's data - also OK
-    })
+  test('should expose top-level actions in both modes', async ({ page }) => {
+    await expect(page.getByRole('button', { name: /create workspace/i })).toBeVisible({ timeout: 15000 })
+    await expect(page.getByRole('button', { name: /share strategy/i }).first()).toBeVisible({ timeout: 15000 })
+
+    await page.getByRole('button', { name: /^strategy sharing$/i }).click()
+    await expect(page.getByRole('button', { name: /share strategy/i }).first()).toBeVisible({ timeout: 15000 })
   })
 })

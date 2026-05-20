@@ -6,19 +6,18 @@ import {
     Download,
     Loader2,
     Play,
-    Square,
-    TrendingUp,
+    Square
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import Badge, { type BadgeVariant } from '../components/ui/Badge'
 import Pagination from '../components/Pagination'
+import Badge, { type BadgeVariant } from '../components/ui/Badge'
 import DataTable, { type Column } from '../components/ui/DataTable'
 import Modal from '../components/ui/Modal'
 import TabPanel from '../components/ui/TabPanel'
-import { usePagination } from '../hooks/usePagination'
 import { showToast } from '../components/ui/toast-service'
+import { usePagination } from '../hooks/usePagination'
 import { rdagentAPI } from '../lib/api'
 
 interface MiningRun {

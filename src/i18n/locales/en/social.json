@@ -43,14 +43,26 @@
   "teamSpace": {
     "title": "Team Space",
     "subtitle": "Collaborative workspaces, member management, and strategy sharing",
+    "tabs": {
+      "workspaces": "Workspaces",
+      "sharing": "Strategy Sharing"
+    },
+    "sections": {
+      "workspaces": "Workspaces",
+      "workspacesHint": "Create a team workspace, invite members, and manage shared execution context."
+    },
     "createWorkspace": "Create Workspace",
+    "shareStrategy": "Share Strategy",
     "noWorkspaces": "No workspace yet. Create one from the top-right corner.",
+    "noDescription": "No workspace description yet.",
     "members": "members",
+    "maxMembers": "max members",
     "strategies": "strategies",
     "createdAt": "Created",
     "backToList": "Back to workspace list",
     "memberManagement": "Member Management",
     "inviteMember": "Invite Member",
+    "removeMember": "Remove",
     "emptyMembers": "No members yet",
     "columns": {
       "member": "Member",
@@ -66,6 +78,11 @@
       "member": "Member",
       "viewer": "Viewer"
     },
+    "permissions": {
+      "view": "View",
+      "edit": "Edit",
+      "execute": "Execute"
+    },
     "modal": {
       "title": "Create Workspace",
       "cancel": "Cancel",
@@ -74,6 +91,60 @@
       "description": "Description",
       "namePlaceholder": "e.g. Quant Research Team",
       "descriptionPlaceholder": "Describe this workspace..."
+    },
+    "inviteModal": {
+      "title": "Invite Member",
+      "submit": "Invite",
+      "userId": "User ID",
+      "userIdPlaceholder": "Enter a user ID",
+      "role": "Role"
+    },
+    "shareModal": {
+      "title": "Share Strategy",
+      "submit": "Share",
+      "strategy": "Strategy",
+      "strategyPlaceholder": "Select a strategy",
+      "targetType": "Share Target",
+      "targetUser": "User",
+      "targetWorkspace": "Workspace",
+      "userId": "Recipient User ID",
+      "userIdPlaceholder": "Enter a user ID",
+      "workspace": "Workspace",
+      "workspacePlaceholder": "Select a workspace",
+      "permission": "Permission"
+    },
+    "sharing": {
+      "receivedTitle": "Shared with Me",
+      "receivedHint": "Strategies shared directly to you or to your workspaces.",
+      "sentTitle": "Sent Shares",
+      "sentHint": "Review and revoke strategies you shared with teammates or workspaces.",
+      "emptyReceived": "No strategies have been shared with you yet.",
+      "emptySent": "You have not shared any strategies yet.",
+      "revoke": "Revoke",
+      "columns": {
+        "strategy": "Strategy",
+        "sharedBy": "Shared By",
+        "target": "Target",
+        "permission": "Permission",
+        "createdAt": "Created At"
+      },
+      "metrics": {
+        "workspaces": "Workspaces",
+        "received": "Received Shares",
+        "sent": "Sent Shares"
+      }
+    },
+    "toasts": {
+      "workspaceCreated": "Workspace created",
+      "workspaceCreateFailed": "Failed to create workspace",
+      "memberInvited": "Member invited",
+      "memberInviteFailed": "Failed to invite member",
+      "memberRemoved": "Member removed",
+      "memberRemoveFailed": "Failed to remove member",
+      "strategyShared": "Strategy shared",
+      "strategyShareFailed": "Failed to share strategy",
+      "shareRevoked": "Share revoked",
+      "shareRevokeFailed": "Failed to revoke share"
     }
   },
   "ai": {

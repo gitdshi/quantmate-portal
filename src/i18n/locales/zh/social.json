@@ -43,14 +43,26 @@
   "teamSpace": {
     "title": "团队空间",
     "subtitle": "协作空间、成员管理与策略共享",
+    "tabs": {
+      "workspaces": "工作空间",
+      "sharing": "策略分享"
+    },
+    "sections": {
+      "workspaces": "工作空间",
+      "workspacesHint": "创建团队空间、邀请成员，并统一管理策略协作上下文。"
+    },
     "createWorkspace": "创建空间",
+    "shareStrategy": "分享策略",
     "noWorkspaces": "暂无工作空间，点击右上角创建",
+    "noDescription": "暂无工作空间描述。",
     "members": "成员",
+    "maxMembers": "成员上限",
     "strategies": "策略",
     "createdAt": "创建于",
     "backToList": "返回工作空间列表",
     "memberManagement": "成员管理",
     "inviteMember": "邀请成员",
+    "removeMember": "移除",
     "emptyMembers": "暂无成员",
     "columns": {
       "member": "成员",
@@ -66,6 +78,11 @@
       "member": "成员",
       "viewer": "观察者"
     },
+    "permissions": {
+      "view": "查看",
+      "edit": "编辑",
+      "execute": "执行"
+    },
     "modal": {
       "title": "创建工作空间",
       "cancel": "取消",
@@ -74,6 +91,60 @@
       "description": "描述",
       "namePlaceholder": "例如：量化研究团队",
       "descriptionPlaceholder": "工作空间描述..."
+    },
+    "inviteModal": {
+      "title": "邀请成员",
+      "submit": "邀请",
+      "userId": "用户 ID",
+      "userIdPlaceholder": "输入用户 ID",
+      "role": "角色"
+    },
+    "shareModal": {
+      "title": "分享策略",
+      "submit": "分享",
+      "strategy": "策略",
+      "strategyPlaceholder": "选择策略",
+      "targetType": "分享目标",
+      "targetUser": "用户",
+      "targetWorkspace": "工作空间",
+      "userId": "接收方用户 ID",
+      "userIdPlaceholder": "输入用户 ID",
+      "workspace": "工作空间",
+      "workspacePlaceholder": "选择工作空间",
+      "permission": "权限"
+    },
+    "sharing": {
+      "receivedTitle": "收到的分享",
+      "receivedHint": "展示直接分享给你或分享给你所在工作空间的策略。",
+      "sentTitle": "已发起分享",
+      "sentHint": "查看并撤销你已分享给成员或工作空间的策略。",
+      "emptyReceived": "暂未收到任何策略分享。",
+      "emptySent": "你还没有分享任何策略。",
+      "revoke": "撤销",
+      "columns": {
+        "strategy": "策略",
+        "sharedBy": "分享人",
+        "target": "目标",
+        "permission": "权限",
+        "createdAt": "创建时间"
+      },
+      "metrics": {
+        "workspaces": "工作空间",
+        "received": "收到分享",
+        "sent": "发起分享"
+      }
+    },
+    "toasts": {
+      "workspaceCreated": "工作空间已创建",
+      "workspaceCreateFailed": "创建工作空间失败",
+      "memberInvited": "成员邀请已发送",
+      "memberInviteFailed": "邀请成员失败",
+      "memberRemoved": "成员已移除",
+      "memberRemoveFailed": "移除成员失败",
+      "strategyShared": "策略已分享",
+      "strategyShareFailed": "分享策略失败",
+      "shareRevoked": "分享已撤销",
+      "shareRevokeFailed": "撤销分享失败"
     }
   },
   "ai": {
