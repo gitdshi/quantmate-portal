@@ -59,7 +59,7 @@ export default function Register() {
       <div className="w-full max-w-md">
         <div className="bg-card p-8 rounded-lg shadow-lg border border-border">
           <div className="flex items-center justify-center mb-8">
-            <img src="/logo.svg" alt={t('brandName')} className="h-10 w-auto" />
+            <img src="/logo.svg?v=20260520-2" alt={t('brandName')} className="h-10 w-auto" />
           </div>
 
           <h1 className="text-2xl font-bold text-center mb-2">{t('createAccount')}</h1>

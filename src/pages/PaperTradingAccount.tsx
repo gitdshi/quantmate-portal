@@ -19,6 +19,7 @@ import DataTable, { type Column } from '../components/ui/DataTable'
 import FilterBar from '../components/ui/FilterBar'
 import Modal from '../components/ui/Modal'
 import StatCard from '../components/ui/StatCard'
+import TabPanel from '../components/ui/TabPanel'
 import { showToast } from '../components/ui/toast-service'
 import { usePagination } from '../hooks/usePagination'
 import { compositeStrategiesAPI, paperAccountAPI, paperTradingAPI, strategiesAPI } from '../lib/api'
@@ -143,6 +144,7 @@ export default function PaperTradingAccount() {
   const [orderStatus, setOrderStatus] = useState('')
   const [signalSearch, setSignalSearch] = useState('')
   const [signalStatus, setSignalStatus] = useState('')
+  const [activeTab, setActiveTab] = useState('detail')
 
   const { data: account, isLoading: accountLoading } = useQuery<PaperAccount>({
     queryKey: ['paper-account', accountId],
@@ -567,11 +569,17 @@ export default function PaperTradingAccount() {
       { value: 'expired', label: t('paper.filters.expired', 'Expired') },
     ],
   }
+  const tabs = [
+    { key: 'detail', label: t('paper.tabs.detail', 'Details') },
+    { key: 'deployments', label: t('paper.detail.deployments', 'Deployed Strategies') },
+    { key: 'positions', label: t('paper.detail.positions', 'Positions') },
+    { key: 'orders', label: t('paper.detail.orders', 'Order History') },
+    { key: 'signals', label: t('paper.detail.signals', 'Pending Signals') },
+  ]
 
   return (
     <div className="space-y-6" data-testid="paper-account-detail">
-      <div className="rounded-[28px] border border-border bg-[radial-gradient(circle_at_top_left,_rgba(34,197,94,0.12),_transparent_35%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(249,250,251,0.94))] p-6 shadow-sm">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <button type="button" onClick={() => navigate('/paper-trading')} className="mb-2 inline-flex items-center gap-1 text-sm text-primary hover:opacity-80">
             <ArrowLeft size={14} />
@@ -594,7 +602,6 @@ export default function PaperTradingAccount() {
             {t('paper.newSimulation', 'New Paper Deployment')}
           </button>
         </div>
-        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-6">
@@ -606,154 +613,166 @@ export default function PaperTradingAccount() {
         <StatCard label={t('paper.stats.pendingSignals', 'Pending Signals')} value={pendingSignals} />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(320px,0.8fr)]">
-        <section className={sectionShellClass}>
-          <div className="mb-4 flex items-center gap-2">
-            <TrendingUp size={18} className="text-muted-foreground" />
+      <TabPanel tabs={tabs} activeTab={activeTab} onChange={setActiveTab}>
+        {activeTab === 'detail' && (
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(320px,0.8fr)]">
+            <section className={sectionShellClass}>
+              <div className="mb-4 flex items-center gap-2">
+                <TrendingUp size={18} className="text-muted-foreground" />
+                <div>
+                  <h2 className="font-semibold text-card-foreground">{t('paper.detail.performance', 'Equity Curve')}</h2>
+                  <p className="text-sm text-muted-foreground">{t('paper.detail.performanceSubtitle', 'Track the account equity path and summary analytics.')}</p>
+                </div>
+              </div>
+              {curveDates.length > 0 ? (
+                <LineChart xData={curveDates} series={[{ name: t('paper.detail.equitySeries', 'Equity'), data: curveValues }]} height={280} />
+              ) : (
+                <p className="py-8 text-center text-sm text-muted-foreground">{t('paper.empty.performance', 'No performance data')}</p>
+              )}
+            </section>
+
+            <section className={sectionShellClass}>
+              <h2 className="font-semibold text-card-foreground">{t('paper.detail.accountOverview', 'Account Overview')}</h2>
+              <div className="mt-4 space-y-3 text-sm">
+                <div className="flex items-center justify-between gap-4"><span className="text-muted-foreground">{t('paper.detail.createdAt', 'Created At')}</span><span>{formatDateTime(account.created_at)}</span></div>
+                <div className="flex items-center justify-between gap-4"><span className="text-muted-foreground">{t('paper.detail.updatedAt', 'Updated At')}</span><span>{formatDateTime(account.updated_at)}</span></div>
+                <div className="flex items-center justify-between gap-4"><span className="text-muted-foreground">{t('paper.detail.totalTrades', 'Total Trades')}</span><span>{analytics?.total_trades ?? 0}</span></div>
+                <div className="flex items-center justify-between gap-4"><span className="text-muted-foreground">{t('paper.detail.winRate', 'Win Rate')}</span><span>{formatPercent(analytics?.win_rate)}</span></div>
+                <div className="flex items-center justify-between gap-4"><span className="text-muted-foreground">{t('paper.detail.sharpe', 'Sharpe')}</span><span>{analytics?.sharpe_ratio == null ? '-' : analytics.sharpe_ratio.toFixed(2)}</span></div>
+                <div className="flex items-center justify-between gap-4"><span className="text-muted-foreground">{t('paper.detail.profitFactor', 'Profit Factor')}</span><span>{analytics?.profit_factor == null ? '-' : analytics.profit_factor.toFixed(2)}</span></div>
+                <div className="flex items-center justify-between gap-4"><span className="text-muted-foreground">{t('paper.detail.maxDrawdown', 'Max Drawdown')}</span><span>{formatPercent(analytics?.max_drawdown_pct)}</span></div>
+                <div className="flex items-center justify-between gap-4"><span className="text-muted-foreground">{t('paper.columns.pnlPct', 'Return')}</span><span>{formatPercent(account.return_pct)}</span></div>
+              </div>
+            </section>
+          </div>
+        )}
+
+        {activeTab === 'deployments' && (
+          <section className={`${sectionShellClass} space-y-4`}>
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-semibold text-foreground">{t('paper.detail.deployments', 'Deployed Strategies')}</h2>
+                  <Badge variant="muted">{filteredDeployments.length}</Badge>
+                </div>
+                <p className="text-sm text-muted-foreground">{t('paper.detail.deploymentsSubtitle', 'Track strategy runtime state and narrow the list by status or keyword.')}</p>
+              </div>
+            </div>
+            <FilterBar
+              searchValue={deploymentSearch}
+              onSearchChange={setDeploymentSearch}
+              searchPlaceholder={t('paper.detail.searchDeployments', 'Search strategy or symbol')}
+              filters={[
+                {
+                  key: 'deployment-status',
+                  value: deploymentStatus,
+                  options: filterOptions.deploymentStatus,
+                  onChange: setDeploymentStatus,
+                },
+              ]}
+            />
+            <DataTable columns={deploymentColumns} data={deploymentPagination.paginatedItems} emptyText={t('paper.empty.deployments', 'No paper deployments')} />
+            <Pagination
+              page={deploymentPagination.page}
+              pageSize={deploymentPagination.pageSize}
+              total={deploymentPagination.total}
+              onPageChange={deploymentPagination.onPageChange}
+              onPageSizeChange={deploymentPagination.onPageSizeChange}
+            />
+          </section>
+        )}
+
+        {activeTab === 'positions' && (
+          <section className={`${sectionShellClass} space-y-4`}>
             <div>
-              <h2 className="font-semibold text-card-foreground">{t('paper.detail.performance', 'Equity Curve')}</h2>
-              <p className="text-sm text-muted-foreground">{t('paper.detail.performanceSubtitle', 'Track the account equity path and summary analytics.')}</p>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-semibold text-foreground">{t('paper.detail.positions', 'Positions')}</h2>
+                <Badge variant="muted">{filteredPositions.length}</Badge>
+              </div>
+              <p className="text-sm text-muted-foreground">{t('paper.detail.positionsSubtitle', 'Search held symbols and scan unrealized P&L across the account.')}</p>
             </div>
-          </div>
-          {curveDates.length > 0 ? (
-            <LineChart xData={curveDates} series={[{ name: t('paper.detail.equitySeries', 'Equity'), data: curveValues }]} height={280} />
-          ) : (
-            <p className="py-8 text-center text-sm text-muted-foreground">{t('paper.empty.performance', 'No performance data')}</p>
-          )}
-        </section>
+            <FilterBar
+              searchValue={positionSearch}
+              onSearchChange={setPositionSearch}
+              searchPlaceholder={t('paper.detail.searchPositions', 'Search held symbol')}
+            />
+            <DataTable columns={positionColumns} data={positionPagination.paginatedItems} emptyText={t('paper.empty.positions', 'No paper positions')} />
+            <Pagination
+              page={positionPagination.page}
+              pageSize={positionPagination.pageSize}
+              total={positionPagination.total}
+              onPageChange={positionPagination.onPageChange}
+              onPageSizeChange={positionPagination.onPageSizeChange}
+            />
+          </section>
+        )}
 
-        <section className={sectionShellClass}>
-          <h2 className="font-semibold text-card-foreground">{t('paper.detail.accountOverview', 'Account Overview')}</h2>
-          <div className="mt-4 space-y-3 text-sm">
-            <div className="flex items-center justify-between gap-4"><span className="text-muted-foreground">{t('paper.detail.createdAt', 'Created At')}</span><span>{formatDateTime(account.created_at)}</span></div>
-            <div className="flex items-center justify-between gap-4"><span className="text-muted-foreground">{t('paper.detail.updatedAt', 'Updated At')}</span><span>{formatDateTime(account.updated_at)}</span></div>
-            <div className="flex items-center justify-between gap-4"><span className="text-muted-foreground">{t('paper.detail.totalTrades', 'Total Trades')}</span><span>{analytics?.total_trades ?? 0}</span></div>
-            <div className="flex items-center justify-between gap-4"><span className="text-muted-foreground">{t('paper.detail.winRate', 'Win Rate')}</span><span>{formatPercent(analytics?.win_rate)}</span></div>
-            <div className="flex items-center justify-between gap-4"><span className="text-muted-foreground">{t('paper.detail.sharpe', 'Sharpe')}</span><span>{analytics?.sharpe_ratio == null ? '-' : analytics.sharpe_ratio.toFixed(2)}</span></div>
-            <div className="flex items-center justify-between gap-4"><span className="text-muted-foreground">{t('paper.detail.profitFactor', 'Profit Factor')}</span><span>{analytics?.profit_factor == null ? '-' : analytics.profit_factor.toFixed(2)}</span></div>
-            <div className="flex items-center justify-between gap-4"><span className="text-muted-foreground">{t('paper.detail.maxDrawdown', 'Max Drawdown')}</span><span>{formatPercent(analytics?.max_drawdown_pct)}</span></div>
-            <div className="flex items-center justify-between gap-4"><span className="text-muted-foreground">{t('paper.columns.pnlPct', 'Return')}</span><span>{formatPercent(account.return_pct)}</span></div>
-          </div>
-        </section>
-      </div>
-
-      <section className={`${sectionShellClass} space-y-4`}>
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-semibold text-foreground">{t('paper.detail.deployments', 'Deployed Strategies')}</h2>
-              <Badge variant="muted">{filteredDeployments.length}</Badge>
+        {activeTab === 'orders' && (
+          <section className={`${sectionShellClass} space-y-4`}>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-semibold text-foreground">{t('paper.detail.orders', 'Order History')}</h2>
+                <Badge variant="muted">{filteredOrders.length}</Badge>
+              </div>
+              <p className="text-sm text-muted-foreground">{t('paper.detail.ordersSubtitle', 'Filter execution records by symbol, side, or lifecycle status.')}</p>
             </div>
-            <p className="text-sm text-muted-foreground">{t('paper.detail.deploymentsSubtitle', 'Track strategy runtime state and narrow the list by status or keyword.')}</p>
-          </div>
-        </div>
-        <FilterBar
-          searchValue={deploymentSearch}
-          onSearchChange={setDeploymentSearch}
-          searchPlaceholder={t('paper.detail.searchDeployments', 'Search strategy or symbol')}
-          filters={[
-            {
-              key: 'deployment-status',
-              value: deploymentStatus,
-              options: filterOptions.deploymentStatus,
-              onChange: setDeploymentStatus,
-            },
-          ]}
-        />
-        <DataTable columns={deploymentColumns} data={deploymentPagination.paginatedItems} emptyText={t('paper.empty.deployments', 'No paper deployments')} />
-        <Pagination
-          page={deploymentPagination.page}
-          pageSize={deploymentPagination.pageSize}
-          total={deploymentPagination.total}
-          onPageChange={deploymentPagination.onPageChange}
-          onPageSizeChange={deploymentPagination.onPageSizeChange}
-        />
-      </section>
+            <FilterBar
+              searchValue={orderSearch}
+              onSearchChange={setOrderSearch}
+              searchPlaceholder={t('paper.detail.searchOrders', 'Search symbol or order type')}
+              filters={[
+                {
+                  key: 'order-status',
+                  value: orderStatus,
+                  options: filterOptions.orderStatus,
+                  onChange: setOrderStatus,
+                },
+              ]}
+            />
+            <DataTable columns={orderColumns} data={orderPagination.paginatedItems} emptyText={t('paper.empty.orders', 'No paper orders')} />
+            <Pagination
+              page={orderPagination.page}
+              pageSize={orderPagination.pageSize}
+              total={orderPagination.total}
+              onPageChange={orderPagination.onPageChange}
+              onPageSizeChange={orderPagination.onPageSizeChange}
+            />
+          </section>
+        )}
 
-      <section className={`${sectionShellClass} space-y-4`}>
-        <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg font-semibold text-foreground">{t('paper.detail.positions', 'Positions')}</h2>
-            <Badge variant="muted">{filteredPositions.length}</Badge>
-          </div>
-          <p className="text-sm text-muted-foreground">{t('paper.detail.positionsSubtitle', 'Search held symbols and scan unrealized P&L across the account.')}</p>
-        </div>
-        <FilterBar
-          searchValue={positionSearch}
-          onSearchChange={setPositionSearch}
-          searchPlaceholder={t('paper.detail.searchPositions', 'Search held symbol')}
-        />
-        <DataTable columns={positionColumns} data={positionPagination.paginatedItems} emptyText={t('paper.empty.positions', 'No paper positions')} />
-        <Pagination
-          page={positionPagination.page}
-          pageSize={positionPagination.pageSize}
-          total={positionPagination.total}
-          onPageChange={positionPagination.onPageChange}
-          onPageSizeChange={positionPagination.onPageSizeChange}
-        />
-      </section>
-
-      <section className={`${sectionShellClass} space-y-4`}>
-        <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg font-semibold text-foreground">{t('paper.detail.orders', 'Order History')}</h2>
-            <Badge variant="muted">{filteredOrders.length}</Badge>
-          </div>
-          <p className="text-sm text-muted-foreground">{t('paper.detail.ordersSubtitle', 'Filter execution records by symbol, side, or lifecycle status.')}</p>
-        </div>
-        <FilterBar
-          searchValue={orderSearch}
-          onSearchChange={setOrderSearch}
-          searchPlaceholder={t('paper.detail.searchOrders', 'Search symbol or order type')}
-          filters={[
-            {
-              key: 'order-status',
-              value: orderStatus,
-              options: filterOptions.orderStatus,
-              onChange: setOrderStatus,
-            },
-          ]}
-        />
-        <DataTable columns={orderColumns} data={orderPagination.paginatedItems} emptyText={t('paper.empty.orders', 'No paper orders')} />
-        <Pagination
-          page={orderPagination.page}
-          pageSize={orderPagination.pageSize}
-          total={orderPagination.total}
-          onPageChange={orderPagination.onPageChange}
-          onPageSizeChange={orderPagination.onPageSizeChange}
-        />
-      </section>
-
-      <section className={`${sectionShellClass} space-y-4`}>
-        <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg font-semibold text-foreground">{t('paper.detail.signals', 'Pending Signals')}</h2>
-            <Badge variant="muted">{filteredSignals.length}</Badge>
-          </div>
-          <p className="text-sm text-muted-foreground">{t('paper.detail.signalsSubtitle', 'Review confirmation queue and narrow by symbol or signal status.')}</p>
-        </div>
-        <FilterBar
-          searchValue={signalSearch}
-          onSearchChange={setSignalSearch}
-          searchPlaceholder={t('paper.detail.searchSignals', 'Search symbol or reason')}
-          filters={[
-            {
-              key: 'signal-status',
-              value: signalStatus,
-              options: filterOptions.signalStatus,
-              onChange: setSignalStatus,
-            },
-          ]}
-        />
-        <DataTable columns={signalColumns} data={signalPagination.paginatedItems} emptyText={t('paper.signals.noSignals', 'No signals')} />
-        <Pagination
-          page={signalPagination.page}
-          pageSize={signalPagination.pageSize}
-          total={signalPagination.total}
-          onPageChange={signalPagination.onPageChange}
-          onPageSizeChange={signalPagination.onPageSizeChange}
-        />
-      </section>
+        {activeTab === 'signals' && (
+          <section className={`${sectionShellClass} space-y-4`}>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-semibold text-foreground">{t('paper.detail.signals', 'Pending Signals')}</h2>
+                <Badge variant="muted">{filteredSignals.length}</Badge>
+              </div>
+              <p className="text-sm text-muted-foreground">{t('paper.detail.signalsSubtitle', 'Review confirmation queue and narrow by symbol or signal status.')}</p>
+            </div>
+            <FilterBar
+              searchValue={signalSearch}
+              onSearchChange={setSignalSearch}
+              searchPlaceholder={t('paper.detail.searchSignals', 'Search symbol or reason')}
+              filters={[
+                {
+                  key: 'signal-status',
+                  value: signalStatus,
+                  options: filterOptions.signalStatus,
+                  onChange: setSignalStatus,
+                },
+              ]}
+            />
+            <DataTable columns={signalColumns} data={signalPagination.paginatedItems} emptyText={t('paper.signals.noSignals', 'No signals')} />
+            <Pagination
+              page={signalPagination.page}
+              pageSize={signalPagination.pageSize}
+              total={signalPagination.total}
+              onPageChange={signalPagination.onPageChange}
+              onPageSizeChange={signalPagination.onPageSizeChange}
+            />
+          </section>
+        )}
+      </TabPanel>
 
       <Modal
         open={orderModal}

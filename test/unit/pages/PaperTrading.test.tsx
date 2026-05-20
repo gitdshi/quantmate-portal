@@ -138,10 +138,15 @@ describe('PaperTrading Pages', () => {
     )
 
     expect(await screen.findByText('Test Account')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Details' })).toBeInTheDocument()
     expect(screen.getByText('Deployed Strategies')).toBeInTheDocument()
-    expect(screen.getByText('Order History')).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Pending Signals' })).toBeInTheDocument()
     expect(screen.getByTestId('line-chart')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Order History' }))
+    expect(await screen.findByText('Filter execution records by symbol, side, or lifecycle status.')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pending Signals' }))
+    expect(screen.getByRole('heading', { name: 'Pending Signals' })).toBeInTheDocument()
 
     await waitFor(() => {
       expect(paperTradingAPI.listDeployments).toHaveBeenCalledWith({ paper_account_id: 1 })
@@ -160,6 +165,7 @@ describe('PaperTrading Pages', () => {
       </Routes>
     )
 
+    fireEvent.click(await screen.findByRole('button', { name: 'Pending Signals' }))
     await screen.findByText('MA crossover')
     fireEvent.click(screen.getByRole('button', { name: /confirm/i }))
 
@@ -190,7 +196,9 @@ describe('PaperTrading Pages', () => {
       </Routes>
     )
 
-    const deploymentsHeading = await screen.findByText('Deployed Strategies')
+    fireEvent.click(await screen.findByRole('button', { name: 'Deployed Strategies' }))
+
+    const deploymentsHeading = await screen.findByRole('heading', { name: 'Deployed Strategies' })
     const deploymentsSection = deploymentsHeading.closest('section') as HTMLElement
 
     expect(within(deploymentsSection).queryByText('Strategy Six')).not.toBeInTheDocument()

@@ -1,4 +1,5 @@
 import { expect, type Page } from '@playwright/test'
+import { installMockAuthMe, seedMockAuthState } from './mock-session'
 
 /**
  * Wait for the page to finish loading.
@@ -24,6 +25,14 @@ export async function waitForPageLoad(page: Page, timeout = 60000) {
  * Handles both sidebar navigation and direct URL.
  */
 export async function navigateToPage(page: Page, path: string) {
+  await installMockAuthMe(page)
+
+  await page.goto('/login')
+  const hasAccessToken = await page.evaluate(() => Boolean(localStorage.getItem('access_token')))
+  if (!hasAccessToken) {
+    await seedMockAuthState(page)
+  }
+
   await page.goto(path)
   const escapedPath = path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   await expect(page).toHaveURL(new RegExp(escapedPath))

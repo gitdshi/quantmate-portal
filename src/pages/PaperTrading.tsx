@@ -151,8 +151,7 @@ export default function PaperTrading() {
 
   return (
     <div className="space-y-6" data-testid="paper-trading-overview">
-      <div className="rounded-[28px] border border-border bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.12),_transparent_35%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(248,250,252,0.94))] p-6 shadow-sm">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">{t('paper.title')}</h1>
           <p className="text-sm text-muted-foreground">{t('paper.overview.subtitle', 'Start from a total overview, then drill into a paper account for strategies, positions, and orders.')}</p>
@@ -165,7 +164,6 @@ export default function PaperTrading() {
           <Plus size={16} />
           {t('paper.newAccount', 'New Account')}
         </button>
-        </div>
       </div>
 
       <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">

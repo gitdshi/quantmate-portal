@@ -19,9 +19,9 @@
   <circle cx="180" cy="170" r="12" fill="white"/>
   <circle cx="220" cy="190" r="12" fill="#fbbf24"/>
   <circle cx="290" cy="110" r="12" fill="#34d399"/>
-  <text x="450" y="180" font-family="Inter, -apple-system, sans-serif" font-size="80" font-weight="700" fill="white">QuantMate</text>
-  <text x="450" y="242" font-family="Inter, -apple-system, sans-serif" font-size="28" font-weight="400" fill="#bfdbfe">Intelligent Quantitative Trading</text>
-  <text x="450" y="280" font-family="Inter, -apple-system, sans-serif" font-size="28" font-weight="400" fill="#bfdbfe">Professional Strategy Analysis</text>
+  <text x="450" y="170" font-family="Inter, -apple-system, sans-serif" font-size="98" font-weight="700" fill="white">QuantMate</text>
+  <text x="450" y="246" font-family="Inter, -apple-system, sans-serif" font-size="36" font-weight="400" fill="#bfdbfe">Intelligent Quantitative Trading</text>
+  <text x="450" y="292" font-family="Inter, -apple-system, sans-serif" font-size="36" font-weight="400" fill="#bfdbfe">Professional Strategy Analysis</text>
   <circle cx="1050" cy="80" r="8" fill="white" opacity="0.3"/>
   <circle cx="1070" cy="120" r="12" fill="white" opacity="0.2"/>
   <circle cx="1090" cy="60" r="6" fill="white" opacity="0.4"/>

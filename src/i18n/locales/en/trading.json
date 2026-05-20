@@ -92,6 +92,7 @@
     "title": "Paper Trading",
     "subtitle": "Strategy deployment and trading in simulated environment",
     "tabs": {
+      "detail": "Details",
       "accounts": "Accounts",
       "deployments": "Deployments",
       "orders": "Orders",

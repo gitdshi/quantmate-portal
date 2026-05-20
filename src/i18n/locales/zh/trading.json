@@ -92,6 +92,7 @@
     "title": "模拟交易",
     "subtitle": "模拟环境中的策略部署和交易",
     "tabs": {
+      "detail": "详情",
       "accounts": "账户",
       "deployments": "策略部署",
       "orders": "委托订单",
