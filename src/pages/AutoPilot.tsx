@@ -13,8 +13,11 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import Badge, { type BadgeVariant } from '../components/ui/Badge'
+import Pagination from '../components/Pagination'
 import DataTable, { type Column } from '../components/ui/DataTable'
+import Modal from '../components/ui/Modal'
 import TabPanel from '../components/ui/TabPanel'
+import { usePagination } from '../hooks/usePagination'
 import { showToast } from '../components/ui/toast-service'
 import { rdagentAPI } from '../lib/api'
 
@@ -103,12 +106,13 @@ export default function AutoPilot() {
 
   const [activeTab, setActiveTab] = useState('runs')
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null)
+  const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [scenario, setScenario] = useState('fin_factor')
   const [maxIterations, setMaxIterations] = useState(10)
   const [llmModel, setLlmModel] = useState('minimax-m2.5-free')
   const [universe, setUniverse] = useState('csi300')
   const [{ startDate, endDate }, setDateRange] = useState(getDefaultDateRange)
-  const detailSectionRef = useRef<HTMLDivElement | null>(null)
+  const detailScrollRef = useRef<HTMLDivElement | null>(null)
 
   const tabs = [
     { key: 'runs', label: t('autoPilot.tabs.runs', { ns: 'social' }), icon: <Bot className="h-4 w-4" /> },
@@ -135,30 +139,41 @@ export default function AutoPilot() {
     t(`autoPilot.status.${status}`, { ns: 'social', defaultValue: status })
 
   useEffect(() => {
-    if (!selectedRunId) {
+    if (!isDetailOpen) {
       return
     }
 
-    detailSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }, [selectedRunId])
+    detailScrollRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
+  }, [isDetailOpen, selectedRunId])
 
   const handleRunSelection = (runId: string) => {
-    if (selectedRunId === runId) {
-      detailSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      return
-    }
-
     setSelectedRunId(runId)
+    setIsDetailOpen(true)
+  }
+
+  const closeRunDetails = () => {
+    setIsDetailOpen(false)
   }
 
   const { data: runsData = [], isLoading: runsLoading } = useQuery<MiningRun[]>({
     queryKey: ['rdagent-runs'],
     queryFn: async () => {
-      const response = await rdagentAPI.listRuns({ limit: 50 })
+      const response = await rdagentAPI.listRuns({ limit: 200 })
       const payload = response.data as MiningRun[] | { items?: MiningRun[] }
       return Array.isArray(payload) ? payload : payload.items ?? []
     },
   })
+
+  const {
+    page: runsPage,
+    pageSize: runsPageSize,
+    total: runsTotal,
+    paginatedItems: paginatedRuns,
+    onPageChange: handleRunsPageChange,
+    onPageSizeChange: handleRunsPageSizeChange,
+  } = usePagination(runsData, { initialPage: 1, initialPageSize: 10 })
+
+  const selectedRun = runsData.find((run) => run.run_id === selectedRunId) ?? null
 
   const { data: iterationsData = [], isLoading: iterationsLoading } = useQuery<Iteration[]>({
     queryKey: ['rdagent-iterations', selectedRunId],
@@ -234,10 +249,10 @@ export default function AutoPilot() {
           type="button"
           className={[
             'text-xs font-mono transition-colors hover:underline',
-            selectedRunId === row.run_id ? 'text-foreground underline' : 'text-primary',
+            selectedRunId === row.run_id && isDetailOpen ? 'text-foreground underline' : 'text-primary',
           ].join(' ')}
           title={row.run_id}
-          aria-pressed={selectedRunId === row.run_id}
+          aria-pressed={selectedRunId === row.run_id && isDetailOpen}
           onClick={() => handleRunSelection(row.run_id)}
         >
           {row.run_id.slice(0, 8)}...
@@ -431,81 +446,117 @@ export default function AutoPilot() {
                   {t('loading', { ns: 'common' })}
                 </div>
               ) : (
-                <DataTable
-                  columns={runColumns}
-                  data={runsData}
-                  keyField="run_id"
-                  emptyText={t('autoPilot.runs.empty', { ns: 'social' })}
-                />
+                <div className="space-y-4 p-5">
+                  <DataTable
+                    columns={runColumns}
+                    data={paginatedRuns}
+                    keyField="run_id"
+                    emptyText={t('autoPilot.runs.empty', { ns: 'social' })}
+                  />
+                  <Pagination
+                    page={runsPage}
+                    pageSize={runsPageSize}
+                    total={runsTotal}
+                    onPageChange={handleRunsPageChange}
+                    onPageSizeChange={handleRunsPageSizeChange}
+                  />
+                </div>
               )}
             </div>
 
-            {selectedRunId ? (
-              <div ref={detailSectionRef} className="space-y-4 rounded-lg border border-border bg-card p-5">
-                <div>
-                  <h3 className="text-lg font-semibold flex items-center gap-2 text-card-foreground">
-                    <TrendingUp className="h-5 w-5 text-primary" />
-                    {t('autoPilot.detail.title', { ns: 'social', id: `${selectedRunId.slice(0, 8)}...` })}
-                  </h3>
-                  <p className="mt-1 text-xs font-mono text-muted-foreground">{selectedRunId}</p>
-                </div>
-
-                <div className="space-y-3">
-                  <h4 className="font-medium text-card-foreground">{t('autoPilot.detail.iterations', { ns: 'social' })}</h4>
-                  {iterationsLoading ? (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      {t('loading', { ns: 'common' })}
+            <Modal
+              open={isDetailOpen && !!selectedRunId}
+              onClose={closeRunDetails}
+              title={
+                selectedRunId
+                  ? t('autoPilot.detail.title', { ns: 'social', id: `${selectedRunId.slice(0, 8)}...` })
+                  : t('autoPilot.detail.iterations', { ns: 'social' })
+              }
+              size="lg"
+            >
+              {selectedRunId ? (
+                <div ref={detailScrollRef} className="space-y-4">
+                  <div className="rounded-lg border border-border bg-background/60 p-4">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <Badge variant={selectedRun ? badgeVariantForStatus(selectedRun.status) : 'muted'}>
+                        {formatStatus(selectedRun?.status ?? 'queued')}
+                      </Badge>
+                      {selectedRun && (
+                        <span className="text-sm text-muted-foreground">
+                          {selectedRun.current_iteration}/{selectedRun.total_iterations}
+                        </span>
+                      )}
                     </div>
-                  ) : iterationsData.length > 0 ? (
-                    <div className="space-y-2">
-                      {iterationsData.map((iteration) => (
-                        <div key={iteration.id} className="rounded-lg border border-border p-3 text-sm">
-                          <div className="mb-1 flex items-center gap-2">
-                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-medium">
-                              {t('autoPilot.detail.iterationLabel', { ns: 'social', number: iteration.iteration_number })}
-                            </span>
-                            <Badge variant={badgeVariantForStatus(iteration.status)}>{formatStatus(iteration.status)}</Badge>
+                    <p className="mt-3 text-xs font-mono text-muted-foreground">{selectedRunId}</p>
+                    {selectedRun && (
+                      <div className="mt-3 grid gap-3 text-sm text-muted-foreground md:grid-cols-2">
+                        <p>
+                          {t('autoPilot.runs.columns.scenario', { ns: 'social' })}: {' '}
+                          {t(`autoPilot.scenarios.${selectedRun.scenario}`, {
+                            ns: 'social',
+                            defaultValue: selectedRun.scenario,
+                          })}
+                        </p>
+                        <p>
+                          {t('autoPilot.runs.columns.created', { ns: 'social' })}: {formatDateTime(selectedRun.created_at)}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-3">
+                    <h4 className="font-medium text-card-foreground">{t('autoPilot.detail.iterations', { ns: 'social' })}</h4>
+                    {iterationsLoading ? (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        {t('loading', { ns: 'common' })}
+                      </div>
+                    ) : iterationsData.length > 0 ? (
+                      <div className="space-y-2">
+                        {iterationsData.map((iteration) => (
+                          <div key={iteration.id} className="rounded-lg border border-border p-3 text-sm">
+                            <div className="mb-1 flex items-center gap-2">
+                              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                              <span className="font-medium">
+                                {t('autoPilot.detail.iterationLabel', { ns: 'social', number: iteration.iteration_number })}
+                              </span>
+                              <Badge variant={badgeVariantForStatus(iteration.status)}>{formatStatus(iteration.status)}</Badge>
+                            </div>
+                            {iteration.hypothesis && (
+                              <p className="ml-6 mb-1 text-muted-foreground">
+                                <strong>{t('autoPilot.detail.hypothesis', { ns: 'social' })}:</strong> {iteration.hypothesis}
+                              </p>
+                            )}
+                            {iteration.feedback && (
+                              <p className="ml-6 text-xs text-muted-foreground">{iteration.feedback}</p>
+                            )}
                           </div>
-                          {iteration.hypothesis && (
-                            <p className="ml-6 mb-1 text-muted-foreground">
-                              <strong>{t('autoPilot.detail.hypothesis', { ns: 'social' })}:</strong> {iteration.hypothesis}
-                            </p>
-                          )}
-                          {iteration.feedback && (
-                            <p className="ml-6 text-xs text-muted-foreground">{iteration.feedback}</p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">{t('autoPilot.detail.noIterations', { ns: 'social' })}</p>
-                  )}
-                </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">{t('autoPilot.detail.noIterations', { ns: 'social' })}</p>
+                    )}
+                  </div>
 
-                <div className="space-y-3">
-                  <h4 className="font-medium text-card-foreground">{t('autoPilot.factors.title', { ns: 'social' })}</h4>
-                  {factorsLoading ? (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      {t('loading', { ns: 'common' })}
-                    </div>
-                  ) : (
-                    <DataTable
-                      columns={factorColumns}
-                      data={discoveredData}
-                      keyField="id"
-                      emptyText={t('autoPilot.factors.empty', { ns: 'social' })}
-                    />
-                  )}
+                  <div className="space-y-3">
+                    <h4 className="font-medium text-card-foreground">{t('autoPilot.factors.title', { ns: 'social' })}</h4>
+                    {factorsLoading ? (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        {t('loading', { ns: 'common' })}
+                      </div>
+                    ) : (
+                      <DataTable
+                        columns={factorColumns}
+                        data={discoveredData}
+                        keyField="id"
+                        emptyText={t('autoPilot.factors.empty', { ns: 'social' })}
+                      />
+                    )}
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div className="rounded-lg border border-dashed border-border bg-card/60 p-5 text-sm text-muted-foreground">
-                {t('autoPilot.detail.empty', { ns: 'social' })}
-              </div>
-            )}
+              ) : null}
+            </Modal>
           </div>
         )}
 

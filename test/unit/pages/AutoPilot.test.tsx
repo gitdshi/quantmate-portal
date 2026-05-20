@@ -67,13 +67,7 @@ describe('AutoPilot Page', () => {
     expect(await screen.findByText(/共 2 个数值字段，来源于 tushare/i)).toBeInTheDocument()
   })
 
-  it('scrolls to run details after selecting a run id', async () => {
-    const scrollIntoView = vi.fn()
-    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
-      configurable: true,
-      value: scrollIntoView,
-    })
-
+  it('opens run details in a modal after selecting a run id', async () => {
     vi.mocked(rdagentAPI.listRuns).mockResolvedValue({
       data: [
         {
@@ -94,7 +88,31 @@ describe('AutoPilot Page', () => {
     await waitFor(() => {
       expect(rdagentAPI.getIterations).toHaveBeenCalledWith('run-12345678')
       expect(rdagentAPI.getDiscoveredFactors).toHaveBeenCalledWith('run-12345678')
-      expect(scrollIntoView).toHaveBeenCalled()
+      expect(screen.getByText('run-12345678')).toBeInTheDocument()
+    })
+  })
+
+  it('paginates mining runs', async () => {
+    vi.mocked(rdagentAPI.listRuns).mockResolvedValue({
+      data: Array.from({ length: 11 }, (_, index) => ({
+        run_id: `run-${String(index).padStart(8, '0')}`,
+        scenario: 'fin_factor',
+        status: 'completed',
+        current_iteration: 1,
+        total_iterations: 5,
+        created_at: '2024-01-01T00:00:00Z',
+      })),
+    } as never)
+
+    render(<AutoPilot />)
+
+    expect(await screen.findByTitle('run-00000000')).toBeInTheDocument()
+    expect(screen.queryByTitle('run-00000010')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '2' }))
+
+    await waitFor(() => {
+      expect(screen.getByTitle('run-00000010')).toBeInTheDocument()
     })
   })
 })
