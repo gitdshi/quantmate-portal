@@ -75,6 +75,7 @@ describe('API Client - HTTP Calls', () => {
       authAPI.login('user1', 'pass123')
       expect(mockPost).toHaveBeenCalledWith('/auth/login', {
         username: 'user1',
+        account: 'user1',
         password: 'pass123',
       })
     })
@@ -520,7 +521,9 @@ describe('API Client - HTTP Calls', () => {
 
     it('listDeployments sends GET', () => {
       paperTradingAPI.listDeployments()
-      expect(mockGet).toHaveBeenCalledWith('/paper-trade/deployments')
+      expect(mockGet).toHaveBeenCalledWith('/paper-trade/deployments', {
+        params: undefined,
+      })
     })
 
     it('stopDeployment sends POST with id', () => {
@@ -551,7 +554,9 @@ describe('API Client - HTTP Calls', () => {
 
     it('getPaperPositions sends GET', () => {
       paperTradingAPI.getPaperPositions()
-      expect(mockGet).toHaveBeenCalledWith('/paper-trade/positions')
+      expect(mockGet).toHaveBeenCalledWith('/paper-trade/positions', {
+        params: undefined,
+      })
     })
 
     it('getPaperPerformance sends GET', () => {

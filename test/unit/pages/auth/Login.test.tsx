@@ -46,7 +46,7 @@ describe('Login Component', () => {
   it('renders login form', () => {
     render(<Login />)
     
-    expect(screen.getByText('Welcome to QuantMate')).toBeInTheDocument()
+    expect(screen.getByText('Welcome to QuantMate宽盟')).toBeInTheDocument()
     expect(screen.getByLabelText('Username')).toBeInTheDocument()
     expect(screen.getByLabelText('Password')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument()

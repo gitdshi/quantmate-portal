@@ -48,7 +48,7 @@ describe('AIAssistant Page', () => {
 
   it('shows initial assistant message in chat tab', async () => {
     render(<AIAssistant />)
-    expect(await screen.findByText(/QuantMate AI assistant/i)).toBeInTheDocument()
+    expect(await screen.findByText(/QuantMate宽盟 AI assistant/i)).toBeInTheDocument()
   })
 
   it('switches to codegen tab', () => {
