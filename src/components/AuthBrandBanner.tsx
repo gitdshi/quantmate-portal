@@ -5,23 +5,13 @@ interface AuthBrandBannerProps {
 }
 
 export default function AuthBrandBanner({ className = '' }: AuthBrandBannerProps) {
-  const { t } = useTranslation('auth')
+  const { t, i18n } = useTranslation('auth')
+  const currentLanguage = i18n.resolvedLanguage ?? i18n.language
+  const bannerSrc = currentLanguage.startsWith('zh') ? '/banner-zh.svg' : '/banner-en.svg'
 
   return (
-    <div className={`relative overflow-hidden rounded-lg shadow-md ${className}`.trim()}>
-      <img src="/banner.svg" alt={t('brandAlt')} className="h-auto w-full" />
-      <div className="absolute inset-0 bg-gradient-to-r from-slate-950/55 via-blue-950/35 to-emerald-900/30" />
-
-      <div className="absolute inset-0 flex flex-col justify-center px-6 py-6 text-white md:px-10">
-        <p className="text-xs font-semibold uppercase tracking-[0.28em] text-blue-100/90 md:text-sm">
-          {t('bannerEyebrow')}
-        </p>
-        <h2 className="mt-3 text-2xl font-bold tracking-tight md:text-5xl">{t('brandName')}</h2>
-        <p className="mt-3 max-w-xl text-sm font-medium text-blue-50 md:text-lg">{t('bannerTitle')}</p>
-        <p className="mt-2 max-w-2xl text-xs leading-6 text-blue-100/90 md:text-sm">
-          {t('bannerSubtitle')}
-        </p>
-      </div>
+    <div className={`overflow-hidden rounded-lg shadow-md ${className}`.trim()}>
+      <img src={bannerSrc} alt={t('brandAlt')} className="h-auto w-full" />
     </div>
   )
 }

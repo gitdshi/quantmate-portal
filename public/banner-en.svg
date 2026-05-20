@@ -1,4 +1,4 @@
-﻿<svg width="1200" height="400" viewBox="0 0 1200 400" xmlns="http://www.w3.org/2000/svg">
+<svg width="1200" height="400" viewBox="0 0 1200 400" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="bg1" x1="0%" y1="0%" x2="100%" y2="0%">
       <stop offset="0%" style="stop-color:#1e40af"/>
@@ -20,7 +20,8 @@
   <circle cx="220" cy="190" r="12" fill="#fbbf24"/>
   <circle cx="290" cy="110" r="12" fill="#34d399"/>
   <text x="450" y="180" font-family="Inter, -apple-system, sans-serif" font-size="80" font-weight="700" fill="white">QuantMate</text>
-  <text x="450" y="250" font-family="Inter, -apple-system, sans-serif" font-size="32" font-weight="400" fill="#bfdbfe">智能量化交易 · 专业策略分析</text>
+  <text x="450" y="242" font-family="Inter, -apple-system, sans-serif" font-size="28" font-weight="400" fill="#bfdbfe">Intelligent Quantitative Trading</text>
+  <text x="450" y="280" font-family="Inter, -apple-system, sans-serif" font-size="28" font-weight="400" fill="#bfdbfe">Professional Strategy Analysis</text>
   <circle cx="1050" cy="80" r="8" fill="white" opacity="0.3"/>
   <circle cx="1070" cy="120" r="12" fill="white" opacity="0.2"/>
   <circle cx="1090" cy="60" r="6" fill="white" opacity="0.4"/>
