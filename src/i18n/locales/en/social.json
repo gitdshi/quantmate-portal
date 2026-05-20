@@ -156,7 +156,7 @@
     },
     "title": "AI Assistant",
     "subtitle": "Smart chat, code generation, and strategy insights",
-    "welcome": "Hello! I am the QuantMate AI assistant. I can help analyze strategies, generate code, and interpret markets. What can I help you with?",
+    "welcome": "Hello! I am the QuantMate宽盟 AI assistant. I can help analyze strategies, generate code, and interpret markets. What can I help you with?",
     "serviceDown": "Sorry, the AI service is temporarily unavailable. Please try again later.",
     "pendingReply": "Got it, thinking...",
     "codePrefix": "Code generation: ",

@@ -103,7 +103,7 @@
     },
     "strategy": {
       "title": "Create your first strategy",
-      "description": "Start with a template or a simple rule so QuantMate can produce the first piece of research output."
+      "description": "Start with a template or a simple rule so QuantMate宽盟 can produce the first piece of research output."
     },
     "backtest": {
       "title": "Run the first backtest",
@@ -115,7 +115,7 @@
     }
   },
   "setup": {
-    "title": "Wake QuantMate up with the first real workflow",
+    "title": "Wake QuantMate宽盟 up with the first real workflow",
     "explanation": "The dashboard is still waiting on data, a starter strategy, and the first backtest result. Once those arrive, the KPI cards and charts become much more informative.",
     "helper": "A solid first milestone is: sync data, clone a template, run a backtest, then move the best idea into paper trading.",
     "primary": "Create first strategy",

@@ -166,7 +166,7 @@
       "history": "No alert history",
       "channels": "No channels configured yet. Create a rule first.",
       "rulesTitle": "No alert rules yet",
-      "rulesExplanation": "Start with a price reminder or risk-control alert so QuantMate can proactively tell you when something needs attention.",
+      "rulesExplanation": "Start with a price reminder or risk-control alert so QuantMate宽盟 can proactively tell you when something needs attention.",
       "rulesHelper": "A solid first rule is a drawdown threshold or a price reminder on a key symbol."
     },
     "search": "Search",

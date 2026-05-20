@@ -156,7 +156,7 @@
     },
     "title": "AI 助手",
     "subtitle": "智能对话、代码生成与策略洞察",
-    "welcome": "你好！我是 QuantMate AI 助手，可以帮助你分析策略、生成代码并解读行情。请问有什么可以帮你的？",
+    "welcome": "你好！我是 QuantMate宽盟 AI 助手，可以帮助你分析策略、生成代码并解读行情。请问有什么可以帮你的？",
     "serviceDown": "抱歉，AI 服务暂时不可用，请稍后重试。",
     "pendingReply": "收到，正在思考中...",
     "codePrefix": "代码生成：",

@@ -1,5 +1,7 @@
 import { test as setup, expect } from '@playwright/test'
 import { env } from './env'
+import { loginForE2E } from './auth-api'
+import { isQuantMateApi, seedMockAuthState } from './mock-session'
 
 const authFile = 'test/e2e/.auth/user.json'
 
@@ -13,12 +15,31 @@ const authFile = 'test/e2e/.auth/user.json'
 setup('authenticate', async ({ page }) => {
   const apiBase = env.apiURL + '/api/v1'
 
-  // 1. Obtain tokens via API
-  const loginResp = await page.request.post(`${apiBase}/auth/login`, {
-    data: { username: env.username, password: env.password },
-  })
-  expect(loginResp.ok()).toBeTruthy()
-  const { access_token, refresh_token } = await loginResp.json()
+  const shouldUseMockAuth = env.authMode === 'mock'
+    || (env.authMode === 'auto' && !(await isQuantMateApi(page.request)))
+
+  if (shouldUseMockAuth) {
+    await seedMockAuthState(page)
+    await page.context().storageState({ path: authFile })
+    return
+  }
+
+  let access_token: string
+  let refresh_token: string
+
+  try {
+    const tokens = await loginForE2E(page.request)
+    access_token = tokens.access_token
+    refresh_token = tokens.refresh_token
+  } catch (error) {
+    if (env.authMode !== 'auto') {
+      throw error
+    }
+
+    await seedMockAuthState(page)
+    await page.context().storageState({ path: authFile })
+    return
+  }
 
   // 2. Fetch user profile
   const meResp = await page.request.get(`${apiBase}/auth/me`, {

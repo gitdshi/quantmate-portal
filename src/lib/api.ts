@@ -146,7 +146,7 @@ api.interceptors.response.use(
 // Auth API
 export const authAPI = {
   login: (username: string, password: string) =>
-    api.post('/auth/login', { username, password }),
+    api.post('/auth/login', { username, account: username, password }),
 
   register: (username: string, email: string, password: string) =>
     api.post('/auth/register', { username, email, password }),
@@ -709,16 +709,17 @@ export const paperTradingAPI = {
     vt_symbol?: string; parameters?: Record<string, unknown>;
     paper_account_id?: number; execution_mode?: string
   }) => api.post('/paper-trade/deploy', data),
-  listDeployments: () => api.get('/paper-trade/deployments'),
+  listDeployments: (params?: { paper_account_id?: number }) =>
+    api.get('/paper-trade/deployments', { params }),
   stopDeployment: (id: number) => api.post(`/paper-trade/deployments/${id}/stop`),
-  listPaperOrders: (params?: { status?: string; page?: number; page_size?: number }) =>
+  listPaperOrders: (params?: { status?: string; page?: number; page_size?: number; paper_account_id?: number }) =>
     api.get('/paper-trade/orders', { params }),
   createPaperOrder: (data: {
     paper_account_id: number; symbol: string; direction: string; order_type: string;
     quantity: number; price?: number; stop_price?: number
   }) => api.post('/paper-trade/orders', data),
   cancelPaperOrder: (id: number) => api.post(`/paper-trade/orders/${id}/cancel`),
-  getPaperPositions: () => api.get('/paper-trade/positions'),
+  getPaperPositions: (params?: { paper_account_id?: number }) => api.get('/paper-trade/positions', { params }),
   getPaperPerformance: () => api.get('/paper-trade/performance'),
   // Signals (semi-auto mode)
   listSignals: (params?: { status?: string; paper_account_id?: number }) =>

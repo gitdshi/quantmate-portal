@@ -381,7 +381,7 @@ export default function Dashboard() {
         <EmptyState
           type="setup"
           icon={<Activity size={24} />}
-          title={t('setup.title', 'Wake QuantMate up with the first real workflow')}
+          title={t('setup.title', 'Wake QuantMate宽盟 up with the first real workflow')}
           explanation={t(
             'setup.explanation',
             'Right now the dashboard is mostly waiting on data, a starter strategy, and the first backtest result. Once those arrive, your KPI cards and charts become much more informative.'

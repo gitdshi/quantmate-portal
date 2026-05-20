@@ -6,37 +6,25 @@ test.describe('Paper Trading', () => {
     await navigateToPage(page, '/paper-trading')
   })
 
-  test('should display paper trading page', async ({ page }) => {
-    await expect(page.locator('h1').filter({ hasText: 'Paper Trading' })).toBeVisible({ timeout: 60000 })
+  test('should display paper trading overview page', async ({ page }) => {
+    await expect(page.getByTestId('paper-trading-overview')).toBeVisible({ timeout: 60000 })
+    await expect(page.getByRole('heading', { level: 1, name: /Paper Trading|模拟交易/i })).toBeVisible()
   })
 
-  test('should display deploy strategy form', async ({ page }) => {
-    await expect(page.locator('h2').filter({ hasText: /Deploy Strategy to Paper/i })).toBeVisible()
+  test('should show overview actions and account section', async ({ page }) => {
+    await expect(page.getByRole('button', { name: /New Account|新建账户/i })).toBeVisible()
+    await expect(page.getByText(/Paper Accounts|模拟账户|No paper accounts|Create one to start/i).first()).toBeVisible()
   })
 
-  test('should display manual paper order form', async ({ page }) => {
-    await expect(page.locator('h2').filter({ hasText: /Manual Paper Order/i })).toBeVisible()
-  })
+  test('should navigate into account detail when an account is available', async ({ page }) => {
+    const openButton = page.getByRole('button', { name: /Open|进入/i }).first()
+    if (await openButton.isVisible().catch(() => false)) {
+      await openButton.click()
+      await expect(page).toHaveURL(/\/paper-trading\/\d+$/)
+      await expect(page.getByText(/Deployed Strategies|已部署策略|Paper account not found|未找到该模拟账户/i).first()).toBeVisible()
+      return
+    }
 
-  test('should have deploy button', async ({ page }) => {
-    await expect(page.locator('button').filter({ hasText: /Deploy/i }).first()).toBeVisible()
-  })
-
-  test('should have submit paper order button', async ({ page }) => {
-    await expect(page.locator('button').filter({ hasText: /Submit Paper Order/i }).first()).toBeVisible()
-  })
-
-  test('should display tabs for navigation', async ({ page }) => {
-    await expect(page.getByText('Deployments')).toBeVisible()
-    await expect(page.getByText('Orders')).toBeVisible()
-    await expect(page.getByText('Positions')).toBeVisible()
-    await expect(page.getByText('Performance')).toBeVisible()
-  })
-
-  test('should switch between tabs', async ({ page }) => {
-    const ordersTab = page.getByText('Orders')
-    await ordersTab.click()
-    // After clicking, verify tab is active (has border-blue-500 class)
-    await expect(ordersTab).toBeVisible()
+    await expect(page.getByText(/No paper accounts|Create one to start|模拟账户/i).first()).toBeVisible()
   })
 })

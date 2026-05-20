@@ -124,7 +124,7 @@
       },
       "empty": {
         "title": "Your portfolio is still empty",
-        "explanation": "Open a paper position or import an existing holding so QuantMate can start tracking exposure, NAV, and rebalance opportunities.",
+        "explanation": "Open a paper position or import an existing holding so QuantMate宽盟 can start tracking exposure, NAV, and rebalance opportunities.",
         "helper": "Even a single starter position is enough to unlock allocation, risk-rule, and contribution views.",
         "primary": "Create a paper position",
         "secondaryImport": "Import holdings",

@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { env } from './env'
+import { loginForE2E } from './auth-api'
 
 test.describe('Authentication', () => {
   // These tests do NOT use the shared auth state — they test the login flow itself.
@@ -15,11 +16,7 @@ test.describe('Authentication', () => {
   test('should login successfully with valid credentials', async ({ page }) => {
     // Use API to login and inject tokens (same as auth.setup.ts)
     const apiBase = (process.env.API_URL || 'http://localhost:8000') + '/api/v1'
-    const loginResp = await page.request.post(`${apiBase}/auth/login`, {
-      data: { username: env.username, password: env.password },
-    })
-    expect(loginResp.ok()).toBeTruthy()
-    const { access_token, refresh_token } = await loginResp.json()
+    const { access_token, refresh_token } = await loginForE2E(page.request)
     const meResp = await page.request.get(`${apiBase}/auth/me`, {
       headers: { Authorization: `Bearer ${access_token}` },
     })
@@ -88,10 +85,7 @@ test.describe('Authentication', () => {
   test('should logout successfully', async ({ page }) => {
     // Setup authenticated state via API
     const apiBase = (process.env.API_URL || 'http://localhost:8000') + '/api/v1'
-    const loginResp = await page.request.post(`${apiBase}/auth/login`, {
-      data: { username: env.username, password: env.password },
-    })
-    const { access_token, refresh_token } = await loginResp.json()
+    const { access_token, refresh_token } = await loginForE2E(page.request)
     const meResp = await page.request.get(`${apiBase}/auth/me`, {
       headers: { Authorization: `Bearer ${access_token}` },
     })
@@ -123,10 +117,7 @@ test.describe('Authentication', () => {
   test('should persist session after page reload', async ({ page }) => {
     // Setup authenticated state via API
     const apiBase = (process.env.API_URL || 'http://localhost:8000') + '/api/v1'
-    const loginResp = await page.request.post(`${apiBase}/auth/login`, {
-      data: { username: env.username, password: env.password },
-    })
-    const { access_token, refresh_token } = await loginResp.json()
+    const { access_token, refresh_token } = await loginForE2E(page.request)
     const meResp = await page.request.get(`${apiBase}/auth/me`, {
       headers: { Authorization: `Bearer ${access_token}` },
     })

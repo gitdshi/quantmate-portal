@@ -17,6 +17,7 @@ const Settings = lazy(() => import('./pages/Settings'))
 const Strategies = lazy(() => import('./pages/Strategies'))
 const Trading = lazy(() => import('./pages/Trading'))
 const PaperTrading = lazy(() => import('./pages/PaperTrading'))
+const PaperTradingAccount = lazy(() => import('./pages/PaperTradingAccount'))
 const Positions = lazy(() => import('./pages/Positions'))
 const Monitoring = lazy(() => import('./pages/Monitoring'))
 const Reports = lazy(() => import('./pages/Reports'))
@@ -156,6 +157,7 @@ function App() {
           <Route path="analytics" element={<Analytics />} />
           <Route path="portfolio" element={<Portfolio />} />
           <Route path="paper-trading" element={<PaperTrading />} />
+          <Route path="paper-trading/:accountId" element={<PaperTradingAccount />} />
           <Route path="trading" element={<Trading />} />
           <Route path="positions" element={<Positions />} />
           <Route path="monitoring" element={<Monitoring />} />

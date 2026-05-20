@@ -103,7 +103,7 @@
     },
     "strategy": {
       "title": "创建第一条策略",
-      "description": "从模板或一个简单规则开始，先让 QuantMate 产出第一份可追踪的研究结果。"
+      "description": "从模板或一个简单规则开始，先让 QuantMate宽盟 产出第一份可追踪的研究结果。"
     },
     "backtest": {
       "title": "运行第一次回测",
@@ -115,7 +115,7 @@
     }
   },
   "setup": {
-    "title": "先让 QuantMate 动起来",
+    "title": "先让 QuantMate宽盟 动起来",
     "explanation": "当前仪表盘还在等待数据、第一条策略和第一次回测结果。把这三步补齐后，大多数 KPI 和图表就会开始变得有意义。",
     "helper": "一个稳妥的起步路径是：同步数据、克隆模板、运行回测，再把最好的想法接到模拟交易。",
     "primary": "创建第一条策略",

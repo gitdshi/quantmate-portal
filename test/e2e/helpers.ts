@@ -25,7 +25,8 @@ export async function waitForPageLoad(page: Page, timeout = 60000) {
  */
 export async function navigateToPage(page: Page, path: string) {
   await page.goto(path)
-  await page.waitForURL(new RegExp(path.replace(/\//g, '\\/')))
+  const escapedPath = path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  await expect(page).toHaveURL(new RegExp(escapedPath))
   await waitForPageLoad(page)
 }
 

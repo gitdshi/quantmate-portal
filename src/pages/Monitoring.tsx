@@ -295,7 +295,7 @@ export default function Monitoring() {
               )}
               explanation={t(
                 'page.empty.rulesExplanation',
-                'Start with a price reminder or a risk-control alert so QuantMate can tell you when something needs attention.'
+                'Start with a price reminder or a risk-control alert so QuantMate宽盟 can tell you when something needs attention.'
               )}
               primaryCTA={{
                 label: t('page.newRule', 'New Rule'),

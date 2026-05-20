@@ -166,7 +166,7 @@
       "history": "暂无告警历史",
       "channels": "暂无通知渠道，请先创建规则。",
       "rulesTitle": "还没有告警规则",
-      "rulesExplanation": "先创建一条价格提醒或风控告警，让 QuantMate 能在真正需要关注时主动提醒你。",
+      "rulesExplanation": "先创建一条价格提醒或风控告警，让 QuantMate宽盟 能在真正需要关注时主动提醒你。",
       "rulesHelper": "建议从回撤阈值或重点标的价格提醒开始。"
     },
     "search": "搜索",

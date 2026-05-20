@@ -168,7 +168,7 @@ export default function Portfolio() {
       title={t('page.emptyStates.empty.title', 'Your portfolio is still empty')}
       explanation={t(
         'page.emptyStates.empty.explanation',
-        'Open a paper position or import an existing holding to let QuantMate start tracking exposure, NAV, and rebalance opportunities.'
+        'Open a paper position or import an existing holding to let QuantMate宽盟 start tracking exposure, NAV, and rebalance opportunities.'
       )}
       primaryCTA={{
         label: t('page.emptyStates.empty.primary', 'Create a paper position'),

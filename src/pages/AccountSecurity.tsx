@@ -98,7 +98,7 @@ export default function AccountSecurity() {
     displayName: t('accountPage.profileDefaults.displayName'),
     email: 'zhang@example.com',
     phone: '138****8888',
-    company: 'QuantMate',
+    company: 'QuantMate宽盟',
     bio: t('accountPage.profileDefaults.bio'),
   })
 

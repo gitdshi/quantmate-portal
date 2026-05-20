@@ -6,17 +6,19 @@ import { resolve } from 'path'
 /**
  * Environment configuration for E2E tests.
  * Override via environment variables:
- *   BASE_URL        - Portal URL (default: http://localhost:5173)
+ *   BASE_URL        - Portal URL (default: http://localhost:4173)
  *   API_URL         - Backend URL (default: http://localhost:8000)
+ *   E2E_PORTAL_PORT - Dedicated dev-server port for Playwright (default: 4173)
  *   TEST_USERNAME   - Login username (default: admin)
  *   TEST_PASSWORD   - Login password (default: admin123)
  *   TEST_ENV        - Environment name: dev | staging (default: dev)
  */
 const testEnv = process.env.TEST_ENV || 'dev'
+const portalPort = Number(process.env.E2E_PORTAL_PORT || 4173)
 
 const envDefaults: Record<string, { baseURL: string; apiURL: string }> = {
   dev: {
-    baseURL: 'http://localhost:5173',
+    baseURL: `http://localhost:${portalPort}`,
     apiURL: 'http://localhost:8000',
   },
   staging: {
@@ -47,6 +49,31 @@ function getChromiumExecutable(): string | undefined {
 }
 
 const chromiumExecutable = getChromiumExecutable()
+
+function hasInstalledBrowser(dirPattern: RegExp, candidatePaths: string[]) {
+  try {
+    const browsersPath = resolve(homedir(), '.cache', 'ms-playwright')
+    const browserDir = readdirSync(browsersPath).find((entry) => dirPattern.test(entry))
+    if (!browserDir) {
+      return false
+    }
+
+    return candidatePaths.some((relativePath) => existsSync(resolve(browsersPath, browserDir, relativePath)))
+  } catch {
+    return false
+  }
+}
+
+const hasFirefox = hasInstalledBrowser(/^firefox-\d+$/, [
+  'firefox/Nightly.app/Contents/MacOS/firefox',
+  'firefox/firefox',
+  'firefox.exe',
+])
+
+const hasWebkit = hasInstalledBrowser(/^webkit-\d+$/, [
+  'pw_run.sh',
+  'Playwright.app/Contents/MacOS/Playwright',
+])
 
 export default defineConfig({
   testDir: './test/e2e',
@@ -89,22 +116,26 @@ export default defineConfig({
       },
       dependencies: ['setup'],
     },
-    {
-      name: 'firefox',
-      use: {
-        ...devices['Desktop Firefox'],
-        storageState: 'test/e2e/.auth/user.json',
-      },
-      dependencies: ['setup'],
-    },
-    {
-      name: 'webkit',
-      use: {
-        ...devices['Desktop Safari'],
-        storageState: 'test/e2e/.auth/user.json',
-      },
-      dependencies: ['setup'],
-    },
+    ...(hasFirefox
+      ? [{
+          name: 'firefox',
+          use: {
+            ...devices['Desktop Firefox'],
+            storageState: 'test/e2e/.auth/user.json',
+          },
+          dependencies: ['setup'],
+        }]
+      : []),
+    ...(hasWebkit
+      ? [{
+          name: 'webkit',
+          use: {
+            ...devices['Desktop Safari'],
+            storageState: 'test/e2e/.auth/user.json',
+          },
+          dependencies: ['setup'],
+        }]
+      : []),
     {
       name: 'Mobile Chrome',
       use: {
@@ -114,18 +145,20 @@ export default defineConfig({
       },
       dependencies: ['setup'],
     },
-    {
-      name: 'Mobile Safari',
-      use: {
-        ...devices['iPhone 12'],
-        storageState: 'test/e2e/.auth/user.json',
-      },
-      dependencies: ['setup'],
-    },
+    ...(hasWebkit
+      ? [{
+          name: 'Mobile Safari',
+          use: {
+            ...devices['iPhone 12'],
+            storageState: 'test/e2e/.auth/user.json',
+          },
+          dependencies: ['setup'],
+        }]
+      : []),
   ],
 
   webServer: testEnv === 'dev' ? {
-    command: 'npm run dev',
+    command: `PORTAL_PORT=${portalPort} npm run dev`,
     url: process.env.BASE_URL || env.baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
