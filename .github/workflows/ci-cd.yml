@@ -151,46 +151,41 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Configure staging SSH
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' '${{ secrets.STAGING_SSH_KEY }}' > ~/.ssh/staging_key
+          chmod 600 ~/.ssh/staging_key
+          ssh-keyscan -H '${{ secrets.STAGING_HOST }}' >> ~/.ssh/known_hosts
+
       - name: Prepare staging script bundle
         run: |
           mkdir -p .deploy_bundle/.github/scripts
           cp .github/scripts/deploy_portal_staging.sh .deploy_bundle/.github/scripts/deploy_portal_staging.sh
 
       - name: Pre-deploy staging disk cleanup
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.STAGING_HOST }}
-          username: ${{ secrets.STAGING_USER }}
-          key: ${{ secrets.STAGING_SSH_KEY }}
-          script: |
+        run: |
+          ssh -i ~/.ssh/staging_key '${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }}' '
             set -e
             docker system prune -af || true
             docker builder prune -af || true
             df -h /
             docker system df || true
+          '
 
       - name: Copy deploy script to staging server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.STAGING_HOST }}
-          username: ${{ secrets.STAGING_USER }}
-          key: ${{ secrets.STAGING_SSH_KEY }}
-          source: ".deploy_bundle/.github/scripts/deploy_portal_staging.sh"
-          target: /opt/quantmate
-          strip_components: 1
+        run: |
+          ssh -i ~/.ssh/staging_key '${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }}' '
+            mkdir -p /opt/quantmate/.github/scripts
+          '
+          scp -i ~/.ssh/staging_key .deploy_bundle/.github/scripts/deploy_portal_staging.sh '${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }}:/opt/quantmate/.github/scripts/deploy_portal_staging.sh'
 
       - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1
-        env:
-          GITHUB_OWNER: ${{ github.repository_owner }}
-          PORTAL_IMAGE_TAG: sha-${{ github.sha }}
-        with:
-          host: ${{ secrets.STAGING_HOST }}
-          username: ${{ secrets.STAGING_USER }}
-          key: ${{ secrets.STAGING_SSH_KEY }}
-          envs: GITHUB_OWNER,PORTAL_IMAGE_TAG
-          script: |
+        run: |
+          ssh -i ~/.ssh/staging_key '${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }}' "
             set -e
             cd /opt/quantmate
-            GITHUB_OWNER=$GITHUB_OWNER PORTAL_IMAGE_TAG=$PORTAL_IMAGE_TAG \
+            GITHUB_OWNER='${{ github.repository_owner }}' PORTAL_IMAGE_TAG='sha-${{ github.sha }}' \
               sh .github/scripts/deploy_portal_staging.sh
+          "
