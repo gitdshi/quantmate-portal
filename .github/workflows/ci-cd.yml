@@ -156,6 +156,19 @@ jobs:
           mkdir -p .deploy_bundle/.github/scripts
           cp .github/scripts/deploy_portal_staging.sh .deploy_bundle/.github/scripts/deploy_portal_staging.sh
 
+      - name: Pre-deploy staging disk cleanup
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          script: |
+            set -e
+            docker system prune -af || true
+            docker builder prune -af || true
+            df -h /
+            docker system df || true
+
       - name: Copy deploy script to staging server
         uses: appleboy/scp-action@v0.1.7
         with:
