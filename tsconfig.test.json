@@ -2,10 +2,9 @@
   "extends": "./tsconfig.app.json",
   "compilerOptions": {
     "types": ["vitest/globals", "@testing-library/jest-dom", "vite/client", "node"],
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
-      "@test/*": ["test/*"]
+      "@/*": ["./src/*"],
+      "@test/*": ["./test/*"]
     }
   },
   "include": ["test/**/*.ts", "test/**/*.tsx"],

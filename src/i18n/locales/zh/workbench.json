@@ -1,0 +1,141 @@
+{
+  "page": {
+    "title": "统一工作台",
+    "subtitle": "将因子研究、策略构建、回测验证与模拟交易串成一个连续流程。",
+    "newWorkflow": "新建流程",
+    "saveProgress": "保存进度"
+  },
+  "defaults": {
+    "workflowName": "新建流程",
+    "generatedDescription": "基于统一工作台中已选因子自动生成。"
+  },
+  "stage": {
+    "factor": "因子研究",
+    "strategy": "策略构建",
+    "backtest": "回测验证",
+    "paper_trade": "模拟交易"
+  },
+  "session": {
+    "title": "流程会话",
+    "description": "统一工作台现已支持持久化会话状态、真实因子选择，以及多因子策略生成。",
+    "workflowName": "流程名称",
+    "summary": "会话摘要",
+    "summaryWithStrategy": "已选择 {{count}} 个因子 · 策略 #{{strategyId}}",
+    "summaryWithoutStrategy": "已选择 {{count}} 个因子 · 尚未保存策略"
+  },
+  "factor": {
+    "searchLabel": "搜索因子",
+    "searchPlaceholder": "按名称、分类或表达式搜索",
+    "continue": "进入策略构建",
+    "selected": "已选",
+    "pick": "选择",
+    "noExpression": "暂无表达式预览"
+  },
+  "strategy": {
+    "selectedFactors": "已选因子",
+    "strategyName": "策略名称",
+    "className": "类名",
+    "description": "描述",
+    "generateCode": "生成策略代码",
+    "saveAndContinue": "保存策略并继续",
+    "codePreview": "代码预览",
+    "codePlaceholder": "先生成策略代码，再在这里预览草稿。"
+  },
+  "backtest": {
+    "symbol": "标的",
+    "startDate": "开始日期",
+    "endDate": "结束日期",
+    "benchmark": "基准",
+    "start": "开始回测",
+    "continue": "进入模拟交易",
+    "statusTitle": "回测状态",
+    "statusWithJob": "{{status}} · 任务 {{jobId}}",
+    "empty": "尚未提交回测任务。",
+    "generateAI": "生成 AI 解读"
+  },
+  "aiReport": {
+    "title": "AI 回测解读",
+    "quality": "质量",
+    "risk": "风险",
+    "overfitRisk": "过拟合风险",
+    "notAvailable": "暂无"
+  },
+  "paper": {
+    "account": "模拟账户",
+    "selectAccount": "选择一个可用模拟账户",
+    "executionMode": "执行模式",
+    "mode": {
+      "auto": "全自动",
+      "semi_auto": "信号模式"
+    },
+    "deploy": "部署到模拟交易",
+    "activeTitle": "部署已生效",
+    "summary": "部署 #{{id}} · 账户 {{accountId}} · {{mode}}"
+  },
+  "statePreview": "流程状态预览",
+  "metrics": {
+    "totalReturn": "总收益",
+    "annualReturn": "年化收益",
+    "sharpeRatio": "夏普比率",
+    "maxDrawdown": "最大回撤",
+    "winRate": "胜率"
+  },
+  "copilot": {
+    "title": "Copilot 面板",
+    "welcome": "我可以结合当前流程上下文，帮助你评估下一步动作，并解读最近的回测结果。",
+    "actions": {
+      "reviewFactors": "评估已选因子",
+      "explainNextStep": "解释下一步",
+      "interpretBacktest": "解读回测结果"
+    },
+    "prompts": {
+      "reviewFactors": "请评估当前已选因子，并告诉我是否适合继续下一步。",
+      "explainNextStep": "请说明当前统一工作台阶段最合理的下一步动作。",
+      "interpretBacktest": "请解读当前回测结果，并指出主要风险。"
+    },
+    "thinking": "Copilot 正在思考...",
+    "placeholder": "询问 Copilot 当前流程相关问题...",
+    "send": "发送"
+  },
+  "recentSessions": {
+    "title": "最近会话",
+    "loading": "加载中...",
+    "empty": "还没有流程会话。",
+    "updated": "更新于 {{date}}"
+  },
+  "status": {
+    "draft": "草稿",
+    "running_backtest": "回测运行中",
+    "paper_active": "模拟交易中",
+    "archived": "已归档",
+    "queued": "排队中",
+    "running": "运行中",
+    "completed": "已完成",
+    "finished": "已完成",
+    "failed": "失败",
+    "cancelled": "已取消"
+  },
+  "messages": {
+    "savedWorkflow": "已保存流程 {{name}}。",
+    "movedToStage": "已切换到 {{stage}}。",
+    "failedChangeStage": "切换阶段失败。",
+    "generatedStrategy": "已根据所选因子生成策略代码。",
+    "failedGenerateStrategy": "生成策略失败。",
+    "savedStrategyAndMoved": "策略已保存，并已进入回测验证。",
+    "failedSaveStrategy": "保存策略失败。",
+    "backtestSubmitted": "回测任务已提交到队列。",
+    "failedSubmitBacktest": "提交回测失败。",
+    "paperDeploymentCreated": "已创建模拟交易部署。",
+    "failedDeployPaper": "部署到模拟交易失败。",
+    "aiReportGenerated": "已生成 AI 回测解读。",
+    "failedGenerateAI": "生成 AI 回测解读失败。",
+    "copilotFailed": "Copilot 请求失败。"
+  },
+  "validation": {
+    "saveStrategyBeforeBacktest": "开始回测前请先保存策略。",
+    "saveStrategyBeforeDeploy": "部署到模拟交易前请先保存策略。",
+    "selectPaperAccount": "部署前请先选择模拟账户。",
+    "runBacktestBeforeAI": "生成 AI 解读前请先运行回测。",
+    "failedCreateConversation": "创建 Copilot 会话失败。"
+  }
+}

@@ -1,26 +1,26 @@
 import { useQuery } from '@tanstack/react-query'
 import type { LucideIcon } from 'lucide-react'
 import {
-  ArrowLeftRight,
-  BarChart3,
-  Bell,
-  Bot,
-  Briefcase,
-  Combine,
-  Database,
-  FileCode,
-  FileText,
-  FlaskConical,
-  Globe,
-  LayoutDashboard,
-  LogOut,
-  Menu,
-  Settings,
-  Shield,
-  Sparkles,
-  Store,
-  TrendingUp,
-  Users,
+    ArrowLeftRight,
+    BarChart3,
+    Bell,
+    Bot,
+    Briefcase,
+    Combine,
+    Database,
+    FileCode,
+    FileText,
+    FlaskConical,
+    Globe,
+    LayoutDashboard,
+    LogOut,
+    Menu,
+    Settings,
+    Shield,
+    Sparkles,
+    Store,
+    TrendingUp,
+    Users,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -64,7 +64,12 @@ export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [sidebarPinned, setSidebarPinned] = useState(true)
 
-  const runtimeConfig = ((window as Record<string, unknown>).__RUNTIME_CONFIG__ ?? {}) as {
+  const runtimeConfig = ((window as typeof window & {
+    __RUNTIME_CONFIG__?: {
+      PORTAL_VERSION?: string
+      PORTAL_BUILD_TIME?: string
+    }
+  }).__RUNTIME_CONFIG__ ?? {}) as {
     PORTAL_VERSION?: string
     PORTAL_BUILD_TIME?: string
   }
@@ -134,17 +139,14 @@ export default function Layout() {
     () => [
       { sectionKey: 'sections.overview' },
       { nameKey: 'items.dashboard', href: '/dashboard', icon: LayoutDashboard },
-      { sectionKey: 'sections.researchData' },
+      { sectionKey: 'sections.strategyResearch' },
       {
         nameKey: 'items.workbench',
         href: '/workbench',
         icon: Sparkles,
-        badge: t('badges.preview', 'Preview'),
+        badge: t('badges.new', 'New'),
         badgeTone: 'preview',
       },
-      { nameKey: 'items.strategyResearch', href: '/strategies', icon: FileCode },
-      { nameKey: 'items.backtesting', href: '/backtest', icon: TrendingUp },
-      { nameKey: 'items.marketData', href: '/market-data', icon: Database },
       {
         nameKey: 'items.factorLab',
         href: '/factor-lab',
@@ -152,6 +154,7 @@ export default function Layout() {
         badge: t('badges.beta', 'Beta'),
         badgeTone: 'beta',
       },
+      { nameKey: 'items.strategyBuilder', href: '/strategies', icon: FileCode },
       {
         nameKey: 'items.compositeStrategies',
         href: '/composite-strategies',
@@ -159,15 +162,7 @@ export default function Layout() {
         badge: t('badges.beta', 'Beta'),
         badgeTone: 'beta',
       },
-      { sectionKey: 'sections.tradingPortfolio' },
-      { nameKey: 'items.portfolio', href: '/portfolio', icon: Briefcase },
-      { nameKey: 'items.trading', href: '/trading', icon: ArrowLeftRight },
-      { nameKey: 'items.paperTrading', href: '/paper-trading', icon: Globe },
-      { nameKey: 'items.analytics', href: '/analytics', icon: BarChart3 },
-      { sectionKey: 'sections.opsAlerts' },
-      { nameKey: 'items.alerts', href: '/monitoring', icon: Bell, badge: '3', badgeTone: 'count' },
-      { nameKey: 'items.reports', href: '/reports', icon: FileText },
-      { sectionKey: 'sections.aiCollaboration' },
+      { sectionKey: 'sections.aiLab' },
       {
         nameKey: 'items.aiAssistant',
         href: '/ai-assistant',
@@ -182,6 +177,18 @@ export default function Layout() {
         badge: t('badges.preview', 'Preview'),
         badgeTone: 'preview',
       },
+      { sectionKey: 'sections.dataValidation' },
+      { nameKey: 'items.marketData', href: '/market-data', icon: Database },
+      { nameKey: 'items.backtesting', href: '/backtest', icon: TrendingUp },
+      { sectionKey: 'sections.tradingPortfolio' },
+      { nameKey: 'items.portfolio', href: '/portfolio', icon: Briefcase },
+      { nameKey: 'items.trading', href: '/trading', icon: ArrowLeftRight },
+      { nameKey: 'items.paperTrading', href: '/paper-trading', icon: Globe },
+      { sectionKey: 'sections.analyticsMonitoring' },
+      { nameKey: 'items.analytics', href: '/analytics', icon: BarChart3 },
+      { nameKey: 'items.monitoring', href: '/monitoring', icon: Bell, badge: '3', badgeTone: 'count' },
+      { nameKey: 'items.reports', href: '/reports', icon: FileText },
+      { sectionKey: 'sections.collaborationSharing' },
       {
         nameKey: 'items.marketplace',
         href: '/marketplace',
@@ -190,14 +197,14 @@ export default function Layout() {
         badgeTone: 'beta',
       },
       {
-        nameKey: 'items.workspaces',
+        nameKey: 'items.teamSpace',
         href: '/team-space',
         icon: Users,
         badge: t('badges.preview', 'Preview'),
         badgeTone: 'preview',
         match: (pathname) => pathname === '/team-space',
       },
-      { sectionKey: 'sections.system' },
+      { sectionKey: 'sections.systemSettings' },
       { nameKey: 'items.settings', href: '/settings', icon: Settings },
       { nameKey: 'items.accountSecurity', href: '/account-security', icon: Shield },
     ],

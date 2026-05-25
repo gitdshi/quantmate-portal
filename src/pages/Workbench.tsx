@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Bot, ChevronRight, FlaskConical, Play, Save, Sparkles, TestTube2 } from 'lucide-react'
 import { startTransition, useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { aiAPI, backtestAPI, factorAPI, paperAccountAPI, paperTradingAPI, queueAPI, strategiesAPI, workbenchAPI } from '../lib/api'
 
@@ -121,17 +122,21 @@ const EMPTY_STATE: WorkbenchState = {
   paper_trade: { account_id: null, mode: null, deployment_id: null, runtime_summary: null },
 }
 
-const STAGES: Array<{ key: Stage; label: string; icon: typeof FlaskConical }> = [
-  { key: 'factor', label: 'Factor Research', icon: FlaskConical },
-  { key: 'strategy', label: 'Strategy Build', icon: Sparkles },
-  { key: 'backtest', label: 'Backtest Validation', icon: TestTube2 },
-  { key: 'paper_trade', label: 'Paper Trading', icon: Play },
-]
+const STAGE_ICONS: Record<Stage, typeof FlaskConical> = {
+  factor: FlaskConical,
+  strategy: Sparkles,
+  backtest: TestTube2,
+  paper_trade: Play,
+}
+
+const STAGE_ORDER: Stage[] = ['factor', 'strategy', 'backtest', 'paper_trade']
 
 export default function Workbench() {
+  const { t, i18n } = useTranslation('workbench')
   const queryClient = useQueryClient()
   const [activeSessionId, setActiveSessionId] = useState<number | null>(null)
-  const [draftName, setDraftName] = useState('New Workflow')
+  const currentLanguage = i18n.resolvedLanguage ?? i18n.language
+  const [draftName, setDraftName] = useState(() => t('defaults.workflowName'))
   const [draftState, setDraftState] = useState<WorkbenchState>(EMPTY_STATE)
   const [factorSearch, setFactorSearch] = useState('')
   const [strategyName, setStrategyName] = useState('')
@@ -140,13 +145,16 @@ export default function Workbench() {
   const [actionMessage, setActionMessage] = useState<string | null>(null)
   const [copilotConversationId, setCopilotConversationId] = useState<number | null>(null)
   const [copilotInput, setCopilotInput] = useState('')
-  const [copilotMessages, setCopilotMessages] = useState<CopilotMessage[]>([
+  const [copilotMessages, setCopilotMessages] = useState<CopilotMessage[]>(() => [
     {
       role: 'assistant',
-      content:
-        'I can review the current workflow context, explain the next stage, and interpret recent backtest outcomes inside Workbench.',
+      content: t('copilot.welcome'),
     },
   ])
+  const stages = useMemo(
+    () => STAGE_ORDER.map((key) => ({ key, label: t(`stage.${key}`), icon: STAGE_ICONS[key] })),
+    [t]
+  )
 
   function buildStrategyName(factorsToUse: WorkbenchState['selected_factors']) {
     const prefix = factorsToUse
@@ -168,7 +176,35 @@ export default function Workbench() {
   }
 
   function labelForStage(stage: Stage) {
-    return STAGES.find((item) => item.key === stage)?.label ?? stage
+    return stages.find((item) => item.key === stage)?.label ?? stage
+  }
+
+  function labelForStatus(status?: string | null) {
+    if (!status) {
+      return t('aiReport.notAvailable')
+    }
+    return t(`status.${status}`, status.replace(/_/g, ' '))
+  }
+
+  function formatDateTime(value?: string) {
+    if (!value) {
+      return '--'
+    }
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) {
+      return value
+    }
+    return new Intl.DateTimeFormat(currentLanguage.startsWith('zh') ? 'zh-CN' : 'en-US', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(date)
+  }
+
+  function labelForExecutionMode(mode?: string | null) {
+    if (!mode) {
+      return t('paper.mode.auto')
+    }
+    return t(`paper.mode.${mode}`, mode)
   }
 
   function buildCopilotPrompt(content: string, workflowName: string, state: WorkbenchState) {
@@ -243,7 +279,7 @@ ${content}`
   const createMutation = useMutation({
     mutationFn: () =>
       workbenchAPI.createSession({
-        name: 'New Workflow',
+        name: t('defaults.workflowName'),
         current_stage: 'factor',
         status: 'draft',
         state_json: EMPTY_STATE,
@@ -292,23 +328,23 @@ ${content}`
     startTransition(() => {
       setStrategyName((current) => current || suggestedName)
       setStrategyClassName((current) => current || buildClassName(suggestedName))
-      setStrategyDescription((current) => current || 'Generated from selected factors in Workbench.')
+      setStrategyDescription((current) => current || t('defaults.generatedDescription'))
     })
-  }, [draftState.selected_factors, draftState.strategy_draft])
+  }, [draftState.selected_factors, draftState.strategy_draft, t])
 
   const saveMutation = useMutation({
     mutationFn: () => persistSession(draftState, draftName),
     onSuccess: (response) => {
-      setActionMessage(`Saved workflow ${response.name}.`)
+      setActionMessage(t('messages.savedWorkflow', { name: response.name }))
     },
   })
 
   const transitionMutation = useMutation({
     mutationFn: (targetStage: Stage) => requestStageTransition(targetStage),
     onSuccess: (session) => {
-      setActionMessage(`Moved to ${labelForStage(session.current_stage)}.`)
+      setActionMessage(t('messages.movedToStage', { stage: labelForStage(session.current_stage) }))
     },
-    onError: (error) => setActionMessage(error instanceof Error ? error.message : 'Failed to change stage.'),
+    onError: (error) => setActionMessage(error instanceof Error ? error.message : t('messages.failedChangeStage')),
   })
 
   const { data: backtestJob } = useQuery<BacktestJob | null>({
@@ -360,9 +396,9 @@ ${content}`
           code,
         },
       }))
-      setActionMessage('Generated strategy code from selected factors.')
+      setActionMessage(t('messages.generatedStrategy'))
     },
-    onError: (error) => setActionMessage(error instanceof Error ? error.message : 'Failed to generate strategy.'),
+    onError: (error) => setActionMessage(error instanceof Error ? error.message : t('messages.failedGenerateStrategy')),
   })
 
   const saveStrategyMutation = useMutation({
@@ -394,14 +430,14 @@ ${content}`
       await persistSession(nextState, draftName)
       return requestStageTransition('backtest', nextState)
     },
-    onSuccess: () => setActionMessage('Strategy saved and moved to Backtest Validation.'),
-    onError: (error) => setActionMessage(error instanceof Error ? error.message : 'Failed to save strategy.'),
+    onSuccess: () => setActionMessage(t('messages.savedStrategyAndMoved')),
+    onError: (error) => setActionMessage(error instanceof Error ? error.message : t('messages.failedSaveStrategy')),
   })
 
   const submitBacktestMutation = useMutation({
     mutationFn: async () => {
       if (!draftState.strategy_draft?.strategy_id) {
-        throw new Error('Save the strategy before starting a backtest.')
+        throw new Error(t('validation.saveStrategyBeforeBacktest'))
       }
       const response = await queueAPI.submitBacktest({
         strategy_id: draftState.strategy_draft.strategy_id,
@@ -426,18 +462,18 @@ ${content}`
     },
     onSuccess: (nextState) => {
       setDraftState(nextState)
-      setActionMessage('Backtest submitted to queue.')
+      setActionMessage(t('messages.backtestSubmitted'))
     },
-    onError: (error) => setActionMessage(error instanceof Error ? error.message : 'Failed to submit backtest.'),
+    onError: (error) => setActionMessage(error instanceof Error ? error.message : t('messages.failedSubmitBacktest')),
   })
 
   const deployPaperMutation = useMutation({
     mutationFn: async () => {
       if (!draftState.strategy_draft?.strategy_id) {
-        throw new Error('Save a strategy before deploying to paper trading.')
+        throw new Error(t('validation.saveStrategyBeforeDeploy'))
       }
       if (!draftState.paper_trade.account_id) {
-        throw new Error('Select a paper account before deployment.')
+        throw new Error(t('validation.selectPaperAccount'))
       }
       const response = await paperTradingAPI.deployStrategy({
         strategy_id: draftState.strategy_draft.strategy_id,
@@ -465,21 +501,21 @@ ${content}`
     },
     onSuccess: (nextState) => {
       setDraftState(nextState)
-      setActionMessage('Paper trading deployment created.')
+      setActionMessage(t('messages.paperDeploymentCreated'))
     },
-    onError: (error) => setActionMessage(error instanceof Error ? error.message : 'Failed to deploy to paper trading.'),
+    onError: (error) => setActionMessage(error instanceof Error ? error.message : t('messages.failedDeployPaper')),
   })
 
   const generateAIReportMutation = useMutation({
     mutationFn: async () => {
       if (!draftState.backtest.job_id) {
-        throw new Error('Run a backtest before generating an AI report.')
+        throw new Error(t('validation.runBacktestBeforeAI'))
       }
       await backtestAPI.generateAIReport(draftState.backtest.job_id)
       await queryClient.invalidateQueries({ queryKey: ['workbench', 'ai-report', draftState.backtest.job_id] })
     },
-    onSuccess: () => setActionMessage('AI backtest report generated.'),
-    onError: (error) => setActionMessage(error instanceof Error ? error.message : 'Failed to generate AI report.'),
+    onSuccess: () => setActionMessage(t('messages.aiReportGenerated')),
+    onError: (error) => setActionMessage(error instanceof Error ? error.message : t('messages.failedGenerateAI')),
   })
 
   const copilotMutation = useMutation({
@@ -489,7 +525,7 @@ ${content}`
         const conversation = await aiAPI.createConversation({ title: `Workbench: ${draftName}` })
         const nextConversationId = conversation.data?.id ?? conversation.data?.data?.id
         if (!nextConversationId) {
-          throw new Error('Failed to create Copilot conversation.')
+          throw new Error(t('validation.failedCreateConversation'))
         }
         setCopilotConversationId(nextConversationId)
         const response = await aiAPI.sendMessage(nextConversationId, { content: prompt })
@@ -502,7 +538,7 @@ ${content}`
       setCopilotMessages((prev) => [...prev, { role: 'assistant', content }])
     },
     onError: (error) => {
-      const fallback = error instanceof Error ? error.message : 'Copilot request failed.'
+      const fallback = error instanceof Error ? error.message : t('messages.copilotFailed')
       setCopilotMessages((prev) => [...prev, { role: 'assistant', content: fallback }])
     },
   })
@@ -521,8 +557,8 @@ ${content}`
   const backtestSummary = extractBacktestSummary(backtestJob)
 
   const stageIndex = useMemo(
-    () => STAGES.findIndex((stage) => stage.key === draftState.stage),
-    [draftState.stage]
+    () => stages.findIndex((stage) => stage.key === draftState.stage),
+    [draftState.stage, stages]
   )
 
   async function persistSession(state: WorkbenchState, name: string) {
@@ -638,10 +674,8 @@ ${content}`
     <div className="space-y-6" data-testid="workbench-page">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Workbench</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Guided workflow for Factor Research, Strategy Build, Backtest Validation, and Paper Trading.
-          </p>
+          <h1 className="text-2xl font-bold text-foreground">{t('page.title')}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t('page.subtitle')}</p>
         </div>
         <div className="flex flex-wrap gap-3">
           <button
@@ -649,7 +683,7 @@ ${content}`
             onClick={() => createMutation.mutate()}
             className="rounded-md border border-border px-4 py-2 text-sm hover:bg-muted"
           >
-            New Workflow
+            {t('page.newWorkflow')}
           </button>
           <button
             type="button"
@@ -658,7 +692,7 @@ ${content}`
             className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm text-white hover:opacity-90 disabled:opacity-50"
           >
             <Save className="h-4 w-4" />
-            Save Progress
+            {t('page.saveProgress')}
           </button>
         </div>
       </div>
@@ -673,7 +707,7 @@ ${content}`
         <div className="space-y-6">
           <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
             <div className="flex flex-wrap items-center gap-2">
-              {STAGES.map((stage, index) => {
+              {stages.map((stage, index) => {
                 const Icon = stage.icon
                 const isActive = draftState.stage === stage.key
                 const isDone = index < stageIndex
@@ -694,7 +728,7 @@ ${content}`
                       <Icon className="h-4 w-4" />
                       {stage.label}
                     </button>
-                    {index < STAGES.length - 1 && <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                    {index < stages.length - 1 && <ChevronRight className="h-4 w-4 text-muted-foreground" />}
                   </div>
                 )
               })}
@@ -704,15 +738,13 @@ ${content}`
           <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold text-card-foreground">Workflow Session</h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Workbench now supports persistent session state, real factor selection, and multi-factor strategy generation.
-                </p>
+                <h2 className="text-lg font-semibold text-card-foreground">{t('session.title')}</h2>
+                <p className="mt-1 text-sm text-muted-foreground">{t('session.description')}</p>
               </div>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <label className="mb-1 block text-sm font-medium">Workflow Name</label>
+                <label className="mb-1 block text-sm font-medium">{t('session.workflowName')}</label>
                 <input
                   value={draftName}
                   onChange={(event) => setDraftName(event.target.value)}
@@ -720,10 +752,16 @@ ${content}`
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium">Session Summary</label>
+                <label className="mb-1 block text-sm font-medium">{t('session.summary')}</label>
                 <div className="rounded-md border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
-                  {draftState.selected_factors.length} factors selected ·{' '}
-                  {draftState.strategy_draft?.strategy_id ? `strategy #${draftState.strategy_draft.strategy_id}` : 'no saved strategy yet'}
+                  {draftState.strategy_draft?.strategy_id
+                    ? t('session.summaryWithStrategy', {
+                        count: draftState.selected_factors.length,
+                        strategyId: draftState.strategy_draft.strategy_id,
+                      })
+                    : t('session.summaryWithoutStrategy', {
+                        count: draftState.selected_factors.length,
+                      })}
                 </div>
               </div>
             </div>
@@ -732,11 +770,11 @@ ${content}`
               <div className="mt-6 space-y-4">
                 <div className="flex flex-wrap items-end gap-3">
                   <div className="min-w-[260px] flex-1">
-                    <label className="mb-1 block text-sm font-medium">Search Factors</label>
+                    <label className="mb-1 block text-sm font-medium">{t('factor.searchLabel')}</label>
                     <input
                       value={factorSearch}
                       onChange={(event) => setFactorSearch(event.target.value)}
-                      placeholder="Search by name, category, or expression"
+                      placeholder={t('factor.searchPlaceholder')}
                       className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
                     />
                   </div>
@@ -746,7 +784,7 @@ ${content}`
                     disabled={draftState.selected_factors.length === 0 || transitionMutation.isPending}
                     className="rounded-md bg-primary px-4 py-2 text-sm text-white hover:opacity-90 disabled:opacity-50"
                   >
-                    Continue To Strategy Build
+                    {t('factor.continue')}
                   </button>
                 </div>
 
@@ -767,10 +805,10 @@ ${content}`
                             <div className="font-medium text-foreground">{factor.name}</div>
                             <div className="mt-1 text-xs text-muted-foreground">{factor.category}</div>
                           </div>
-                          <div className="text-xs text-muted-foreground">{selected ? 'Selected' : 'Pick'}</div>
+                          <div className="text-xs text-muted-foreground">{selected ? t('factor.selected') : t('factor.pick')}</div>
                         </div>
                         <div className="mt-3 text-xs text-muted-foreground">
-                          {factor.expression || 'No expression preview'}
+                          {factor.expression || t('factor.noExpression')}
                         </div>
                         <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted-foreground">
                           <span>IC {factor.ic_mean?.toFixed(3) ?? '—'}</span>
@@ -786,7 +824,7 @@ ${content}`
             {draftState.stage === 'strategy' && (
               <div className="mt-6 space-y-4">
                 <div>
-                  <label className="mb-1 block text-sm font-medium">Selected Factors</label>
+                  <label className="mb-1 block text-sm font-medium">{t('strategy.selectedFactors')}</label>
                   <div className="flex flex-wrap gap-2">
                     {draftState.selected_factors.map((factor) => (
                       <span key={factor.id ?? factor.name} className="rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs text-primary">
@@ -798,7 +836,7 @@ ${content}`
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
-                    <label className="mb-1 block text-sm font-medium">Strategy Name</label>
+                    <label className="mb-1 block text-sm font-medium">{t('strategy.strategyName')}</label>
                     <input
                       value={strategyName}
                       onChange={(event) => setStrategyName(event.target.value)}
@@ -806,7 +844,7 @@ ${content}`
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-sm font-medium">Class Name</label>
+                    <label className="mb-1 block text-sm font-medium">{t('strategy.className')}</label>
                     <input
                       value={strategyClassName}
                       onChange={(event) => setStrategyClassName(event.target.value)}
@@ -816,7 +854,7 @@ ${content}`
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-sm font-medium">Description</label>
+                  <label className="mb-1 block text-sm font-medium">{t('strategy.description')}</label>
                   <textarea
                     value={strategyDescription}
                     onChange={(event) => setStrategyDescription(event.target.value)}
@@ -831,7 +869,7 @@ ${content}`
                     disabled={!strategyName || !strategyClassName || draftState.selected_factors.length === 0 || generateStrategyMutation.isPending}
                     className="rounded-md border border-border px-4 py-2 text-sm hover:bg-muted disabled:opacity-50"
                   >
-                    Generate Strategy Code
+                    {t('strategy.generateCode')}
                   </button>
                   <button
                     type="button"
@@ -839,14 +877,14 @@ ${content}`
                     disabled={!draftState.strategy_draft?.code || saveStrategyMutation.isPending}
                     className="rounded-md bg-primary px-4 py-2 text-sm text-white hover:opacity-90 disabled:opacity-50"
                   >
-                    Save Strategy And Continue
+                    {t('strategy.saveAndContinue')}
                   </button>
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-sm font-medium">Generated Code Preview</label>
+                  <label className="mb-1 block text-sm font-medium">{t('strategy.codePreview')}</label>
                   <pre className="max-h-[360px] overflow-auto rounded-md border border-border bg-slate-950 px-4 py-3 text-xs text-slate-100">
-                    {draftState.strategy_draft?.code || 'Generate strategy code to preview the draft here.'}
+                    {draftState.strategy_draft?.code || t('strategy.codePlaceholder')}
                   </pre>
                 </div>
               </div>
@@ -856,7 +894,7 @@ ${content}`
               <div className="mt-6 space-y-4">
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                   <div>
-                    <label className="mb-1 block text-sm font-medium">Symbol</label>
+                    <label className="mb-1 block text-sm font-medium">{t('backtest.symbol')}</label>
                     <input
                       value={draftState.backtest.symbol || ''}
                       onChange={(event) =>
@@ -869,7 +907,7 @@ ${content}`
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-sm font-medium">Start Date</label>
+                    <label className="mb-1 block text-sm font-medium">{t('backtest.startDate')}</label>
                     <input
                       type="date"
                       value={draftState.backtest.start_date || '2023-01-01'}
@@ -883,7 +921,7 @@ ${content}`
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-sm font-medium">End Date</label>
+                    <label className="mb-1 block text-sm font-medium">{t('backtest.endDate')}</label>
                     <input
                       type="date"
                       value={draftState.backtest.end_date || '2024-12-31'}
@@ -897,7 +935,7 @@ ${content}`
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-sm font-medium">Benchmark</label>
+                    <label className="mb-1 block text-sm font-medium">{t('backtest.benchmark')}</label>
                     <input
                       value={draftState.backtest.benchmark || '000300.SH'}
                       onChange={(event) =>
@@ -918,7 +956,7 @@ ${content}`
                     disabled={!draftState.strategy_draft?.strategy_id || submitBacktestMutation.isPending}
                     className="rounded-md bg-primary px-4 py-2 text-sm text-white hover:opacity-90 disabled:opacity-50"
                   >
-                    Start Backtest
+                    {t('backtest.start')}
                   </button>
                   {draftState.backtest.summary && (
                     <button
@@ -926,28 +964,31 @@ ${content}`
                       onClick={() => transitionMutation.mutate('paper_trade')}
                       className="rounded-md border border-border px-4 py-2 text-sm hover:bg-muted"
                     >
-                      Continue To Paper Trading
+                      {t('backtest.continue')}
                     </button>
                   )}
                 </div>
 
                 <div className="rounded-xl border border-border bg-background px-4 py-4 text-sm">
-                  <div className="font-medium text-foreground">Backtest Status</div>
+                  <div className="font-medium text-foreground">{t('backtest.statusTitle')}</div>
                   <div className="mt-1 text-muted-foreground">
                     {draftState.backtest.job_id
-                      ? `${draftState.backtest.status || 'queued'} · job ${draftState.backtest.job_id}`
-                      : 'No backtest submitted yet.'}
+                      ? t('backtest.statusWithJob', {
+                          status: labelForStatus(draftState.backtest.status || 'queued'),
+                          jobId: draftState.backtest.job_id,
+                        })
+                      : t('backtest.empty')}
                   </div>
                 </div>
 
                 {backtestSummary && (
                   <>
                     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-                      <MetricCard label="Total Return" value={`${backtestSummary.total_return.toFixed(2)}%`} positive={backtestSummary.total_return >= 0} />
-                      <MetricCard label="Annual Return" value={`${backtestSummary.annual_return.toFixed(2)}%`} positive={backtestSummary.annual_return >= 0} />
-                      <MetricCard label="Sharpe Ratio" value={backtestSummary.sharpe_ratio.toFixed(2)} positive />
-                      <MetricCard label="Max Drawdown" value={`${backtestSummary.max_drawdown.toFixed(2)}%`} />
-                      <MetricCard label="Win Rate" value={`${backtestSummary.win_rate.toFixed(2)}%`} positive={backtestSummary.win_rate >= 50} />
+                      <MetricCard label={t('metrics.totalReturn')} value={`${backtestSummary.total_return.toFixed(2)}%`} positive={backtestSummary.total_return >= 0} />
+                      <MetricCard label={t('metrics.annualReturn')} value={`${backtestSummary.annual_return.toFixed(2)}%`} positive={backtestSummary.annual_return >= 0} />
+                      <MetricCard label={t('metrics.sharpeRatio')} value={backtestSummary.sharpe_ratio.toFixed(2)} positive />
+                      <MetricCard label={t('metrics.maxDrawdown')} value={`${backtestSummary.max_drawdown.toFixed(2)}%`} />
+                      <MetricCard label={t('metrics.winRate')} value={`${backtestSummary.win_rate.toFixed(2)}%`} positive={backtestSummary.win_rate >= 50} />
                     </div>
 
                     <div className="flex flex-wrap gap-3">
@@ -957,16 +998,16 @@ ${content}`
                         disabled={generateAIReportMutation.isPending}
                         className="rounded-md border border-border px-4 py-2 text-sm hover:bg-muted disabled:opacity-50"
                       >
-                        Generate AI Interpretation
+                        {t('backtest.generateAI')}
                       </button>
                     </div>
 
                     {aiReport?.report_json && (
                       <div className="space-y-4 rounded-xl border border-border bg-background px-4 py-4">
                         <div>
-                          <div className="text-sm font-semibold text-foreground">AI Backtest Interpretation</div>
+                          <div className="text-sm font-semibold text-foreground">{t('aiReport.title')}</div>
                           <div className="mt-1 text-xs text-muted-foreground">
-                            Quality: {aiReport.report_json.summary?.quality || 'n/a'} · Risk: {aiReport.report_json.summary?.risk_level || 'n/a'} · Overfit risk: {aiReport.report_json.summary?.overfit_risk || 'n/a'}
+                            {t('aiReport.quality')}: {aiReport.report_json.summary?.quality || t('aiReport.notAvailable')} · {t('aiReport.risk')}: {aiReport.report_json.summary?.risk_level || t('aiReport.notAvailable')} · {t('aiReport.overfitRisk')}: {aiReport.report_json.summary?.overfit_risk || t('aiReport.notAvailable')}
                           </div>
                         </div>
                         {Object.entries(aiReport.report_json.sections || {}).map(([key, section]) => (
@@ -995,7 +1036,7 @@ ${content}`
               <div className="mt-6 space-y-4">
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
-                    <label className="mb-1 block text-sm font-medium">Paper Account</label>
+                    <label className="mb-1 block text-sm font-medium">{t('paper.account')}</label>
                     <select
                       value={draftState.paper_trade.account_id ?? ''}
                       onChange={(event) =>
@@ -1009,7 +1050,7 @@ ${content}`
                       }
                       className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
                     >
-                      <option value="">Select an active paper account</option>
+                      <option value="">{t('paper.selectAccount')}</option>
                       {paperAccounts.map((account) => (
                         <option key={account.id} value={account.id}>
                           {account.name} · {account.market}
@@ -1018,7 +1059,7 @@ ${content}`
                     </select>
                   </div>
                   <div>
-                    <label className="mb-1 block text-sm font-medium">Execution Mode</label>
+                    <label className="mb-1 block text-sm font-medium">{t('paper.executionMode')}</label>
                     <select
                       value={draftState.paper_trade.mode ?? 'auto'}
                       onChange={(event) =>
@@ -1032,8 +1073,8 @@ ${content}`
                       }
                       className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
                     >
-                      <option value="auto">Full Auto</option>
-                      <option value="semi_auto">Signal Mode</option>
+                      <option value="auto">{t('paper.mode.auto')}</option>
+                      <option value="semi_auto">{t('paper.mode.semi_auto')}</option>
                     </select>
                   </div>
                 </div>
@@ -1044,14 +1085,18 @@ ${content}`
                   disabled={!draftState.backtest.summary || !draftState.paper_trade.account_id || deployPaperMutation.isPending}
                   className="rounded-md bg-primary px-4 py-2 text-sm text-white hover:opacity-90 disabled:opacity-50"
                 >
-                  Deploy To Paper Trading
+                  {t('paper.deploy')}
                 </button>
 
                 {draftState.paper_trade.deployment_id && (
                   <div className="rounded-xl border border-border bg-background px-4 py-4 text-sm">
-                    <div className="font-medium text-foreground">Deployment Active</div>
+                    <div className="font-medium text-foreground">{t('paper.activeTitle')}</div>
                     <div className="mt-1 text-muted-foreground">
-                      Deployment #{draftState.paper_trade.deployment_id} · account {draftState.paper_trade.account_id} · {draftState.paper_trade.mode || 'auto'}
+                      {t('paper.summary', {
+                        id: draftState.paper_trade.deployment_id,
+                        accountId: draftState.paper_trade.account_id,
+                        mode: labelForExecutionMode(draftState.paper_trade.mode),
+                      })}
                     </div>
                     <pre className="mt-3 max-h-[220px] overflow-auto rounded-md bg-slate-950 px-3 py-3 text-xs text-slate-100">
                       {JSON.stringify(draftState.paper_trade.runtime_summary ?? {}, null, 2)}
@@ -1062,7 +1107,7 @@ ${content}`
             )}
 
             <div className="mt-6">
-              <label className="mb-1 block text-sm font-medium">Workflow State Preview</label>
+              <label className="mb-1 block text-sm font-medium">{t('statePreview')}</label>
               <textarea
                 value={JSON.stringify(draftState, null, 2)}
                 onChange={(event) => {
@@ -1082,18 +1127,18 @@ ${content}`
           <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
             <div className="mb-3 flex items-center gap-2">
               <Bot className="h-5 w-5 text-primary" />
-              <h2 className="text-lg font-semibold text-card-foreground">Copilot Panel</h2>
+              <h2 className="text-lg font-semibold text-card-foreground">{t('copilot.title')}</h2>
             </div>
             <div className="space-y-3">
               <div className="flex flex-wrap gap-2">
-                <button type="button" onClick={() => sendCopilotMessage('Review the selected factors and tell me whether I should proceed.')} className="rounded-full border border-border px-3 py-1 text-xs hover:bg-muted">
-                  Review Factors
+                <button type="button" onClick={() => sendCopilotMessage(t('copilot.prompts.reviewFactors'))} className="rounded-full border border-border px-3 py-1 text-xs hover:bg-muted">
+                  {t('copilot.actions.reviewFactors')}
                 </button>
-                <button type="button" onClick={() => sendCopilotMessage('Explain the best next step for the current Workbench stage.')} className="rounded-full border border-border px-3 py-1 text-xs hover:bg-muted">
-                  Explain Next Step
+                <button type="button" onClick={() => sendCopilotMessage(t('copilot.prompts.explainNextStep'))} className="rounded-full border border-border px-3 py-1 text-xs hover:bg-muted">
+                  {t('copilot.actions.explainNextStep')}
                 </button>
-                <button type="button" onClick={() => sendCopilotMessage('Interpret the current backtest result and call out the main risks.')} className="rounded-full border border-border px-3 py-1 text-xs hover:bg-muted">
-                  Interpret Backtest
+                <button type="button" onClick={() => sendCopilotMessage(t('copilot.prompts.interpretBacktest'))} className="rounded-full border border-border px-3 py-1 text-xs hover:bg-muted">
+                  {t('copilot.actions.interpretBacktest')}
                 </button>
               </div>
 
@@ -1107,7 +1152,7 @@ ${content}`
                   </div>
                 ))}
                 {copilotMutation.isPending && (
-                  <div className="rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">Copilot is thinking...</div>
+                  <div className="rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">{t('copilot.thinking')}</div>
                 )}
               </div>
 
@@ -1120,7 +1165,7 @@ ${content}`
                       sendCopilotMessage(copilotInput)
                     }
                   }}
-                  placeholder="Ask Copilot about this workflow..."
+                  placeholder={t('copilot.placeholder')}
                   className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm"
                 />
                 <button
@@ -1129,7 +1174,7 @@ ${content}`
                   disabled={!copilotInput.trim() || copilotMutation.isPending}
                   className="rounded-md bg-primary px-4 py-2 text-sm text-white hover:opacity-90 disabled:opacity-50"
                 >
-                  Send
+                  {t('copilot.send')}
                 </button>
               </div>
             </div>
@@ -1137,13 +1182,13 @@ ${content}`
 
           <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
             <div className="mb-3 flex items-center justify-between gap-3">
-              <h2 className="text-lg font-semibold text-card-foreground">Recent Sessions</h2>
-              {sessionsLoading && <span className="text-xs text-muted-foreground">Loading...</span>}
+              <h2 className="text-lg font-semibold text-card-foreground">{t('recentSessions.title')}</h2>
+              {sessionsLoading && <span className="text-xs text-muted-foreground">{t('recentSessions.loading')}</span>}
             </div>
             <div className="space-y-3">
               {sessions.length === 0 && (
                 <div className="rounded-lg border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
-                  No workflow sessions yet.
+                  {t('recentSessions.empty')}
                 </div>
               )}
               {sessions.map((session) => (
@@ -1157,10 +1202,10 @@ ${content}`
                 >
                   <div className="font-medium text-foreground">{session.name}</div>
                   <div className="mt-1 text-xs text-muted-foreground">
-                    {session.current_stage} · {session.status}
+                    {labelForStage(session.current_stage)} · {labelForStatus(session.status)}
                   </div>
                   <div className="mt-1 text-xs text-muted-foreground">
-                    Updated {new Date(session.updated_at).toLocaleString()}
+                    {t('recentSessions.updated', { date: formatDateTime(session.updated_at) })}
                   </div>
                 </button>
               ))}

@@ -1,16 +1,18 @@
 {
   "sections": {
     "overview": "Overview",
-    "researchData": "Research & Data",
+    "strategyResearch": "Strategy Research",
+    "aiLab": "AI Lab",
+    "dataValidation": "Data & Validation",
     "tradingPortfolio": "Trading & Portfolio",
-    "opsAlerts": "Operations & Alerts",
-    "aiCollaboration": "AI & Collaboration",
-    "system": "System"
+    "analyticsMonitoring": "Analytics & Monitoring",
+    "collaborationSharing": "Collaboration & Sharing",
+    "systemSettings": "System & Settings"
   },
   "items": {
     "dashboard": "Dashboard",
     "workbench": "Workbench",
-    "strategyResearch": "Strategy Research",
+    "strategyBuilder": "Strategy Builder",
     "backtesting": "Backtesting",
     "marketData": "Market Data",
     "factorLab": "Factor Lab",
@@ -20,12 +22,11 @@
     "trading": "Trading",
     "paperTrading": "Paper Trading",
     "analytics": "Analytics",
-    "alerts": "Alerts",
+    "monitoring": "Monitoring",
     "reports": "Reports",
     "aiAssistant": "AI Assistant",
     "marketplace": "Marketplace",
-    "sharing": "Sharing",
-    "workspaces": "Workspaces",
+    "teamSpace": "Team Space",
     "accountSecurity": "Account Security",
     "settings": "Settings"
   },
@@ -34,6 +35,7 @@
   "language": "Language",
   "switchLang": "Switch language",
   "badges": {
+    "new": "New",
     "beta": "Beta",
     "preview": "Preview"
   },

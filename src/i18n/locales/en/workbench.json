@@ -1,0 +1,141 @@
+{
+  "page": {
+    "title": "Workbench",
+    "subtitle": "Guided workflow for Factor Research, Strategy Build, Backtest Validation, and Paper Trading.",
+    "newWorkflow": "New Workflow",
+    "saveProgress": "Save Progress"
+  },
+  "defaults": {
+    "workflowName": "New Workflow",
+    "generatedDescription": "Generated from selected factors in Workbench."
+  },
+  "stage": {
+    "factor": "Factor Research",
+    "strategy": "Strategy Build",
+    "backtest": "Backtest Validation",
+    "paper_trade": "Paper Trading"
+  },
+  "session": {
+    "title": "Workflow Session",
+    "description": "Workbench now supports persistent session state, real factor selection, and multi-factor strategy generation.",
+    "workflowName": "Workflow Name",
+    "summary": "Session Summary",
+    "summaryWithStrategy": "{{count}} factors selected · strategy #{{strategyId}}",
+    "summaryWithoutStrategy": "{{count}} factors selected · no saved strategy yet"
+  },
+  "factor": {
+    "searchLabel": "Search Factors",
+    "searchPlaceholder": "Search by name, category, or expression",
+    "continue": "Continue To Strategy Build",
+    "selected": "Selected",
+    "pick": "Pick",
+    "noExpression": "No expression preview"
+  },
+  "strategy": {
+    "selectedFactors": "Selected Factors",
+    "strategyName": "Strategy Name",
+    "className": "Class Name",
+    "description": "Description",
+    "generateCode": "Generate Strategy Code",
+    "saveAndContinue": "Save Strategy And Continue",
+    "codePreview": "Generated Code Preview",
+    "codePlaceholder": "Generate strategy code to preview the draft here."
+  },
+  "backtest": {
+    "symbol": "Symbol",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "benchmark": "Benchmark",
+    "start": "Start Backtest",
+    "continue": "Continue To Paper Trading",
+    "statusTitle": "Backtest Status",
+    "statusWithJob": "{{status}} · job {{jobId}}",
+    "empty": "No backtest submitted yet.",
+    "generateAI": "Generate AI Interpretation"
+  },
+  "aiReport": {
+    "title": "AI Backtest Interpretation",
+    "quality": "Quality",
+    "risk": "Risk",
+    "overfitRisk": "Overfit risk",
+    "notAvailable": "n/a"
+  },
+  "paper": {
+    "account": "Paper Account",
+    "selectAccount": "Select an active paper account",
+    "executionMode": "Execution Mode",
+    "mode": {
+      "auto": "Full Auto",
+      "semi_auto": "Signal Mode"
+    },
+    "deploy": "Deploy To Paper Trading",
+    "activeTitle": "Deployment Active",
+    "summary": "Deployment #{{id}} · account {{accountId}} · {{mode}}"
+  },
+  "statePreview": "Workflow State Preview",
+  "metrics": {
+    "totalReturn": "Total Return",
+    "annualReturn": "Annual Return",
+    "sharpeRatio": "Sharpe Ratio",
+    "maxDrawdown": "Max Drawdown",
+    "winRate": "Win Rate"
+  },
+  "copilot": {
+    "title": "Copilot Panel",
+    "welcome": "I can review the current workflow context, explain the next stage, and interpret recent backtest outcomes inside Workbench.",
+    "actions": {
+      "reviewFactors": "Review Factors",
+      "explainNextStep": "Explain Next Step",
+      "interpretBacktest": "Interpret Backtest"
+    },
+    "prompts": {
+      "reviewFactors": "Review the selected factors and tell me whether I should proceed.",
+      "explainNextStep": "Explain the best next step for the current Workbench stage.",
+      "interpretBacktest": "Interpret the current backtest result and call out the main risks."
+    },
+    "thinking": "Copilot is thinking...",
+    "placeholder": "Ask Copilot about this workflow...",
+    "send": "Send"
+  },
+  "recentSessions": {
+    "title": "Recent Sessions",
+    "loading": "Loading...",
+    "empty": "No workflow sessions yet.",
+    "updated": "Updated {{date}}"
+  },
+  "status": {
+    "draft": "Draft",
+    "running_backtest": "Running Backtest",
+    "paper_active": "Paper Active",
+    "archived": "Archived",
+    "queued": "Queued",
+    "running": "Running",
+    "completed": "Completed",
+    "finished": "Completed",
+    "failed": "Failed",
+    "cancelled": "Cancelled"
+  },
+  "messages": {
+    "savedWorkflow": "Saved workflow {{name}}.",
+    "movedToStage": "Moved to {{stage}}.",
+    "failedChangeStage": "Failed to change stage.",
+    "generatedStrategy": "Generated strategy code from selected factors.",
+    "failedGenerateStrategy": "Failed to generate strategy.",
+    "savedStrategyAndMoved": "Strategy saved and moved to Backtest Validation.",
+    "failedSaveStrategy": "Failed to save strategy.",
+    "backtestSubmitted": "Backtest submitted to queue.",
+    "failedSubmitBacktest": "Failed to submit backtest.",
+    "paperDeploymentCreated": "Paper trading deployment created.",
+    "failedDeployPaper": "Failed to deploy to paper trading.",
+    "aiReportGenerated": "AI backtest report generated.",
+    "failedGenerateAI": "Failed to generate AI report.",
+    "copilotFailed": "Copilot request failed."
+  },
+  "validation": {
+    "saveStrategyBeforeBacktest": "Save the strategy before starting a backtest.",
+    "saveStrategyBeforeDeploy": "Save a strategy before deploying to paper trading.",
+    "selectPaperAccount": "Select a paper account before deployment.",
+    "runBacktestBeforeAI": "Run a backtest before generating an AI report.",
+    "failedCreateConversation": "Failed to create Copilot conversation."
+  }
+}
