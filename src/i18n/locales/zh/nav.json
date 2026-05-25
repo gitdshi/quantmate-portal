@@ -9,6 +9,7 @@
   },
   "items": {
     "dashboard": "仪表盘",
+    "workbench": "统一工作台",
     "strategyResearch": "策略研究",
     "backtesting": "回测评估",
     "marketData": "行情数据",

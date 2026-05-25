@@ -149,6 +149,23 @@ jobs:
     needs: publish
     environment: staging
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare staging script bundle
+        run: |
+          mkdir -p .deploy_bundle/.github/scripts
+          cp .github/scripts/deploy_portal_staging.sh .deploy_bundle/.github/scripts/deploy_portal_staging.sh
+
+      - name: Copy deploy script to staging server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          source: ".deploy_bundle/.github/scripts/deploy_portal_staging.sh"
+          target: /opt/quantmate
+          strip_components: 1
+
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
         env:
@@ -162,36 +179,5 @@ jobs:
           script: |
             set -e
             cd /opt/quantmate
-
-            ENV_FILE=.env
-
-            upsert_env_key() {
-              key="$1"
-              value="$2"
-              if grep -q "^${key}=" "$ENV_FILE"; then
-                sed -i "s|^${key}=.*|${key}=${value}|" "$ENV_FILE"
-              else
-                printf "\n%s=%s\n" "$key" "$value" >> "$ENV_FILE"
-              fi
-            }
-
-            echo "==> Pulling portal image tag: $PORTAL_IMAGE_TAG"
             GITHUB_OWNER=$GITHUB_OWNER PORTAL_IMAGE_TAG=$PORTAL_IMAGE_TAG \
-              docker compose -f docker-compose.staging.yml pull portal
-
-            echo "==> Restarting portal service"
-            GITHUB_OWNER=$GITHUB_OWNER PORTAL_IMAGE_TAG=$PORTAL_IMAGE_TAG \
-              docker compose -f docker-compose.staging.yml up -d portal --remove-orphans
-
-            echo "==> Restarting nginx to refresh upstream container IPs"
-            docker restart quantmate_nginx >/dev/null
-
-            echo "==> Waiting for portal to start"
-            sleep 10
-            curl -sf http://localhost:80/ || curl -sf http://localhost:5173/ || exit 1
-
-            echo "==> Persisting deployed portal image tag into .env"
-            upsert_env_key GITHUB_OWNER "$GITHUB_OWNER"
-            upsert_env_key PORTAL_IMAGE_TAG "$PORTAL_IMAGE_TAG"
-
-            echo "Portal staging deploy successful: $PORTAL_IMAGE_TAG"
+              sh .github/scripts/deploy_portal_staging.sh

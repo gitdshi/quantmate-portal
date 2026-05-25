@@ -11,6 +11,7 @@ const Login = lazy(() => import('./pages/auth/Login'))
 const Register = lazy(() => import('./pages/auth/Register'))
 const Backtest = lazy(() => import('./pages/Backtest'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))
+const Workbench = lazy(() => import('./pages/Workbench'))
 const MarketData = lazy(() => import('./pages/MarketData'))
 const Portfolio = lazy(() => import('./pages/Portfolio'))
 const Settings = lazy(() => import('./pages/Settings'))
@@ -151,6 +152,7 @@ function App() {
         >
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
+          <Route path="workbench" element={<Workbench />} />
           <Route path="strategies" element={<Strategies />} />
           <Route path="backtest" element={<Backtest />} />
           <Route path="market-data" element={<MarketData />} />

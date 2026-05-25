@@ -135,6 +135,13 @@ export default function Layout() {
       { sectionKey: 'sections.overview' },
       { nameKey: 'items.dashboard', href: '/dashboard', icon: LayoutDashboard },
       { sectionKey: 'sections.researchData' },
+      {
+        nameKey: 'items.workbench',
+        href: '/workbench',
+        icon: Sparkles,
+        badge: t('badges.preview', 'Preview'),
+        badgeTone: 'preview',
+      },
       { nameKey: 'items.strategyResearch', href: '/strategies', icon: FileCode },
       { nameKey: 'items.backtesting', href: '/backtest', icon: TrendingUp },
       { nameKey: 'items.marketData', href: '/market-data', icon: Database },

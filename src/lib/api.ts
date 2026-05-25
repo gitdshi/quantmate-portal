@@ -110,7 +110,7 @@ api.interceptors.response.use(
           return api(originalRequest)
         } else {
           // No refresh token: clear auth state and redirect immediately
-          try { useAuthStore.getState().logout() } catch (e) { /* ignore */ }
+          try { useAuthStore.getState().logout() } catch (_e) { /* ignore */ }
           localStorage.removeItem('access_token')
           localStorage.removeItem('refresh_token')
           window.location.href = '/login'
@@ -120,7 +120,7 @@ api.interceptors.response.use(
         // Clear auth state and tokens, then redirect to login
         try {
           useAuthStore.getState().logout()
-        } catch (e) {
+        } catch (_e) {
           // ignore errors during logout
         }
         localStorage.removeItem('access_token')
@@ -131,7 +131,7 @@ api.interceptors.response.use(
     }
 
     if (error.response?.status === 401) {
-      try { useAuthStore.getState().logout() } catch (e) { /* ignore */ }
+      try { useAuthStore.getState().logout() } catch (_e) { /* ignore */ }
       localStorage.removeItem('access_token')
       localStorage.removeItem('refresh_token')
       if (!window.location.pathname.startsWith('/login')) {
@@ -169,9 +169,9 @@ export const strategiesAPI = {
   
   get: (id: number) => api.get(`/strategies/${id}`),
   
-  create: (data: any) => api.post('/strategies', data),
+  create: (data: Record<string, unknown>) => api.post('/strategies', data),
   
-  update: (id: number, data: any) => api.put(`/strategies/${id}`, data),
+  update: (id: number, data: Record<string, unknown>) => api.put(`/strategies/${id}`, data),
   
   delete: (id: number) => api.delete(`/strategies/${id}`),
   
@@ -233,11 +233,15 @@ export const strategiesAPI = {
 
 // Backtest API
 export const backtestAPI = {
-  submit: (data: any) => api.post('/backtest', data),
+  submit: (data: Record<string, unknown>) => api.post('/backtest', data),
   
-  submitBatch: (data: any) => api.post('/backtest/batch', data),
+  submitBatch: (data: Record<string, unknown>) => api.post('/backtest/batch', data),
   
   getStatus: (jobId: string) => api.get(`/backtest/${jobId}`),
+
+  getAIReport: (jobId: string) => api.get(`/backtest/${jobId}/ai-report`),
+
+  generateAIReport: (jobId: string) => api.post(`/backtest/${jobId}/ai-report`),
   
   getHistory: () => api.get('/backtest/history/list'),
   
@@ -875,6 +879,31 @@ export const factorAPI = {
   }) => api.post('/factors/mining/run', data),
   screeningHistory: () => api.get('/factors/screening/history'),
   screeningDetails: (runId: number) => api.get(`/factors/screening/${runId}`),
+}
+
+export const workbenchAPI = {
+  listSessions: (params?: { limit?: number }) => api.get('/workbench/sessions', { params }),
+  createSession: (data: {
+    name?: string
+    current_stage?: 'factor' | 'strategy' | 'backtest' | 'paper_trade'
+    status?: 'draft' | 'running_backtest' | 'paper_active' | 'archived'
+    state_json?: Record<string, unknown>
+  }) => api.post('/workbench/sessions', data),
+  getSession: (sessionId: number) => api.get(`/workbench/sessions/${sessionId}`),
+  updateSession: (
+    sessionId: number,
+    data: {
+      name?: string
+      current_stage?: 'factor' | 'strategy' | 'backtest' | 'paper_trade'
+      status?: 'draft' | 'running_backtest' | 'paper_active' | 'archived'
+      state_json?: Record<string, unknown>
+    }
+  ) => api.put(`/workbench/sessions/${sessionId}`, data),
+  transitionSession: (
+    sessionId: number,
+    data: { target_stage: 'factor' | 'strategy' | 'backtest' | 'paper_trade' }
+  ) => api.post(`/workbench/sessions/${sessionId}/transition`, data),
+  listEvents: (sessionId: number) => api.get(`/workbench/sessions/${sessionId}/events`),
 }
 
 // RD-Agent Auto Pilot API

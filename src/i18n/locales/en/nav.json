@@ -9,6 +9,7 @@
   },
   "items": {
     "dashboard": "Dashboard",
+    "workbench": "Workbench",
     "strategyResearch": "Strategy Research",
     "backtesting": "Backtesting",
     "marketData": "Market Data",
