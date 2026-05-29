@@ -89,7 +89,7 @@ describe('FactorLab Page', () => {
   it('switches to backtest tab', () => {
     render(<FactorLab />)
     fireEvent.click(screen.getByRole('button', { name: 'Factor Backtest' }))
-    expect(screen.getByText('No factor backtest data available')).toBeInTheDocument()
+    expect(screen.getByText('No factor backtests yet')).toBeInTheDocument()
   })
 
   it('switches to mining tab', () => {
@@ -401,7 +401,7 @@ describe('FactorLab Page', () => {
   it('renders backtest tab with placeholder', () => {
     render(<FactorLab />)
     fireEvent.click(screen.getByRole('button', { name: 'Factor Backtest' }))
-    expect(screen.getByText(/No factor backtest data available/i)).toBeInTheDocument()
+    expect(screen.getByText(/No factor backtests yet/i)).toBeInTheDocument()
   })
 
   // ─── ICIR tab without selected factor (line 395) ────────
