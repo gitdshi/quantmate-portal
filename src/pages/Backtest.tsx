@@ -13,7 +13,7 @@ import OptimizationTaskResultsModal from '../components/OptimizationTaskResultsM
 import PerformanceComparison from '../components/PerformanceComparison'
 import StrategyOptimization from '../components/StrategyOptimization'
 import TabPanel from '../components/ui/TabPanel'
-import { queueAPI } from '../lib/api'
+import { backtestAPI, queueAPI } from '../lib/api'
 
 type QueueJob = {
   job_id: string
@@ -34,6 +34,39 @@ type QueueJob = {
   }
 }
 
+type UnifiedRun = {
+  job_id: string
+  subject_type?: 'strategy' | 'factor' | 'composite'
+  subject_name?: string | null
+  status: string
+  start_date?: string | null
+  end_date?: string | null
+  created_at?: string | null
+  summary?: {
+    total_return?: number
+    sharpe_ratio?: number
+    ic_mean?: number
+  }
+}
+
+type UnifiedRunDetail = UnifiedRun & {
+  result?: {
+    statistics?: {
+      total_return?: number
+      annual_return?: number
+      max_drawdown?: number
+      sharpe_ratio?: number
+      total_trades?: number
+      winning_rate?: number
+    }
+    factor_metrics?: {
+      ic_mean?: number
+      ic_ir?: number
+      turnover?: number
+    }
+  }
+}
+
 export default function Backtest() {
   const { t } = useTranslation(['backtest', 'common'])
   const [showSingleForm, setShowSingleForm] = useState(false)
@@ -42,6 +75,7 @@ export default function Backtest() {
   const [activeBulkSummaryJobId, setActiveBulkSummaryJobId] = useState<string | null>(null)
   const [resumeBulkSummaryJobId, setResumeBulkSummaryJobId] = useState<string | null>(null)
   const [activeOptimizationTaskId, setActiveOptimizationTaskId] = useState<number | null>(null)
+  const [activeUnifiedRunId, setActiveUnifiedRunId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'runs' | 'compare' | 'optimize'>('runs')
 
   const { data: jobsResponse } = useQuery({
@@ -50,10 +84,27 @@ export default function Backtest() {
     refetchInterval: activeTab === 'runs' && !showBulkForm ? 5000 : false,
   })
 
+  const { data: unifiedRunsResponse } = useQuery({
+    queryKey: ['unified-backtest-runs'],
+    queryFn: () => backtestAPI.listRuns({ page_size: 50 }),
+    refetchInterval: activeTab === 'runs' ? 5000 : false,
+  })
+
+  const { data: unifiedRunDetail } = useQuery<UnifiedRunDetail>({
+    queryKey: ['unified-backtest-run', activeUnifiedRunId],
+    queryFn: () => backtestAPI.getRun(activeUnifiedRunId!).then((response) => response.data),
+    enabled: !!activeUnifiedRunId,
+  })
+
   const jobs = useMemo<QueueJob[]>(() => {
     const payload = jobsResponse?.data
     return Array.isArray(payload) ? payload : []
   }, [jobsResponse])
+
+  const unifiedRuns = useMemo<UnifiedRun[]>(() => {
+    const payload = unifiedRunsResponse?.data
+    return Array.isArray(payload) ? payload : payload?.data ?? []
+  }, [unifiedRunsResponse])
 
   const summary = useMemo(() => {
     const runningStatuses = new Set(['queued', 'started'])
@@ -72,6 +123,19 @@ export default function Backtest() {
       completionRate: total > 0 ? Math.round((completed / total) * 100) : 0,
     }
   }, [jobs])
+
+  const unifiedSummary = useMemo(() => {
+    return unifiedRuns.reduce(
+      (acc, run) => {
+        acc.total += 1
+        if (run.subject_type === 'strategy') acc.strategy += 1
+        if (run.subject_type === 'factor') acc.factor += 1
+        if (run.subject_type === 'composite') acc.composite += 1
+        return acc
+      },
+      { total: 0, strategy: 0, factor: 0, composite: 0 }
+    )
+  }, [unifiedRuns])
 
   const tabs = useMemo(
     () => [
@@ -161,6 +225,103 @@ export default function Backtest() {
           </div>
           <div className="mt-1 text-lg font-semibold text-card-foreground">{summary.bulk}</div>
         </div>
+      </div>
+
+      <div className="rounded-lg border border-border bg-card p-5">
+        <div className="mb-4 flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-card-foreground">Unified Backtest Runs</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Strategy, factor, and composite backtests are now tracked in one history.</p>
+          </div>
+          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+            <span className="rounded-full bg-muted px-3 py-1">All {unifiedSummary.total}</span>
+            <span className="rounded-full bg-muted px-3 py-1">Strategy {unifiedSummary.strategy}</span>
+            <span className="rounded-full bg-muted px-3 py-1">Factor {unifiedSummary.factor}</span>
+            <span className="rounded-full bg-muted px-3 py-1">Composite {unifiedSummary.composite}</span>
+          </div>
+        </div>
+
+        {unifiedRuns.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No unified runs yet.</p>
+        ) : (
+          <div className="overflow-x-auto rounded-lg border border-border">
+            <table className="min-w-full text-sm">
+              <thead className="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                <tr>
+                  <th className="px-3 py-2">Subject</th>
+                  <th className="px-3 py-2">Type</th>
+                  <th className="px-3 py-2">Status</th>
+                  <th className="px-3 py-2">Return</th>
+                  <th className="px-3 py-2">Sharpe</th>
+                  <th className="px-3 py-2">Created</th>
+                  <th className="px-3 py-2"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {unifiedRuns.map((run) => (
+                  <tr key={run.job_id} className="border-t border-border">
+                    <td className="px-3 py-2 font-medium text-card-foreground">{run.subject_name || run.job_id}</td>
+                    <td className="px-3 py-2 capitalize text-muted-foreground">{run.subject_type || '-'}</td>
+                    <td className="px-3 py-2">
+                      <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${run.status === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : run.status === 'failed' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'}`}>
+                        {run.status}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2">{run.summary?.total_return != null ? `${(run.summary.total_return * 100).toFixed(2)}%` : '-'}</td>
+                    <td className="px-3 py-2">{run.summary?.sharpe_ratio?.toFixed(3) ?? '-'}</td>
+                    <td className="px-3 py-2 text-muted-foreground">{run.created_at?.slice(0, 16).replace('T', ' ') ?? '-'}</td>
+                    <td className="px-3 py-2 text-right">
+                      <button className="text-xs font-medium text-primary hover:underline" onClick={() => setActiveUnifiedRunId(run.job_id)}>
+                        View
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {activeUnifiedRunId && unifiedRunDetail && (
+          <div className="mt-4 rounded-lg border border-border bg-background p-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-card-foreground">{unifiedRunDetail.subject_name || 'Run detail'}</h3>
+                <p className="text-xs capitalize text-muted-foreground">{unifiedRunDetail.subject_type || 'unknown'} backtest</p>
+              </div>
+              <button className="text-xs text-muted-foreground hover:text-foreground" onClick={() => setActiveUnifiedRunId(null)}>
+                Close
+              </button>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
+              <div className="rounded-md border border-border bg-card px-3 py-2">
+                <div className="text-xs text-muted-foreground">Total Return</div>
+                <div className="mt-1 text-sm font-semibold">{unifiedRunDetail.result?.statistics?.total_return != null ? `${(unifiedRunDetail.result.statistics.total_return * 100).toFixed(2)}%` : '-'}</div>
+              </div>
+              <div className="rounded-md border border-border bg-card px-3 py-2">
+                <div className="text-xs text-muted-foreground">Annual Return</div>
+                <div className="mt-1 text-sm font-semibold">{unifiedRunDetail.result?.statistics?.annual_return != null ? `${(unifiedRunDetail.result.statistics.annual_return * 100).toFixed(2)}%` : '-'}</div>
+              </div>
+              <div className="rounded-md border border-border bg-card px-3 py-2">
+                <div className="text-xs text-muted-foreground">Max Drawdown</div>
+                <div className="mt-1 text-sm font-semibold">{unifiedRunDetail.result?.statistics?.max_drawdown != null ? `${(unifiedRunDetail.result.statistics.max_drawdown * 100).toFixed(2)}%` : '-'}</div>
+              </div>
+              <div className="rounded-md border border-border bg-card px-3 py-2">
+                <div className="text-xs text-muted-foreground">Sharpe</div>
+                <div className="mt-1 text-sm font-semibold">{unifiedRunDetail.result?.statistics?.sharpe_ratio?.toFixed(3) ?? '-'}</div>
+              </div>
+              <div className="rounded-md border border-border bg-card px-3 py-2">
+                <div className="text-xs text-muted-foreground">IC Mean</div>
+                <div className="mt-1 text-sm font-semibold">{unifiedRunDetail.result?.factor_metrics?.ic_mean?.toFixed(4) ?? '-'}</div>
+              </div>
+              <div className="rounded-md border border-border bg-card px-3 py-2">
+                <div className="text-xs text-muted-foreground">IC IR</div>
+                <div className="mt-1 text-sm font-semibold">{unifiedRunDetail.result?.factor_metrics?.ic_ir?.toFixed(3) ?? '-'}</div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="rounded-lg border border-border bg-card p-5">

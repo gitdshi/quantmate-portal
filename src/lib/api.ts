@@ -234,6 +234,16 @@ export const strategiesAPI = {
 // Backtest API
 export const backtestAPI = {
   submit: (data: Record<string, unknown>) => api.post('/backtest', data),
+
+  submitRun: (data: Record<string, unknown>) => api.post('/backtest/runs', data),
+
+  listRuns: (params?: {
+    subject_type?: 'strategy' | 'factor' | 'composite'
+    page?: number
+    page_size?: number
+  }) => api.get('/backtest/runs', { params }),
+
+  getRun: (jobId: string) => api.get(`/backtest/runs/${jobId}`),
   
   submitBatch: (data: Record<string, unknown>) => api.post('/backtest/batch', data),
   

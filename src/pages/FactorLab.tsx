@@ -1,12 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  GitCompare,
-  Library,
-  LineChart as LineChartIcon,
-  Pickaxe,
-  Plus,
-  Trash2,
-  TrendingUp,
+    GitCompare,
+    Library,
+    LineChart as LineChartIcon,
+    Pickaxe,
+    Plus,
+    Trash2,
+    TrendingUp,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -17,7 +17,7 @@ import FilterBar from '../components/ui/FilterBar'
 import Modal from '../components/ui/Modal'
 import TabPanel from '../components/ui/TabPanel'
 import { showToast } from '../components/ui/toast-service'
-import { factorAPI, strategiesAPI } from '../lib/api'
+import { backtestAPI, factorAPI, strategiesAPI } from '../lib/api'
 
 interface Factor {
   id: number
@@ -68,6 +68,56 @@ interface CombineFactor {
   factor_set: string
 }
 
+interface UnifiedBacktestRun {
+  job_id: string
+  subject_id?: number | null
+  subject_name?: string | null
+  status: string
+  start_date?: string | null
+  end_date?: string | null
+  created_at?: string | null
+  summary?: {
+    total_return?: number
+    sharpe_ratio?: number
+    universe_size?: number
+    top_n?: number
+  }
+}
+
+interface UnifiedBacktestDetail extends UnifiedBacktestRun {
+  result?: {
+    statistics?: {
+      total_return?: number
+      annual_return?: number
+      max_drawdown?: number
+      sharpe_ratio?: number
+      total_trades?: number
+      winning_rate?: number
+    }
+    factor_metrics?: {
+      ic_mean?: number
+      ic_ir?: number
+      turnover?: number
+      long_short_ret?: number
+    }
+  }
+  artifacts?: {
+    latest_factor_snapshot?: Array<{
+      instrument: string
+      date: string
+      score: number
+    }>
+  }
+  extensions?: {
+    factor?: {
+      universe?: {
+        type?: string
+        preset?: string
+      }
+    }
+  }
+}
+
 export default function FactorLab() {
   const { t } = useTranslation('social')
   const queryClient = useQueryClient()
@@ -84,6 +134,16 @@ export default function FactorLab() {
   const [selectedFactorId, setSelectedFactorId] = useState<number | null>(null)
   const [evalStartDate, setEvalStartDate] = useState('2023-01-01')
   const [evalEndDate, setEvalEndDate] = useState('2024-12-31')
+
+  // Backtest tab state
+  const [backtestFactorId, setBacktestFactorId] = useState<number | null>(null)
+  const [btStartDate, setBtStartDate] = useState('2023-01-01')
+  const [btEndDate, setBtEndDate] = useState('2024-12-31')
+  const [btUniversePreset, setBtUniversePreset] = useState('csi300')
+  const [btSymbols, setBtSymbols] = useState('')
+  const [btTopN, setBtTopN] = useState('10')
+  const [btBenchmark, setBtBenchmark] = useState('000300.SH')
+  const [btDetailJobId, setBtDetailJobId] = useState<string | null>(null)
 
   // Mining tab state
   const [miningStart, setMiningStart] = useState('2023-01-01')
@@ -123,6 +183,23 @@ export default function FactorLab() {
         ? factorAPI.listEvaluations(selectedFactorId).then((r) => r.data ?? [])
         : Promise.resolve([]),
     enabled: !!selectedFactorId,
+  })
+
+  const { data: factorRuns = [] } = useQuery<UnifiedBacktestRun[]>({
+    queryKey: ['factor-backtest-runs'],
+    queryFn: () =>
+      backtestAPI.listRuns({ subject_type: 'factor', page_size: 50 }).then((r) => {
+        const payload = r.data
+        return Array.isArray(payload) ? payload : payload?.data ?? []
+      }),
+    enabled: activeTab === 'backtest',
+    refetchInterval: activeTab === 'backtest' ? 5000 : false,
+  })
+
+  const { data: backtestDetail } = useQuery<UnifiedBacktestDetail>({
+    queryKey: ['factor-backtest-detail', btDetailJobId],
+    queryFn: () => backtestAPI.getRun(btDetailJobId!).then((r) => r.data),
+    enabled: !!btDetailJobId,
   })
 
   // ── Mutations ──
@@ -181,6 +258,16 @@ export default function FactorLab() {
     onError: () => showToast('Strategy creation failed', 'error'),
   })
 
+  const factorBacktestMutation = useMutation({
+    mutationFn: (data: Record<string, unknown>) => backtestAPI.submitRun(data),
+    onSuccess: (response) => {
+      showToast('Factor backtest queued', 'success')
+      setBtDetailJobId(response.data?.job_id ?? null)
+      queryClient.invalidateQueries({ queryKey: ['factor-backtest-runs'] })
+    },
+    onError: () => showToast('Factor backtest failed to submit', 'error'),
+  })
+
   // ── Helpers ──
 
   const filtered = factors.filter(
@@ -188,6 +275,37 @@ export default function FactorLab() {
   )
 
   const selectedFactor = factors.find((f) => f.id === selectedFactorId)
+  const effectiveBacktestFactorId = backtestFactorId ?? factors[0]?.id ?? null
+  const selectedBacktestFactor = factors.find((f) => f.id === effectiveBacktestFactorId)
+
+  const filteredFactorRuns = factorRuns.filter((run) => !effectiveBacktestFactorId || run.subject_id === effectiveBacktestFactorId)
+
+  const submitFactorBacktest = () => {
+    if (!effectiveBacktestFactorId) {
+      showToast('Select a factor first', 'error')
+      return
+    }
+
+    const customSymbols = btSymbols
+      .split(/[\s,]+/)
+      .map((item) => item.trim())
+      .filter(Boolean)
+
+    factorBacktestMutation.mutate({
+      subject_type: 'factor',
+      subject_id: effectiveBacktestFactorId,
+      subject_name: selectedBacktestFactor?.name,
+      start_date: btStartDate,
+      end_date: btEndDate,
+      benchmark: btBenchmark,
+      profile: {
+        top_n: Number(btTopN) || 10,
+        universe: btUniversePreset === 'custom'
+          ? { symbols: customSymbols }
+          : { preset: btUniversePreset },
+      },
+    })
+  }
 
   const addFactorToCombine = (factor: Factor) => {
     if (combineFactors.some((cf) => cf.factor_id === factor.id)) return
@@ -328,6 +446,41 @@ export default function FactorLab() {
       key: 'turnover',
       label: t('factorLab.columns.turnover'),
       render: (r) => (r.turnover != null ? `${(r.turnover * 100).toFixed(1)}%` : '-'),
+    },
+  ]
+
+  const backtestCols: Column<UnifiedBacktestRun>[] = [
+    {
+      key: 'subject_name',
+      label: 'Factor',
+      render: (run) => run.subject_name || `#${run.subject_id ?? '-'}`,
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      render: (run) => <Badge variant={run.status === 'completed' ? 'success' : run.status === 'failed' ? 'destructive' : 'warning'}>{run.status}</Badge>,
+    },
+    {
+      key: 'summary',
+      label: 'Return',
+      render: (run) => run.summary?.total_return != null ? `${(run.summary.total_return * 100).toFixed(2)}%` : '-',
+    },
+    {
+      key: 'created_at',
+      label: 'Created',
+      render: (run) => run.created_at?.slice(0, 16).replace('T', ' ') ?? '-',
+    },
+    {
+      key: 'job_id',
+      label: '',
+      render: (run) => (
+        <button
+          className="text-xs px-2 py-1 rounded bg-primary/10 text-primary hover:bg-primary/20"
+          onClick={() => setBtDetailJobId(run.job_id)}
+        >
+          View
+        </button>
+      ),
     },
   ]
 
@@ -561,7 +714,136 @@ export default function FactorLab() {
 
         {/* ── Backtest Tab ── */}
         {activeTab === 'backtest' && (
-          <p className="text-center text-muted-foreground py-8">{t('factorLab.empty.backtest')}</p>
+          <div className="space-y-4">
+            <div className="rounded-lg border border-border bg-card p-4">
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+                <div className="xl:col-span-2">
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Factor</label>
+                  <select
+                    value={effectiveBacktestFactorId ?? ''}
+                    onChange={(e) => setBacktestFactorId(Number(e.target.value))}
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                  >
+                    {factors.map((factor) => (
+                      <option key={factor.id} value={factor.id}>{factor.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Start</label>
+                  <input value={btStartDate} onChange={(e) => setBtStartDate(e.target.value)} type="date" className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">End</label>
+                  <input value={btEndDate} onChange={(e) => setBtEndDate(e.target.value)} type="date" className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Universe</label>
+                  <select value={btUniversePreset} onChange={(e) => setBtUniversePreset(e.target.value)} className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm">
+                    <option value="csi300">CSI 300</option>
+                    <option value="csi500">CSI 500</option>
+                    <option value="csi1000">CSI 1000</option>
+                    <option value="custom">Custom symbols</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Top N</label>
+                  <input value={btTopN} onChange={(e) => setBtTopN(e.target.value)} type="number" min="1" className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm" />
+                </div>
+              </div>
+
+              {btUniversePreset === 'custom' && (
+                <div className="mt-3">
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Symbols</label>
+                  <input
+                    value={btSymbols}
+                    onChange={(e) => setBtSymbols(e.target.value)}
+                    placeholder="000001.SZ, 600519.SH"
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                  />
+                </div>
+              )}
+
+              <div className="mt-3 flex flex-wrap items-end gap-3">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Benchmark</label>
+                  <input value={btBenchmark} onChange={(e) => setBtBenchmark(e.target.value)} className="rounded-md border border-border bg-background px-3 py-2 text-sm" />
+                </div>
+                <button
+                  disabled={factorBacktestMutation.isPending}
+                  onClick={submitFactorBacktest}
+                  className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+                >
+                  Run factor backtest
+                </button>
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-border bg-card p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">Recent runs</h3>
+                  <p className="text-xs text-muted-foreground">Unified factor backtests are persisted in the shared backtest history.</p>
+                </div>
+              </div>
+              <DataTable data={filteredFactorRuns} columns={backtestCols} emptyText="No factor backtests yet" />
+            </div>
+
+            {btDetailJobId && backtestDetail && (
+              <div className="rounded-lg border border-border bg-card p-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-semibold text-foreground">{backtestDetail.subject_name || 'Factor backtest detail'}</h3>
+                    <p className="text-xs text-muted-foreground">{backtestDetail.extensions?.factor?.universe?.preset || backtestDetail.extensions?.factor?.universe?.type || 'custom universe'}</p>
+                  </div>
+                  <button className="text-xs text-muted-foreground hover:text-foreground" onClick={() => setBtDetailJobId(null)}>Close</button>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-4">
+                  <div className="rounded-md border border-border bg-background px-3 py-2">
+                    <div className="text-xs text-muted-foreground">Total Return</div>
+                    <div className="mt-1 text-sm font-semibold">{backtestDetail.result?.statistics?.total_return != null ? `${(backtestDetail.result.statistics.total_return * 100).toFixed(2)}%` : '-'}</div>
+                  </div>
+                  <div className="rounded-md border border-border bg-background px-3 py-2">
+                    <div className="text-xs text-muted-foreground">Sharpe</div>
+                    <div className="mt-1 text-sm font-semibold">{backtestDetail.result?.statistics?.sharpe_ratio?.toFixed(3) ?? '-'}</div>
+                  </div>
+                  <div className="rounded-md border border-border bg-background px-3 py-2">
+                    <div className="text-xs text-muted-foreground">IC Mean</div>
+                    <div className="mt-1 text-sm font-semibold">{backtestDetail.result?.factor_metrics?.ic_mean?.toFixed(4) ?? '-'}</div>
+                  </div>
+                  <div className="rounded-md border border-border bg-background px-3 py-2">
+                    <div className="text-xs text-muted-foreground">IC IR</div>
+                    <div className="mt-1 text-sm font-semibold">{backtestDetail.result?.factor_metrics?.ic_ir?.toFixed(3) ?? '-'}</div>
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Latest factor snapshot</h4>
+                  <div className="overflow-x-auto rounded-md border border-border">
+                    <table className="min-w-full text-sm">
+                      <thead className="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                        <tr>
+                          <th className="px-3 py-2">Instrument</th>
+                          <th className="px-3 py-2">Date</th>
+                          <th className="px-3 py-2">Score</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(backtestDetail.artifacts?.latest_factor_snapshot ?? []).map((item) => (
+                          <tr key={`${item.instrument}-${item.date}`} className="border-t border-border">
+                            <td className="px-3 py-2 font-mono text-xs">{item.instrument}</td>
+                            <td className="px-3 py-2">{item.date}</td>
+                            <td className="px-3 py-2">{item.score.toFixed(4)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         )}
       </TabPanel>
 
