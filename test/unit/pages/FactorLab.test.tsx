@@ -17,6 +17,11 @@ vi.mock('@/lib/api', () => ({
     get: vi.fn(),
     interceptors: { request: { use: vi.fn() }, response: { use: vi.fn() } },
   },
+  backtestAPI: {
+    listRuns: vi.fn(),
+    getRun: vi.fn(),
+    submitRun: vi.fn(),
+  },
   factorAPI: {
     list: vi.fn(),
     create: vi.fn(),
@@ -30,7 +35,7 @@ vi.mock('@/lib/api', () => ({
   },
 }))
 
-import { factorAPI, strategiesAPI } from '@/lib/api'
+import { backtestAPI, factorAPI, strategiesAPI } from '@/lib/api'
 
 const mockFactors = [
   { id: 1, name: 'Alpha01', category: 'technical', expression: 'close/delay(close,20)-1', status: 'validated', ic_mean: 0.05, ic_ir: 1.2, turnover: 0.3 },
@@ -41,11 +46,37 @@ const mockEvaluations = [
   { id: 10, factor_id: 1, start_date: '2023-01-01', end_date: '2024-12-31', ic_mean: 0.05, ic_std: 0.02, ic_ir: 1.2, turnover: 0.3, long_ret: 0.15, short_ret: -0.05, long_short_ret: 0.2, created_at: '2025-01-01' },
 ]
 
+const mockFactorRuns = [
+  { job_id: 'job-1', subject_id: 1, subject_name: 'Alpha01', status: 'completed', created_at: '2026-05-30T10:00:00', summary: { total_return: 0.12 } },
+]
+
+const mockFactorRunDetail = {
+  job_id: 'job-1',
+  subject_id: 1,
+  subject_name: 'Alpha01',
+  status: 'completed',
+  result: {
+    statistics: { total_return: 0.12, sharpe_ratio: 1.23 },
+    factor_metrics: { ic_mean: 0.04, ic_ir: 0.9 },
+  },
+  artifacts: {
+    latest_factor_snapshot: [{ instrument: '000001.SZ', date: '2026-05-30', score: 1.2345 }],
+  },
+  extensions: {
+    factor: {
+      universe: { preset: 'csi300' },
+    },
+  },
+}
+
 describe('FactorLab Page', () => {
   beforeEach(async () => {
     vi.clearAllMocks()
     localStorage.setItem('quantmate-lang', 'en')
     await i18n.changeLanguage('en')
+    vi.mocked(backtestAPI.listRuns).mockResolvedValue({ data: [] } as never)
+    vi.mocked(backtestAPI.getRun).mockResolvedValue({ data: mockFactorRunDetail } as never)
+    vi.mocked(backtestAPI.submitRun).mockResolvedValue({ data: { job_id: 'job-1' } } as never)
     vi.mocked(factorAPI.list).mockResolvedValue({ data: mockFactors } as never)
     vi.mocked(factorAPI.create).mockResolvedValue({ data: { id: 3, name: 'NewFactor' } } as never)
     vi.mocked(factorAPI.listEvaluations).mockResolvedValue({ data: mockEvaluations } as never)
@@ -103,7 +134,7 @@ describe('FactorLab Page', () => {
     render(<FactorLab />)
     expect(await screen.findByText('Alpha01')).toBeInTheDocument()
     expect(screen.getByText('Momentum20')).toBeInTheDocument()
-    expect(screen.getByText('technical')).toBeInTheDocument()
+    expect(screen.getByText('Technical')).toBeInTheDocument()
   })
 
   it('shows factor status badges', async () => {
@@ -402,6 +433,19 @@ describe('FactorLab Page', () => {
     render(<FactorLab />)
     fireEvent.click(screen.getByRole('button', { name: 'Factor Backtest' }))
     expect(screen.getByText(/No factor backtests yet/i)).toBeInTheDocument()
+  })
+
+  it('opens factor backtest detail modal when clicking view', async () => {
+    vi.mocked(backtestAPI.listRuns).mockResolvedValue({ data: mockFactorRuns } as never)
+
+    render(<FactorLab />)
+    fireEvent.click(screen.getByRole('button', { name: 'Factor Backtest' }))
+
+    fireEvent.click(await screen.findByRole('button', { name: 'View' }))
+
+    expect(await screen.findByRole('heading', { name: 'Alpha01' })).toBeInTheDocument()
+    expect(screen.getByText('Latest factor snapshot')).toBeInTheDocument()
+    expect(screen.getByText('000001.SZ')).toBeInTheDocument()
   })
 
   // ─── ICIR tab without selected factor (line 395) ────────

@@ -207,6 +207,7 @@
       "category": "Category",
       "ic": "IC",
       "icir": "ICIR",
+      "date": "Date",
       "turnover": "Turnover",
       "coverage": "Coverage",
       "status": "Status",
@@ -220,6 +221,12 @@
     },
     "search": "Search factors",
     "total": "{{count}} factors",
+    "categories": {
+      "technical": "Technical",
+      "fundamental": "Fundamental",
+      "style": "Style",
+      "custom": "Custom"
+    },
     "empty": {
       "library": "No factors available",
       "icir": "Select a factor to view IC/IR analysis. No evaluation data yet.",
@@ -250,7 +257,8 @@
       "daily": "Daily",
       "weekly": "Weekly",
       "monthly": "Monthly",
-      "raw": "Raw"
+      "raw": "Raw",
+      "formulaPlaceholder": "e.g. close / delay(close, 20) - 1"
     },
     "evaluation": {
       "title": "Evaluation Results",
@@ -291,7 +299,77 @@
       "createStrategy": "Create Strategy",
       "strategyName": "Strategy Name",
       "className": "Class Name",
+      "strategyNamePlaceholder": "My Multi-Factor Strategy",
+      "classNamePlaceholder": "MultiFactorStrategy",
+      "generatedCode": "Generated Code",
       "noFactors": "Add factors from the library to start combining."
+    },
+    "backtest": {
+      "fields": {
+        "factor": "Factor",
+        "start": "Start",
+        "end": "End",
+        "universe": "Universe",
+        "topN": "Top N",
+        "symbols": "Symbols",
+        "symbolsPlaceholder": "000001.SZ, 600519.SH",
+        "benchmark": "Benchmark"
+      },
+      "universeOptions": {
+        "csi300": "CSI 300",
+        "csi500": "CSI 500",
+        "csi1000": "CSI 1000",
+        "custom": "Custom symbols"
+      },
+      "columns": {
+        "factor": "Factor",
+        "status": "Status",
+        "return": "Return",
+        "created": "Created"
+      },
+      "actions": {
+        "view": "View",
+        "loading": "Loading...",
+        "close": "Close"
+      },
+      "status": {
+        "completed": "Completed",
+        "failed": "Failed",
+        "queued": "Queued",
+        "started": "Running",
+        "finished": "Completed"
+      },
+      "run": "Run factor backtest",
+      "selectFactorFirst": "Select a factor first",
+      "recentRunsTitle": "Recent runs",
+      "recentRunsSubtitle": "Unified factor backtests are persisted in the shared backtest history.",
+      "empty": "No factor backtests yet",
+      "detailTitle": "Factor backtest detail",
+      "loadingDetail": "Loading factor backtest details...",
+      "detailLoadFailed": "Failed to load factor backtest details.",
+      "detailEmpty": "Factor backtest details are not available yet.",
+      "latestSnapshot": "Latest factor snapshot",
+      "emptySnapshot": "No factor snapshot is available yet.",
+      "metrics": {
+        "totalReturn": "Total Return",
+        "sharpe": "Sharpe",
+        "icMean": "IC Mean",
+        "icIr": "IC IR"
+      },
+      "snapshot": {
+        "instrument": "Instrument",
+        "date": "Date",
+        "score": "Score"
+      }
+    },
+    "notifications": {
+      "evaluationFailed": "Evaluation failed",
+      "miningFailed": "Mining failed",
+      "codeGenerationFailed": "Code generation failed",
+      "strategyCreated": "Multi-factor strategy created",
+      "strategyCreationFailed": "Strategy creation failed",
+      "backtestQueued": "Factor backtest queued",
+      "backtestSubmitFailed": "Factor backtest failed to submit"
     }
   },
   "autoPilot": {

@@ -8,6 +8,7 @@ import BacktestJobList from '../components/BacktestJobList'
 import BacktestResults from '../components/BacktestResults'
 import BulkBacktestForm from '../components/BulkBacktestForm'
 import BulkBacktestSummary from '../components/BulkBacktestSummary'
+import Modal from '../components/ui/Modal'
 import OptimizationTaskList from '../components/OptimizationTaskList'
 import OptimizationTaskResultsModal from '../components/OptimizationTaskResultsModal'
 import PerformanceComparison from '../components/PerformanceComparison'
@@ -90,7 +91,11 @@ export default function Backtest() {
     refetchInterval: activeTab === 'runs' ? 5000 : false,
   })
 
-  const { data: unifiedRunDetail } = useQuery<UnifiedRunDetail>({
+  const {
+    data: unifiedRunDetail,
+    isPending: isUnifiedRunDetailPending,
+    isError: isUnifiedRunDetailError,
+  } = useQuery<UnifiedRunDetail>({
     queryKey: ['unified-backtest-run', activeUnifiedRunId],
     queryFn: () => backtestAPI.getRun(activeUnifiedRunId!).then((response) => response.data),
     enabled: !!activeUnifiedRunId,
@@ -136,6 +141,21 @@ export default function Backtest() {
       { total: 0, strategy: 0, factor: 0, composite: 0 }
     )
   }, [unifiedRuns])
+
+  const activeUnifiedRun = useMemo(
+    () => unifiedRuns.find((run) => run.job_id === activeUnifiedRunId) ?? null,
+    [activeUnifiedRunId, unifiedRuns]
+  )
+
+  const formatUnifiedStatus = (status?: string) => {
+    if (!status) return '-'
+    return t(`unified.status.${status}`, { defaultValue: status })
+  }
+
+  const formatUnifiedType = (subjectType?: UnifiedRun['subject_type']) => {
+    if (!subjectType) return '-'
+    return t(`unified.types.${subjectType}`, { defaultValue: subjectType })
+  }
 
   const tabs = useMemo(
     () => [
@@ -230,41 +250,44 @@ export default function Backtest() {
       <div className="rounded-lg border border-border bg-card p-5">
         <div className="mb-4 flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-card-foreground">Unified Backtest Runs</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Strategy, factor, and composite backtests are now tracked in one history.</p>
+            <h2 className="text-lg font-semibold text-card-foreground">{t('unified.title')}</h2>
+            <p className="mt-1 text-sm text-muted-foreground">{t('unified.subtitle')}</p>
           </div>
           <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-            <span className="rounded-full bg-muted px-3 py-1">All {unifiedSummary.total}</span>
-            <span className="rounded-full bg-muted px-3 py-1">Strategy {unifiedSummary.strategy}</span>
-            <span className="rounded-full bg-muted px-3 py-1">Factor {unifiedSummary.factor}</span>
-            <span className="rounded-full bg-muted px-3 py-1">Composite {unifiedSummary.composite}</span>
+            <span className="rounded-full bg-muted px-3 py-1">{t('unified.summary.all', { count: unifiedSummary.total })}</span>
+            <span className="rounded-full bg-muted px-3 py-1">{t('unified.summary.strategy', { count: unifiedSummary.strategy })}</span>
+            <span className="rounded-full bg-muted px-3 py-1">{t('unified.summary.factor', { count: unifiedSummary.factor })}</span>
+            <span className="rounded-full bg-muted px-3 py-1">{t('unified.summary.composite', { count: unifiedSummary.composite })}</span>
           </div>
         </div>
 
         {unifiedRuns.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No unified runs yet.</p>
+          <p className="text-sm text-muted-foreground">{t('unified.empty')}</p>
         ) : (
           <div className="overflow-x-auto rounded-lg border border-border">
             <table className="min-w-full text-sm">
               <thead className="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
-                  <th className="px-3 py-2">Subject</th>
-                  <th className="px-3 py-2">Type</th>
-                  <th className="px-3 py-2">Status</th>
-                  <th className="px-3 py-2">Return</th>
-                  <th className="px-3 py-2">Sharpe</th>
-                  <th className="px-3 py-2">Created</th>
+                  <th className="px-3 py-2">{t('unified.columns.subject')}</th>
+                  <th className="px-3 py-2">{t('unified.columns.type')}</th>
+                  <th className="px-3 py-2">{t('unified.columns.status')}</th>
+                  <th className="px-3 py-2">{t('unified.columns.return')}</th>
+                  <th className="px-3 py-2">{t('unified.columns.sharpe')}</th>
+                  <th className="px-3 py-2">{t('unified.columns.created')}</th>
                   <th className="px-3 py-2"></th>
                 </tr>
               </thead>
               <tbody>
                 {unifiedRuns.map((run) => (
-                  <tr key={run.job_id} className="border-t border-border">
+                  <tr
+                    key={run.job_id}
+                    className={`border-t border-border ${activeUnifiedRunId === run.job_id ? 'bg-muted/30' : ''}`}
+                  >
                     <td className="px-3 py-2 font-medium text-card-foreground">{run.subject_name || run.job_id}</td>
-                    <td className="px-3 py-2 capitalize text-muted-foreground">{run.subject_type || '-'}</td>
+                    <td className="px-3 py-2 text-muted-foreground">{formatUnifiedType(run.subject_type)}</td>
                     <td className="px-3 py-2">
                       <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${run.status === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : run.status === 'failed' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'}`}>
-                        {run.status}
+                        {formatUnifiedStatus(run.status)}
                       </span>
                     </td>
                     <td className="px-3 py-2">{run.summary?.total_return != null ? `${(run.summary.total_return * 100).toFixed(2)}%` : '-'}</td>
@@ -272,7 +295,7 @@ export default function Backtest() {
                     <td className="px-3 py-2 text-muted-foreground">{run.created_at?.slice(0, 16).replace('T', ' ') ?? '-'}</td>
                     <td className="px-3 py-2 text-right">
                       <button className="text-xs font-medium text-primary hover:underline" onClick={() => setActiveUnifiedRunId(run.job_id)}>
-                        View
+                        {activeUnifiedRunId === run.job_id && isUnifiedRunDetailPending ? t('unified.actions.loading') : t('unified.actions.view')}
                       </button>
                     </td>
                   </tr>
@@ -281,48 +304,68 @@ export default function Backtest() {
             </table>
           </div>
         )}
+      </div>
 
-        {activeUnifiedRunId && unifiedRunDetail && (
-          <div className="mt-4 rounded-lg border border-border bg-background p-4">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div>
-                <h3 className="text-sm font-semibold text-card-foreground">{unifiedRunDetail.subject_name || 'Run detail'}</h3>
-                <p className="text-xs capitalize text-muted-foreground">{unifiedRunDetail.subject_type || 'unknown'} backtest</p>
-              </div>
-              <button className="text-xs text-muted-foreground hover:text-foreground" onClick={() => setActiveUnifiedRunId(null)}>
-                Close
-              </button>
+      <Modal
+        open={!!activeUnifiedRunId}
+        onClose={() => setActiveUnifiedRunId(null)}
+        title={unifiedRunDetail?.subject_name || activeUnifiedRun?.subject_name || t('unified.detailFallbackTitle')}
+        size="lg"
+        footer={
+          <button
+            className="rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
+            onClick={() => setActiveUnifiedRunId(null)}
+          >
+            {t('unified.actions.close')}
+          </button>
+        }
+      >
+        {isUnifiedRunDetailPending ? (
+          <p className="text-sm text-muted-foreground">{t('unified.loadingDetail')}</p>
+        ) : isUnifiedRunDetailError ? (
+          <p className="text-sm text-destructive">{t('unified.detailLoadFailed')}</p>
+        ) : unifiedRunDetail ? (
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm text-muted-foreground">
+                {t('unified.detailSubtitle', {
+                  type: formatUnifiedType(unifiedRunDetail.subject_type),
+                  status: formatUnifiedStatus(unifiedRunDetail.status),
+                })}
+              </p>
             </div>
 
             <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
               <div className="rounded-md border border-border bg-card px-3 py-2">
-                <div className="text-xs text-muted-foreground">Total Return</div>
+                <div className="text-xs text-muted-foreground">{t('metrics.totalReturn')}</div>
                 <div className="mt-1 text-sm font-semibold">{unifiedRunDetail.result?.statistics?.total_return != null ? `${(unifiedRunDetail.result.statistics.total_return * 100).toFixed(2)}%` : '-'}</div>
               </div>
               <div className="rounded-md border border-border bg-card px-3 py-2">
-                <div className="text-xs text-muted-foreground">Annual Return</div>
+                <div className="text-xs text-muted-foreground">{t('metrics.annualReturn')}</div>
                 <div className="mt-1 text-sm font-semibold">{unifiedRunDetail.result?.statistics?.annual_return != null ? `${(unifiedRunDetail.result.statistics.annual_return * 100).toFixed(2)}%` : '-'}</div>
               </div>
               <div className="rounded-md border border-border bg-card px-3 py-2">
-                <div className="text-xs text-muted-foreground">Max Drawdown</div>
+                <div className="text-xs text-muted-foreground">{t('metrics.maxDrawdown')}</div>
                 <div className="mt-1 text-sm font-semibold">{unifiedRunDetail.result?.statistics?.max_drawdown != null ? `${(unifiedRunDetail.result.statistics.max_drawdown * 100).toFixed(2)}%` : '-'}</div>
               </div>
               <div className="rounded-md border border-border bg-card px-3 py-2">
-                <div className="text-xs text-muted-foreground">Sharpe</div>
+                <div className="text-xs text-muted-foreground">{t('metrics.sharpeRatio')}</div>
                 <div className="mt-1 text-sm font-semibold">{unifiedRunDetail.result?.statistics?.sharpe_ratio?.toFixed(3) ?? '-'}</div>
               </div>
               <div className="rounded-md border border-border bg-card px-3 py-2">
-                <div className="text-xs text-muted-foreground">IC Mean</div>
+                <div className="text-xs text-muted-foreground">{t('unified.metrics.icMean')}</div>
                 <div className="mt-1 text-sm font-semibold">{unifiedRunDetail.result?.factor_metrics?.ic_mean?.toFixed(4) ?? '-'}</div>
               </div>
               <div className="rounded-md border border-border bg-card px-3 py-2">
-                <div className="text-xs text-muted-foreground">IC IR</div>
+                <div className="text-xs text-muted-foreground">{t('unified.metrics.icIr')}</div>
                 <div className="mt-1 text-sm font-semibold">{unifiedRunDetail.result?.factor_metrics?.ic_ir?.toFixed(3) ?? '-'}</div>
               </div>
             </div>
           </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">{t('unified.detailEmpty')}</p>
         )}
-      </div>
+      </Modal>
 
       <div className="rounded-lg border border-border bg-card p-5">
         <div className="mb-4 flex items-start justify-between gap-4">

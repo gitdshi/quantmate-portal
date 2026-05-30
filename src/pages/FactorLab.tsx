@@ -196,7 +196,11 @@ export default function FactorLab() {
     refetchInterval: activeTab === 'backtest' ? 5000 : false,
   })
 
-  const { data: backtestDetail } = useQuery<UnifiedBacktestDetail>({
+  const {
+    data: backtestDetail,
+    isPending: isBacktestDetailPending,
+    isError: isBacktestDetailError,
+  } = useQuery<UnifiedBacktestDetail>({
     queryKey: ['factor-backtest-detail', btDetailJobId],
     queryFn: () => backtestAPI.getRun(btDetailJobId!).then((r) => r.data),
     enabled: !!btDetailJobId,
@@ -222,7 +226,7 @@ export default function FactorLab() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['evaluations', selectedFactorId] })
     },
-    onError: () => showToast('Evaluation failed', 'error'),
+    onError: () => showToast(t('factorLab.notifications.evaluationFailed'), 'error'),
   })
 
   const miningMutation = useMutation({
@@ -233,7 +237,7 @@ export default function FactorLab() {
       setMiningResults(results)
       showToast(t('factorLab.mining.resultCount', { count: results.length }), 'success')
     },
-    onError: () => showToast('Mining failed', 'error'),
+    onError: () => showToast(t('factorLab.notifications.miningFailed'), 'error'),
   })
 
   const generateCodeMutation = useMutation({
@@ -242,30 +246,30 @@ export default function FactorLab() {
     onSuccess: (res) => {
       setGeneratedCode(res.data?.code ?? '')
     },
-    onError: () => showToast('Code generation failed', 'error'),
+    onError: () => showToast(t('factorLab.notifications.codeGenerationFailed'), 'error'),
   })
 
   const createStrategyMutation = useMutation({
     mutationFn: (data: Parameters<typeof strategiesAPI.createMultiFactor>[0]) =>
       strategiesAPI.createMultiFactor(data),
     onSuccess: () => {
-      showToast('Multi-factor strategy created', 'success')
+      showToast(t('factorLab.notifications.strategyCreated'), 'success')
       setCombineFactors([])
       setCombineStrategyName('')
       setCombineClassName('')
       setGeneratedCode('')
     },
-    onError: () => showToast('Strategy creation failed', 'error'),
+    onError: () => showToast(t('factorLab.notifications.strategyCreationFailed'), 'error'),
   })
 
   const factorBacktestMutation = useMutation({
     mutationFn: (data: Record<string, unknown>) => backtestAPI.submitRun(data),
     onSuccess: (response) => {
-      showToast('Factor backtest queued', 'success')
+      showToast(t('factorLab.notifications.backtestQueued'), 'success')
       setBtDetailJobId(response.data?.job_id ?? null)
       queryClient.invalidateQueries({ queryKey: ['factor-backtest-runs'] })
     },
-    onError: () => showToast('Factor backtest failed to submit', 'error'),
+    onError: () => showToast(t('factorLab.notifications.backtestSubmitFailed'), 'error'),
   })
 
   // ── Helpers ──
@@ -280,9 +284,24 @@ export default function FactorLab() {
 
   const filteredFactorRuns = factorRuns.filter((run) => !effectiveBacktestFactorId || run.subject_id === effectiveBacktestFactorId)
 
+  const formatFactorCategory = (category?: string) => {
+    if (!category) return '-'
+    return t(`factorLab.categories.${category}`, { defaultValue: category })
+  }
+
+  const formatBacktestStatus = (status?: string) => {
+    if (!status) return '-'
+    return t(`factorLab.backtest.status.${status}`, { defaultValue: status })
+  }
+
+  const formatUniverseLabel = (universe?: string) => {
+    if (!universe) return t('factorLab.backtest.universeOptions.custom')
+    return t(`factorLab.backtest.universeOptions.${universe}`, { defaultValue: universe })
+  }
+
   const submitFactorBacktest = () => {
     if (!effectiveBacktestFactorId) {
-      showToast('Select a factor first', 'error')
+      showToast(t('factorLab.backtest.selectFactorFirst'), 'error')
       return
     }
 
@@ -347,7 +366,7 @@ export default function FactorLab() {
     {
       key: 'category',
       label: t('factorLab.columns.category'),
-      render: (factor) => <Badge variant="primary">{factor.category || '-'}</Badge>,
+      render: (factor) => <Badge variant="primary">{formatFactorCategory(factor.category)}</Badge>,
     },
     {
       key: 'expression',
@@ -416,7 +435,7 @@ export default function FactorLab() {
       label: t('factorLab.columns.turnover'),
       render: (e) => (e.turnover != null ? `${(e.turnover * 100).toFixed(1)}%` : '-'),
     },
-    { key: 'created_at', label: 'Date', render: (e) => e.created_at?.slice(0, 10) ?? '-' },
+    { key: 'created_at', label: t('factorLab.columns.date'), render: (e) => e.created_at?.slice(0, 10) ?? '-' },
   ]
 
   const miningCols: Column<MiningResult>[] = [
@@ -452,22 +471,22 @@ export default function FactorLab() {
   const backtestCols: Column<UnifiedBacktestRun>[] = [
     {
       key: 'subject_name',
-      label: 'Factor',
+      label: t('factorLab.backtest.columns.factor'),
       render: (run) => run.subject_name || `#${run.subject_id ?? '-'}`,
     },
     {
       key: 'status',
-      label: 'Status',
-      render: (run) => <Badge variant={run.status === 'completed' ? 'success' : run.status === 'failed' ? 'destructive' : 'warning'}>{run.status}</Badge>,
+      label: t('factorLab.backtest.columns.status'),
+      render: (run) => <Badge variant={run.status === 'completed' ? 'success' : run.status === 'failed' ? 'destructive' : 'warning'}>{formatBacktestStatus(run.status)}</Badge>,
     },
     {
       key: 'summary',
-      label: 'Return',
+      label: t('factorLab.backtest.columns.return'),
       render: (run) => run.summary?.total_return != null ? `${(run.summary.total_return * 100).toFixed(2)}%` : '-',
     },
     {
       key: 'created_at',
-      label: 'Created',
+      label: t('factorLab.backtest.columns.created'),
       render: (run) => run.created_at?.slice(0, 16).replace('T', ' ') ?? '-',
     },
     {
@@ -478,7 +497,7 @@ export default function FactorLab() {
           className="text-xs px-2 py-1 rounded bg-primary/10 text-primary hover:bg-primary/20"
           onClick={() => setBtDetailJobId(run.job_id)}
         >
-          View
+          {btDetailJobId === run.job_id && isBacktestDetailPending ? t('factorLab.backtest.actions.loading') : t('factorLab.backtest.actions.view')}
         </button>
       ),
     },
@@ -663,13 +682,13 @@ export default function FactorLab() {
                 <div>
                   <label className="block text-xs font-medium mb-1">{t('factorLab.combine.strategyName')}</label>
                   <input value={combineStrategyName} onChange={(e) => setCombineStrategyName(e.target.value)}
-                    placeholder="My Multi-Factor Strategy"
+                    placeholder={t('factorLab.combine.strategyNamePlaceholder')}
                     className="px-3 py-2 text-sm rounded-md border border-border bg-background w-56" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium mb-1">{t('factorLab.combine.className')}</label>
                   <input value={combineClassName} onChange={(e) => setCombineClassName(e.target.value)}
-                    placeholder="MultiFactorStrategy"
+                    placeholder={t('factorLab.combine.classNamePlaceholder')}
                     className="px-3 py-2 text-sm rounded-md border border-border bg-background w-48" />
                 </div>
                 <button
@@ -703,7 +722,7 @@ export default function FactorLab() {
 
             {generatedCode && (
               <div className="mt-4">
-                <h4 className="text-sm font-medium mb-2">Generated Code</h4>
+                <h4 className="text-sm font-medium mb-2">{t('factorLab.combine.generatedCode')}</h4>
                 <pre className="p-4 rounded-md bg-muted overflow-auto text-xs max-h-[400px] border border-border">
                   <code>{generatedCode}</code>
                 </pre>
@@ -718,7 +737,7 @@ export default function FactorLab() {
             <div className="rounded-lg border border-border bg-card p-4">
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
                 <div className="xl:col-span-2">
-                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Factor</label>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">{t('factorLab.backtest.fields.factor')}</label>
                   <select
                     value={effectiveBacktestFactorId ?? ''}
                     onChange={(e) => setBacktestFactorId(Number(e.target.value))}
@@ -730,35 +749,35 @@ export default function FactorLab() {
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Start</label>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">{t('factorLab.backtest.fields.start')}</label>
                   <input value={btStartDate} onChange={(e) => setBtStartDate(e.target.value)} type="date" className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm" />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-muted-foreground">End</label>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">{t('factorLab.backtest.fields.end')}</label>
                   <input value={btEndDate} onChange={(e) => setBtEndDate(e.target.value)} type="date" className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm" />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Universe</label>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">{t('factorLab.backtest.fields.universe')}</label>
                   <select value={btUniversePreset} onChange={(e) => setBtUniversePreset(e.target.value)} className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm">
-                    <option value="csi300">CSI 300</option>
-                    <option value="csi500">CSI 500</option>
-                    <option value="csi1000">CSI 1000</option>
-                    <option value="custom">Custom symbols</option>
+                    <option value="csi300">{t('factorLab.backtest.universeOptions.csi300')}</option>
+                    <option value="csi500">{t('factorLab.backtest.universeOptions.csi500')}</option>
+                    <option value="csi1000">{t('factorLab.backtest.universeOptions.csi1000')}</option>
+                    <option value="custom">{t('factorLab.backtest.universeOptions.custom')}</option>
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Top N</label>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">{t('factorLab.backtest.fields.topN')}</label>
                   <input value={btTopN} onChange={(e) => setBtTopN(e.target.value)} type="number" min="1" className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm" />
                 </div>
               </div>
 
               {btUniversePreset === 'custom' && (
                 <div className="mt-3">
-                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Symbols</label>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">{t('factorLab.backtest.fields.symbols')}</label>
                   <input
                     value={btSymbols}
                     onChange={(e) => setBtSymbols(e.target.value)}
-                    placeholder="000001.SZ, 600519.SH"
+                    placeholder={t('factorLab.backtest.fields.symbolsPlaceholder')}
                     className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
                   />
                 </div>
@@ -766,7 +785,7 @@ export default function FactorLab() {
 
               <div className="mt-3 flex flex-wrap items-end gap-3">
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Benchmark</label>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">{t('factorLab.backtest.fields.benchmark')}</label>
                   <input value={btBenchmark} onChange={(e) => setBtBenchmark(e.target.value)} className="rounded-md border border-border bg-background px-3 py-2 text-sm" />
                 </div>
                 <button
@@ -774,7 +793,7 @@ export default function FactorLab() {
                   onClick={submitFactorBacktest}
                   className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
                 >
-                  Run factor backtest
+                  {t('factorLab.backtest.run')}
                 </button>
               </div>
             </div>
@@ -782,70 +801,93 @@ export default function FactorLab() {
             <div className="rounded-lg border border-border bg-card p-4">
               <div className="mb-3 flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-semibold text-foreground">Recent runs</h3>
-                  <p className="text-xs text-muted-foreground">Unified factor backtests are persisted in the shared backtest history.</p>
+                  <h3 className="text-sm font-semibold text-foreground">{t('factorLab.backtest.recentRunsTitle')}</h3>
+                  <p className="text-xs text-muted-foreground">{t('factorLab.backtest.recentRunsSubtitle')}</p>
                 </div>
               </div>
-              <DataTable data={filteredFactorRuns} columns={backtestCols} emptyText="No factor backtests yet" />
+              <DataTable data={filteredFactorRuns} columns={backtestCols} emptyText={t('factorLab.backtest.empty')} />
             </div>
-
-            {btDetailJobId && backtestDetail && (
-              <div className="rounded-lg border border-border bg-card p-4">
-                <div className="mb-3 flex items-center justify-between">
-                  <div>
-                    <h3 className="text-sm font-semibold text-foreground">{backtestDetail.subject_name || 'Factor backtest detail'}</h3>
-                    <p className="text-xs text-muted-foreground">{backtestDetail.extensions?.factor?.universe?.preset || backtestDetail.extensions?.factor?.universe?.type || 'custom universe'}</p>
-                  </div>
-                  <button className="text-xs text-muted-foreground hover:text-foreground" onClick={() => setBtDetailJobId(null)}>Close</button>
-                </div>
-
-                <div className="grid gap-3 md:grid-cols-4">
-                  <div className="rounded-md border border-border bg-background px-3 py-2">
-                    <div className="text-xs text-muted-foreground">Total Return</div>
-                    <div className="mt-1 text-sm font-semibold">{backtestDetail.result?.statistics?.total_return != null ? `${(backtestDetail.result.statistics.total_return * 100).toFixed(2)}%` : '-'}</div>
-                  </div>
-                  <div className="rounded-md border border-border bg-background px-3 py-2">
-                    <div className="text-xs text-muted-foreground">Sharpe</div>
-                    <div className="mt-1 text-sm font-semibold">{backtestDetail.result?.statistics?.sharpe_ratio?.toFixed(3) ?? '-'}</div>
-                  </div>
-                  <div className="rounded-md border border-border bg-background px-3 py-2">
-                    <div className="text-xs text-muted-foreground">IC Mean</div>
-                    <div className="mt-1 text-sm font-semibold">{backtestDetail.result?.factor_metrics?.ic_mean?.toFixed(4) ?? '-'}</div>
-                  </div>
-                  <div className="rounded-md border border-border bg-background px-3 py-2">
-                    <div className="text-xs text-muted-foreground">IC IR</div>
-                    <div className="mt-1 text-sm font-semibold">{backtestDetail.result?.factor_metrics?.ic_ir?.toFixed(3) ?? '-'}</div>
-                  </div>
-                </div>
-
-                <div className="mt-4">
-                  <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Latest factor snapshot</h4>
-                  <div className="overflow-x-auto rounded-md border border-border">
-                    <table className="min-w-full text-sm">
-                      <thead className="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                        <tr>
-                          <th className="px-3 py-2">Instrument</th>
-                          <th className="px-3 py-2">Date</th>
-                          <th className="px-3 py-2">Score</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {(backtestDetail.artifacts?.latest_factor_snapshot ?? []).map((item) => (
-                          <tr key={`${item.instrument}-${item.date}`} className="border-t border-border">
-                            <td className="px-3 py-2 font-mono text-xs">{item.instrument}</td>
-                            <td className="px-3 py-2">{item.date}</td>
-                            <td className="px-3 py-2">{item.score.toFixed(4)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         )}
       </TabPanel>
+
+      <Modal
+        open={!!btDetailJobId}
+        onClose={() => setBtDetailJobId(null)}
+        title={backtestDetail?.subject_name || t('factorLab.backtest.detailTitle')}
+        size="lg"
+        footer={
+          <button
+            onClick={() => setBtDetailJobId(null)}
+            className="px-4 py-2 text-sm rounded-md border border-border hover:bg-muted"
+          >
+            {t('factorLab.backtest.actions.close')}
+          </button>
+        }
+      >
+        {isBacktestDetailPending ? (
+          <p className="text-sm text-muted-foreground">{t('factorLab.backtest.loadingDetail')}</p>
+        ) : isBacktestDetailError ? (
+          <p className="text-sm text-destructive">{t('factorLab.backtest.detailLoadFailed')}</p>
+        ) : backtestDetail ? (
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm text-muted-foreground">
+                {formatUniverseLabel(backtestDetail.extensions?.factor?.universe?.preset || backtestDetail.extensions?.factor?.universe?.type)}
+              </p>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-4">
+              <div className="rounded-md border border-border bg-background px-3 py-2">
+                <div className="text-xs text-muted-foreground">{t('factorLab.backtest.metrics.totalReturn')}</div>
+                <div className="mt-1 text-sm font-semibold">{backtestDetail.result?.statistics?.total_return != null ? `${(backtestDetail.result.statistics.total_return * 100).toFixed(2)}%` : '-'}</div>
+              </div>
+              <div className="rounded-md border border-border bg-background px-3 py-2">
+                <div className="text-xs text-muted-foreground">{t('factorLab.backtest.metrics.sharpe')}</div>
+                <div className="mt-1 text-sm font-semibold">{backtestDetail.result?.statistics?.sharpe_ratio?.toFixed(3) ?? '-'}</div>
+              </div>
+              <div className="rounded-md border border-border bg-background px-3 py-2">
+                <div className="text-xs text-muted-foreground">{t('factorLab.backtest.metrics.icMean')}</div>
+                <div className="mt-1 text-sm font-semibold">{backtestDetail.result?.factor_metrics?.ic_mean?.toFixed(4) ?? '-'}</div>
+              </div>
+              <div className="rounded-md border border-border bg-background px-3 py-2">
+                <div className="text-xs text-muted-foreground">{t('factorLab.backtest.metrics.icIr')}</div>
+                <div className="mt-1 text-sm font-semibold">{backtestDetail.result?.factor_metrics?.ic_ir?.toFixed(3) ?? '-'}</div>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('factorLab.backtest.latestSnapshot')}</h4>
+              {(backtestDetail.artifacts?.latest_factor_snapshot ?? []).length === 0 ? (
+                <p className="text-sm text-muted-foreground">{t('factorLab.backtest.emptySnapshot')}</p>
+              ) : (
+                <div className="overflow-x-auto rounded-md border border-border">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                      <tr>
+                        <th className="px-3 py-2">{t('factorLab.backtest.snapshot.instrument')}</th>
+                        <th className="px-3 py-2">{t('factorLab.backtest.snapshot.date')}</th>
+                        <th className="px-3 py-2">{t('factorLab.backtest.snapshot.score')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(backtestDetail.artifacts?.latest_factor_snapshot ?? []).map((item) => (
+                        <tr key={`${item.instrument}-${item.date}`} className="border-t border-border">
+                          <td className="px-3 py-2 font-mono text-xs">{item.instrument}</td>
+                          <td className="px-3 py-2">{item.date}</td>
+                          <td className="px-3 py-2">{item.score.toFixed(4)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">{t('factorLab.backtest.detailEmpty')}</p>
+        )}
+      </Modal>
 
       {/* ── Create Factor Modal ── */}
       <Modal
@@ -915,7 +957,7 @@ export default function FactorLab() {
               value={formExpression}
               onChange={(e) => setFormExpression(e.target.value)}
               className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background min-h-[120px] font-mono"
-              placeholder="e.g. close / delay(close, 20) - 1"
+              placeholder={t('factorLab.modal.formulaPlaceholder')}
             />
           </div>
         </div>

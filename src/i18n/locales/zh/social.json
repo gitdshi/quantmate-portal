@@ -207,6 +207,7 @@
       "category": "分类",
       "ic": "IC",
       "icir": "ICIR",
+      "date": "日期",
       "turnover": "换手率",
       "coverage": "覆盖率",
       "status": "状态",
@@ -220,6 +221,12 @@
     },
     "search": "搜索因子",
     "total": "共 {{count}} 个因子",
+    "categories": {
+      "technical": "技术",
+      "fundamental": "基本面",
+      "style": "风格",
+      "custom": "自定义"
+    },
     "empty": {
       "library": "暂无因子",
       "icir": "选择因子后查看 IC/IR 分析结果，当前暂无评估数据。",
@@ -250,7 +257,8 @@
       "daily": "日频",
       "weekly": "周频",
       "monthly": "月频",
-      "raw": "原值"
+      "raw": "原值",
+      "formulaPlaceholder": "例如：close / delay(close, 20) - 1"
     },
     "evaluation": {
       "title": "评估结果",
@@ -291,7 +299,77 @@
       "createStrategy": "创建策略",
       "strategyName": "策略名称",
       "className": "类名",
+      "strategyNamePlaceholder": "我的多因子策略",
+      "classNamePlaceholder": "MultiFactorStrategy",
+      "generatedCode": "生成代码",
       "noFactors": "从因子库中添加因子以开始合成。"
+    },
+    "backtest": {
+      "fields": {
+        "factor": "因子",
+        "start": "开始",
+        "end": "结束",
+        "universe": "股票池",
+        "topN": "Top N",
+        "symbols": "标的列表",
+        "symbolsPlaceholder": "000001.SZ, 600519.SH",
+        "benchmark": "基准"
+      },
+      "universeOptions": {
+        "csi300": "沪深 300",
+        "csi500": "中证 500",
+        "csi1000": "中证 1000",
+        "custom": "自定义标的"
+      },
+      "columns": {
+        "factor": "因子",
+        "status": "状态",
+        "return": "收益",
+        "created": "创建时间"
+      },
+      "actions": {
+        "view": "查看",
+        "loading": "加载中...",
+        "close": "关闭"
+      },
+      "status": {
+        "completed": "已完成",
+        "failed": "失败",
+        "queued": "排队中",
+        "started": "运行中",
+        "finished": "已完成"
+      },
+      "run": "运行因子回测",
+      "selectFactorFirst": "请先选择因子",
+      "recentRunsTitle": "最近运行",
+      "recentRunsSubtitle": "因子回测已统一持久化到共享回测历史中。",
+      "empty": "暂无因子回测记录",
+      "detailTitle": "因子回测详情",
+      "loadingDetail": "正在加载因子回测详情...",
+      "detailLoadFailed": "加载因子回测详情失败。",
+      "detailEmpty": "当前暂无可展示的因子回测详情。",
+      "latestSnapshot": "最新因子快照",
+      "emptySnapshot": "暂无因子快照数据。",
+      "metrics": {
+        "totalReturn": "总收益",
+        "sharpe": "夏普",
+        "icMean": "IC 均值",
+        "icIr": "IC IR"
+      },
+      "snapshot": {
+        "instrument": "标的",
+        "date": "日期",
+        "score": "得分"
+      }
+    },
+    "notifications": {
+      "evaluationFailed": "评估失败",
+      "miningFailed": "因子挖掘失败",
+      "codeGenerationFailed": "生成代码失败",
+      "strategyCreated": "多因子策略已创建",
+      "strategyCreationFailed": "创建策略失败",
+      "backtestQueued": "因子回测任务已提交",
+      "backtestSubmitFailed": "提交因子回测失败"
     }
   },
   "autoPilot": {

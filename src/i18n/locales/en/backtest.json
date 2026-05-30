@@ -215,6 +215,51 @@
     "failedSymbols": "Failed Symbols",
     "selectSymbolError": "Please select at least one symbol"
   },
+  "unified": {
+    "title": "Unified Backtest Runs",
+    "subtitle": "Strategy, factor, and composite backtests are tracked in one history.",
+    "empty": "No unified runs yet.",
+    "summary": {
+      "all": "All {{count}}",
+      "strategy": "Strategy {{count}}",
+      "factor": "Factor {{count}}",
+      "composite": "Composite {{count}}"
+    },
+    "columns": {
+      "subject": "Subject",
+      "type": "Type",
+      "status": "Status",
+      "return": "Return",
+      "sharpe": "Sharpe",
+      "created": "Created"
+    },
+    "actions": {
+      "view": "View",
+      "loading": "Loading...",
+      "close": "Close"
+    },
+    "types": {
+      "strategy": "Strategy",
+      "factor": "Factor",
+      "composite": "Composite"
+    },
+    "status": {
+      "completed": "Completed",
+      "failed": "Failed",
+      "queued": "Queued",
+      "started": "Running",
+      "finished": "Completed"
+    },
+    "detailFallbackTitle": "Run Detail",
+    "detailSubtitle": "{{type}} backtest · {{status}}",
+    "loadingDetail": "Loading run details...",
+    "detailLoadFailed": "Failed to load run details.",
+    "detailEmpty": "Run details are not available yet.",
+    "metrics": {
+      "icMean": "IC Mean",
+      "icIr": "IC IR"
+    }
+  },
   "loadFailed": "Failed to load backtest data",
   "submitFailed": "Failed to submit backtest job"
 }

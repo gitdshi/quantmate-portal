@@ -215,6 +215,51 @@
     "failedSymbols": "失败标的",
     "selectSymbolError": "请至少选择一个标的"
   },
+  "unified": {
+    "title": "统一回测记录",
+    "subtitle": "策略、因子和组合回测统一记录在同一份历史中。",
+    "empty": "暂无统一回测记录。",
+    "summary": {
+      "all": "全部 {{count}}",
+      "strategy": "策略 {{count}}",
+      "factor": "因子 {{count}}",
+      "composite": "组合 {{count}}"
+    },
+    "columns": {
+      "subject": "对象",
+      "type": "类型",
+      "status": "状态",
+      "return": "收益",
+      "sharpe": "夏普",
+      "created": "创建时间"
+    },
+    "actions": {
+      "view": "查看",
+      "loading": "加载中...",
+      "close": "关闭"
+    },
+    "types": {
+      "strategy": "策略",
+      "factor": "因子",
+      "composite": "组合"
+    },
+    "status": {
+      "completed": "已完成",
+      "failed": "失败",
+      "queued": "排队中",
+      "started": "运行中",
+      "finished": "已完成"
+    },
+    "detailFallbackTitle": "回测详情",
+    "detailSubtitle": "{{type}}回测 · {{status}}",
+    "loadingDetail": "正在加载回测详情...",
+    "detailLoadFailed": "加载回测详情失败。",
+    "detailEmpty": "当前暂无可展示的回测详情。",
+    "metrics": {
+      "icMean": "IC 均值",
+      "icIr": "IC IR"
+    }
+  },
   "loadFailed": "加载回测数据失败",
   "submitFailed": "提交回测任务失败"
 }
