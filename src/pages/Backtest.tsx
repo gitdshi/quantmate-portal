@@ -82,13 +82,17 @@ export default function Backtest() {
   const { data: jobsResponse } = useQuery({
     queryKey: ['backtest-jobs', 'overview'],
     queryFn: () => queueAPI.listJobs(undefined, 100),
-    refetchInterval: activeTab === 'runs' && !showBulkForm ? 5000 : false,
+    retry: 0,
+    refetchOnWindowFocus: false,
+    refetchInterval: activeTab === 'runs' && !showBulkForm && !activeUnifiedRunId ? 5000 : false,
   })
 
   const { data: unifiedRunsResponse } = useQuery({
     queryKey: ['unified-backtest-runs'],
     queryFn: () => backtestAPI.listRuns({ page_size: 50 }),
-    refetchInterval: activeTab === 'runs' ? 5000 : false,
+    retry: 0,
+    refetchOnWindowFocus: false,
+    refetchInterval: activeTab === 'runs' && !activeUnifiedRunId ? 5000 : false,
   })
 
   const {
@@ -99,6 +103,8 @@ export default function Backtest() {
     queryKey: ['unified-backtest-run', activeUnifiedRunId],
     queryFn: () => backtestAPI.getRun(activeUnifiedRunId!).then((response) => response.data),
     enabled: !!activeUnifiedRunId,
+    retry: 0,
+    refetchOnWindowFocus: false,
   })
 
   const jobs = useMemo<QueueJob[]>(() => {

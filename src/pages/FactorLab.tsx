@@ -193,7 +193,9 @@ export default function FactorLab() {
         return Array.isArray(payload) ? payload : payload?.data ?? []
       }),
     enabled: activeTab === 'backtest',
-    refetchInterval: activeTab === 'backtest' ? 5000 : false,
+    retry: 0,
+    refetchOnWindowFocus: false,
+    refetchInterval: activeTab === 'backtest' && !btDetailJobId ? 5000 : false,
   })
 
   const {
@@ -204,6 +206,8 @@ export default function FactorLab() {
     queryKey: ['factor-backtest-detail', btDetailJobId],
     queryFn: () => backtestAPI.getRun(btDetailJobId!).then((r) => r.data),
     enabled: !!btDetailJobId,
+    retry: 0,
+    refetchOnWindowFocus: false,
   })
 
   // ── Mutations ──
