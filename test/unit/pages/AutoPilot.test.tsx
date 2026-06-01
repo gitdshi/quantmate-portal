@@ -92,6 +92,99 @@ describe('AutoPilot Page', () => {
     })
   })
 
+  it('starts a mining run with the selected form values', async () => {
+    vi.mocked(rdagentAPI.startMining).mockResolvedValue({ data: { run_id: 'run-new' } } as never)
+
+    const { container } = render(<AutoPilot />)
+
+    const selects = screen.getAllByRole('combobox')
+    const maxIterationsInput = screen.getByDisplayValue('10')
+    const dateInputs = container.querySelectorAll('input[type="date"]')
+
+    fireEvent.change(selects[0], { target: { value: 'fin_model' } })
+    fireEvent.change(maxIterationsInput, { target: { value: '12' } })
+    fireEvent.change(selects[1], { target: { value: 'gpt-4o' } })
+    fireEvent.change(selects[2], { target: { value: 'csi500' } })
+    fireEvent.change(dateInputs[0], { target: { value: '2024-01-01' } })
+    fireEvent.change(dateInputs[1], { target: { value: '2024-12-31' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Start Mining' }))
+
+    await waitFor(() => {
+      expect(rdagentAPI.startMining).toHaveBeenCalledWith({
+        scenario: 'fin_model',
+        max_iterations: 12,
+        llm_model: 'gpt-4o',
+        universe: 'csi500',
+        start_date: '2024-01-01',
+        end_date: '2024-12-31',
+      })
+    })
+  })
+
+  it('cancels a running mining run', async () => {
+    vi.mocked(rdagentAPI.cancelRun).mockResolvedValue({ data: {} } as never)
+    vi.mocked(rdagentAPI.listRuns).mockResolvedValue({
+      data: [
+        {
+          run_id: 'run-running-1',
+          scenario: 'fin_factor',
+          status: 'running',
+          current_iteration: 1,
+          total_iterations: 5,
+          created_at: '2024-01-01T00:00:00Z',
+        },
+      ],
+    } as never)
+
+    render(<AutoPilot />)
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancel run' }))
+
+    await waitFor(() => {
+      expect(rdagentAPI.cancelRun).toHaveBeenCalledWith('run-running-1')
+    })
+  })
+
+  it('imports a discovered factor from the run detail modal', async () => {
+    vi.mocked(rdagentAPI.importFactor).mockResolvedValue({ data: {} } as never)
+    vi.mocked(rdagentAPI.listRuns).mockResolvedValue({
+      data: [
+        {
+          run_id: 'run-87654321',
+          scenario: 'fin_factor',
+          status: 'completed',
+          current_iteration: 5,
+          total_iterations: 5,
+          created_at: '2024-01-01T00:00:00Z',
+        },
+      ],
+    } as never)
+    vi.mocked(rdagentAPI.getDiscoveredFactors).mockResolvedValue({
+      data: [
+        {
+          id: 7,
+          run_id: 'run-87654321',
+          factor_name: 'alpha_signal',
+          expression: 'close / volume',
+          ic_mean: 0.1234,
+          icir: 1.2345,
+          sharpe: 0.9876,
+          status: 'completed',
+          created_at: '2024-01-02T00:00:00Z',
+        },
+      ],
+    } as never)
+
+    render(<AutoPilot />)
+
+    fireEvent.click(await screen.findByRole('button', { name: /run-8765/i }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Import' }))
+
+    await waitFor(() => {
+      expect(rdagentAPI.importFactor).toHaveBeenCalledWith('run-87654321', 7)
+    })
+  })
+
   it('paginates mining runs', async () => {
     vi.mocked(rdagentAPI.listRuns).mockResolvedValue({
       data: Array.from({ length: 11 }, (_, index) => ({

@@ -1,16 +1,26 @@
 import i18n from '@/i18n'
 import { render, screen, waitFor } from '@test/support/utils'
+import { Outlet } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Mock all lazy-loaded pages to avoid importing heavy components
-vi.mock('@/components/Layout', () => ({ default: () => <div>Layout</div> }))
+vi.mock('@/components/Layout', () => ({
+  default: () => (
+    <div>
+      <div>Layout</div>
+      <Outlet />
+    </div>
+  ),
+}))
 vi.mock('@/pages/Dashboard', () => ({ default: () => <div>Dashboard</div> }))
+vi.mock('@/pages/Workbench', () => ({ default: () => <div>Workbench</div> }))
 vi.mock('@/pages/Strategies', () => ({ default: () => <div>Strategies</div> }))
 vi.mock('@/pages/Backtest', () => ({ default: () => <div>Backtest</div> }))
 vi.mock('@/pages/MarketData', () => ({ default: () => <div>MarketData</div> }))
 vi.mock('@/pages/Analytics', () => ({ default: () => <div>Analytics</div> }))
 vi.mock('@/pages/Portfolio', () => ({ default: () => <div>Portfolio</div> }))
 vi.mock('@/pages/PaperTrading', () => ({ default: () => <div>PaperTrading</div> }))
+vi.mock('@/pages/PaperTradingAccount', () => ({ default: () => <div>PaperTradingAccount</div> }))
 vi.mock('@/pages/Trading', () => ({ default: () => <div>Trading</div> }))
 vi.mock('@/pages/Positions', () => ({ default: () => <div>Positions</div> }))
 vi.mock('@/pages/Monitoring', () => ({ default: () => <div>Monitoring</div> }))
@@ -18,6 +28,7 @@ vi.mock('@/pages/Reports', () => ({ default: () => <div>Reports</div> }))
 vi.mock('@/pages/AccountSecurity', () => ({ default: () => <div>AccountSecurity</div> }))
 vi.mock('@/pages/AIAssistant', () => ({ default: () => <div>AIAssistant</div> }))
 vi.mock('@/pages/FactorLab', () => ({ default: () => <div>FactorLab</div> }))
+vi.mock('@/pages/AutoPilot', () => ({ default: () => <div>AutoPilot</div> }))
 vi.mock('@/pages/CompositeStrategies', () => ({ default: () => <div>Composite</div> }))
 vi.mock('@/pages/Marketplace', () => ({ default: () => <div>Marketplace</div> }))
 vi.mock('@/pages/TeamSpace', () => ({ default: () => <div>TeamSpace</div> }))
@@ -42,6 +53,31 @@ import { useAuthStore } from '@/stores/auth'
 
 // Must import App after mocks
 import App from '@/App'
+
+const protectedRouteCases = [
+  ['/dashboard', 'Dashboard'],
+  ['/workbench', 'Workbench'],
+  ['/strategies', 'Strategies'],
+  ['/backtest', 'Backtest'],
+  ['/market-data', 'MarketData'],
+  ['/analytics', 'Analytics'],
+  ['/portfolio', 'Portfolio'],
+  ['/paper-trading', 'PaperTrading'],
+  ['/paper-trading/42', 'PaperTradingAccount'],
+  ['/trading', 'Trading'],
+  ['/positions', 'Positions'],
+  ['/monitoring', 'Monitoring'],
+  ['/reports', 'Reports'],
+  ['/account-security', 'AccountSecurity'],
+  ['/ai-assistant', 'AIAssistant'],
+  ['/factor-lab', 'FactorLab'],
+  ['/auto-pilot', 'AutoPilot'],
+  ['/composite-strategies', 'Composite'],
+  ['/marketplace', 'Marketplace'],
+  ['/team-space', 'TeamSpace'],
+  ['/visual-explorer', 'VisualExplorer'],
+  ['/settings', 'Settings'],
+] as const
 
 describe('App', () => {
   beforeEach(async () => {
@@ -145,6 +181,38 @@ describe('App', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Change Password Page')).toBeInTheDocument()
+    })
+  })
+
+  it.each(protectedRouteCases)('renders protected route %s', async (path, pageLabel) => {
+    localStorage.setItem('access_token', 'test-token')
+    localStorage.setItem('refresh_token', 'ref-token')
+    vi.mocked(authAPI.me).mockResolvedValue({
+      data: { id: 1, username: 'testuser', email: 'test@example.com', role: 'user', permissions: [] },
+    } as never)
+
+    window.history.replaceState({}, '', path)
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Layout')).toBeInTheDocument()
+      expect(screen.getByText(pageLabel)).toBeInTheDocument()
+    })
+  })
+
+  it('redirects root route to dashboard for authenticated users', async () => {
+    localStorage.setItem('access_token', 'test-token')
+    localStorage.setItem('refresh_token', 'ref-token')
+    vi.mocked(authAPI.me).mockResolvedValue({
+      data: { id: 1, username: 'testuser', email: 'test@example.com', role: 'user', permissions: [] },
+    } as never)
+
+    window.history.replaceState({}, '', '/')
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Layout')).toBeInTheDocument()
+      expect(screen.getByText('Dashboard')).toBeInTheDocument()
     })
   })
 

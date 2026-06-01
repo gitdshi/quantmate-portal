@@ -118,6 +118,34 @@ describe('PaperTrading Pages', () => {
     expect(await screen.findByRole('heading', { name: /create paper account/i })).toBeInTheDocument()
   })
 
+  it('creates a new account and closes an existing active account', async () => {
+    render(<PaperTrading />)
+
+    fireEvent.click(screen.getByText('New Account'))
+
+    await screen.findByText('Create Paper Account')
+    const selects = screen.getAllByRole('combobox')
+    const capitalInput = screen.getByDisplayValue('1000000')
+
+    fireEvent.change(selects[0], { target: { value: 'HK' } })
+    fireEvent.change(capitalInput, { target: { value: '250000' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Create Deployment' }))
+
+    await waitFor(() => {
+      expect(paperAccountAPI.create).toHaveBeenCalledWith({
+        name: 'Paper HK',
+        initial_capital: 250000,
+        market: 'HK',
+      })
+    })
+
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Close' }))[0])
+
+    await waitFor(() => {
+      expect(paperAccountAPI.close).toHaveBeenCalledWith(1)
+    })
+  })
+
   it('navigates from overview to account detail', async () => {
     render(<PaperTrading />)
 
@@ -172,6 +200,148 @@ describe('PaperTrading Pages', () => {
     await waitFor(() => {
       expect(paperTradingAPI.confirmSignal).toHaveBeenCalledWith(1)
     })
+  })
+
+  it('rejects a signal from the account detail page', async () => {
+    window.history.pushState({}, '', '/paper-trading/1')
+
+    render(
+      <Routes>
+        <Route path="/paper-trading/:accountId" element={<PaperTradingAccount />} />
+      </Routes>
+    )
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Pending Signals' }))
+    await screen.findByText('MA crossover')
+    fireEvent.click(screen.getByRole('button', { name: /reject/i }))
+
+    await waitFor(() => {
+      expect(paperTradingAPI.rejectSignal).toHaveBeenCalledWith(1)
+    })
+  })
+
+  it('loads composite options and creates a strategy deployment from the account detail page', async () => {
+    window.history.pushState({}, '', '/paper-trading/1')
+
+    render(
+      <Routes>
+        <Route path="/paper-trading/:accountId" element={<PaperTradingAccount />} />
+      </Routes>
+    )
+
+    fireEvent.click(await screen.findByRole('button', { name: 'New Paper Deployment' }))
+
+    await screen.findByText('Create Paper Deployment')
+    const selects = screen.getAllByRole('combobox')
+
+    fireEvent.change(selects[0], { target: { value: 'composite' } })
+
+    await waitFor(() => {
+      expect(compositeStrategiesAPI.list).toHaveBeenCalled()
+    })
+
+    expect(await screen.findByRole('option', { name: 'Composite Alpha' })).toBeInTheDocument()
+
+    fireEvent.change(screen.getAllByRole('combobox')[0], { target: { value: 'strategy' } })
+
+    const updatedSelects = screen.getAllByRole('combobox')
+    fireEvent.change(updatedSelects[1], { target: { value: '1' } })
+    fireEvent.change(screen.getByPlaceholderText('600519.SH'), {
+      target: { value: '600519.SH' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Create Deployment' }))
+
+    await waitFor(() => {
+      expect(paperTradingAPI.deployStrategy).toHaveBeenCalledWith({
+        strategy_source_type: 'strategy',
+        strategy_id: 1,
+        composite_strategy_id: undefined,
+        vt_symbol: '600519.SH',
+        parameters: {},
+        paper_account_id: 1,
+        execution_mode: 'auto',
+      })
+    })
+  })
+
+  it('submits a limit order and cancels a submitted order', async () => {
+    window.history.pushState({}, '', '/paper-trading/1')
+    vi.mocked(paperTradingAPI.listPaperOrders).mockResolvedValue({
+      data: {
+        orders: [
+          {
+            id: 2,
+            symbol: '000001.SZ',
+            direction: 'sell',
+            order_type: 'limit',
+            price: 12.5,
+            quantity: 20,
+            status: 'submitted',
+            paper_account_id: 1,
+            created_at: '2025-01-02T10:00:00Z',
+          },
+        ],
+      },
+    } as never)
+
+    render(
+      <Routes>
+        <Route path="/paper-trading/:accountId" element={<PaperTradingAccount />} />
+      </Routes>
+    )
+
+    fireEvent.click(await screen.findByRole('button', { name: 'New Order' }))
+
+    await screen.findByText('Submit Paper Order')
+    const selects = screen.getAllByRole('combobox')
+    const quantityInput = screen.getByDisplayValue('100')
+
+    fireEvent.change(screen.getByPlaceholderText('600519.SH'), { target: { value: '000001.sz' } })
+    fireEvent.change(selects[0], { target: { value: 'sell' } })
+    fireEvent.change(selects[1], { target: { value: 'limit' } })
+    fireEvent.change(quantityInput, { target: { value: '20' } })
+    fireEvent.change(screen.getAllByRole('spinbutton')[1], { target: { value: '12.5' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Create Deployment' }))
+
+    await waitFor(() => {
+      expect(paperTradingAPI.createPaperOrder).toHaveBeenCalledWith({
+        paper_account_id: 1,
+        symbol: '000001.SZ',
+        direction: 'sell',
+        order_type: 'limit',
+        quantity: 20,
+        price: 12.5,
+      })
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Order History' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancel' }))
+
+    await waitFor(() => {
+      expect(paperTradingAPI.cancelPaperOrder).toHaveBeenCalledWith(2)
+    })
+  })
+
+  it('shows invalid and missing account states', async () => {
+    vi.mocked(paperAccountAPI.get).mockResolvedValue(undefined as never)
+
+    window.history.pushState({}, '', '/paper-trading/abc')
+    render(
+      <Routes>
+        <Route path="/paper-trading/:accountId" element={<PaperTradingAccount />} />
+      </Routes>
+    )
+
+    expect(await screen.findByText('Invalid paper account.')).toBeInTheDocument()
+
+    window.history.pushState({}, '', '/paper-trading/999')
+    render(
+      <Routes>
+        <Route path="/paper-trading/:accountId" element={<PaperTradingAccount />} />
+      </Routes>
+    )
+
+    expect(await screen.findByText('Paper account not found.')).toBeInTheDocument()
   })
 
   it('filters and paginates deployments on the account detail page', async () => {
