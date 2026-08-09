@@ -1,18 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  BarChart3,
-  BookOpen,
-  Combine,
-  Eye,
-  Globe,
-  Layers,
-  MessageSquare,
-  PencilLine,
-  Play,
-  Plus,
-  Search,
-  Star,
-  Trash2,
+    BarChart3,
+    BookOpen,
+    Combine,
+    Eye,
+    Globe,
+    Layers,
+    MessageSquare,
+    PencilLine,
+    Play,
+    Plus,
+    Search,
+    Star,
+    Trash2,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -22,18 +22,19 @@ import DataTable, { type Column } from '../components/ui/DataTable'
 import Modal from '../components/ui/Modal'
 import TabPanel from '../components/ui/TabPanel'
 import { showToast } from '../components/ui/toast-service'
-import { compositeStrategiesAPI, compositeBacktestAPI, templateAPI } from '../lib/api'
-import ComponentsTab from './ComponentsTab'
+import { compositeBacktestAPI, compositeStrategiesAPI, templateAPI } from '../lib/api'
+import { oneYearAgoStr, todayStr } from '../lib/dateUtils'
 import type {
-  ComponentLayer,
-  ExecutionMode,
-  CompositeStrategyListItem,
-  CompositeStrategyDetail,
-  ComponentBinding,
-  CompositeBacktestListItem,
-  CompositeBacktestResult,
-  CompositeBacktestStatus,
+    ComponentBinding,
+    ComponentLayer,
+    CompositeBacktestListItem,
+    CompositeBacktestResult,
+    CompositeBacktestStatus,
+    CompositeStrategyDetail,
+    CompositeStrategyListItem,
+    ExecutionMode,
 } from '../types'
+import ComponentsTab from './ComponentsTab'
 
 type TemplateItem = {
   id: number
@@ -152,8 +153,8 @@ export default function CompositeStrategies() {
   // Backtest state
   const [btModal, setBtModal] = useState(false)
   const [btStrategyId, setBtStrategyId] = useState('')
-  const [btStartDate, setBtStartDate] = useState('')
-  const [btEndDate, setBtEndDate] = useState('')
+  const [btStartDate, setBtStartDate] = useState(oneYearAgoStr())
+  const [btEndDate, setBtEndDate] = useState(todayStr())
   const [btCapital, setBtCapital] = useState('1000000')
   const [btBenchmark, setBtBenchmark] = useState('000300.SH')
   const [btResultJobId, setBtResultJobId] = useState<string | null>(null)

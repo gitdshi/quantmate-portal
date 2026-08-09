@@ -3,6 +3,7 @@ import { Loader, TrendingDown, TrendingUp } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { marketDataAPI } from '../lib/api'
+import { oneYearAgoStr, todayStr } from '../lib/dateUtils'
 
 interface MarketDataViewProps {
   symbol: string
@@ -10,12 +11,8 @@ interface MarketDataViewProps {
 
 export default function MarketDataView({ symbol }: MarketDataViewProps) {
   const { t } = useTranslation(['market', 'common'])
-  const [startDate, setStartDate] = useState(() => {
-    const date = new Date()
-    date.setMonth(date.getMonth() - 1)
-    return date.toISOString().split('T')[0]
-  })
-  const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0])
+  const [startDate, setStartDate] = useState(oneYearAgoStr())
+  const [endDate, setEndDate] = useState(todayStr())
 
   const { data: historyData, isLoading } = useQuery({
     queryKey: ['market-data', symbol, startDate, endDate],

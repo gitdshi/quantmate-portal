@@ -1,4 +1,5 @@
 import i18n from '@/i18n'
+import { oneYearAgoStr, todayStr } from '@/lib/dateUtils'
 import FactorLab from '@/pages/FactorLab'
 import { fireEvent, render, screen, waitFor } from '@test/support/utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -208,8 +209,8 @@ describe('FactorLab Page', () => {
 
     await waitFor(() => {
       expect(factorAPI.runEvaluation).toHaveBeenCalledWith(1, {
-        start_date: '2023-01-01',
-        end_date: '2024-12-31',
+        start_date: oneYearAgoStr(),
+        end_date: todayStr(),
       })
     })
   })
@@ -224,8 +225,8 @@ describe('FactorLab Page', () => {
 
     await waitFor(() => {
       expect(factorAPI.runMining).toHaveBeenCalledWith({
-        start_date: '2023-01-01',
-        end_date: '2024-12-31',
+        start_date: oneYearAgoStr(),
+        end_date: todayStr(),
         instruments: 'csi300',
       })
     })

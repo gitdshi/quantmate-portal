@@ -18,6 +18,7 @@ import Modal from '../components/ui/Modal'
 import TabPanel from '../components/ui/TabPanel'
 import { showToast } from '../components/ui/toast-service'
 import { backtestAPI, factorAPI, strategiesAPI } from '../lib/api'
+import { oneYearAgoStr, todayStr } from '../lib/dateUtils'
 
 interface Factor {
   id: number
@@ -132,13 +133,13 @@ export default function FactorLab() {
 
   // ICIR tab state
   const [selectedFactorId, setSelectedFactorId] = useState<number | null>(null)
-  const [evalStartDate, setEvalStartDate] = useState('2023-01-01')
-  const [evalEndDate, setEvalEndDate] = useState('2024-12-31')
+  const [evalStartDate, setEvalStartDate] = useState(oneYearAgoStr())
+  const [evalEndDate, setEvalEndDate] = useState(todayStr())
 
   // Backtest tab state
   const [backtestFactorId, setBacktestFactorId] = useState<number | null>(null)
-  const [btStartDate, setBtStartDate] = useState('2023-01-01')
-  const [btEndDate, setBtEndDate] = useState('2024-12-31')
+  const [btStartDate, setBtStartDate] = useState(oneYearAgoStr())
+  const [btEndDate, setBtEndDate] = useState(todayStr())
   const [btUniversePreset, setBtUniversePreset] = useState('csi300')
   const [btSymbols, setBtSymbols] = useState('')
   const [btTopN, setBtTopN] = useState('10')
@@ -146,8 +147,8 @@ export default function FactorLab() {
   const [btDetailJobId, setBtDetailJobId] = useState<string | null>(null)
 
   // Mining tab state
-  const [miningStart, setMiningStart] = useState('2023-01-01')
-  const [miningEnd, setMiningEnd] = useState('2024-12-31')
+  const [miningStart, setMiningStart] = useState(oneYearAgoStr())
+  const [miningEnd, setMiningEnd] = useState(todayStr())
   const [miningInstruments, setMiningInstruments] = useState('csi300')
   const [miningResults, setMiningResults] = useState<MiningResult[]>([])
 

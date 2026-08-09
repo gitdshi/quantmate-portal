@@ -1,12 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  Download,
-  FileText,
-  List,
-  Plus,
-  PieChart as PieChartIcon,
-  Radar,
-  TrendingUp,
+    Download,
+    FileText,
+    List,
+    PieChart as PieChartIcon,
+    Plus,
+    Radar,
+    TrendingUp,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -18,6 +18,7 @@ import Modal from '../components/ui/Modal'
 import TabPanel from '../components/ui/TabPanel'
 import { showToast } from '../components/ui/toast-service'
 import { reportsAPI } from '../lib/api'
+import { oneYearAgoStr, todayStr } from '../lib/dateUtils'
 import type { Report } from '../types'
 
 export default function Reports() {
@@ -25,6 +26,8 @@ export default function Reports() {
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState('perf')
   const [newReportModal, setNewReportModal] = useState(false)
+  const [reportStartDate, setReportStartDate] = useState(oneYearAgoStr())
+  const [reportEndDate, setReportEndDate] = useState(todayStr())
 
   const tabs = [
     { key: 'perf', label: t('reports.tabs.perf'), icon: <TrendingUp size={16} /> },
@@ -173,6 +176,8 @@ export default function Reports() {
               <label className="block text-sm font-medium mb-1">{t('reports.modal.startDate')}</label>
               <input
                 type="date"
+                value={reportStartDate}
+                onChange={(e) => setReportStartDate(e.target.value)}
                 className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background"
               />
             </div>
@@ -180,6 +185,8 @@ export default function Reports() {
               <label className="block text-sm font-medium mb-1">{t('reports.modal.endDate')}</label>
               <input
                 type="date"
+                value={reportEndDate}
+                onChange={(e) => setReportEndDate(e.target.value)}
                 className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background"
               />
             </div>

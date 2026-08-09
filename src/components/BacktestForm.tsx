@@ -3,6 +3,7 @@ import { Play, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { marketDataAPI, queueAPI, strategiesAPI } from '../lib/api'
+import { oneYearAgoStr, todayStr } from '../lib/dateUtils'
 import SymbolSearch from './SymbolSearch'
 
 interface BacktestFormProps {
@@ -26,8 +27,8 @@ export default function BacktestForm({ onClose = () => undefined, onSubmitSucces
   const [strategyId, setStrategyId] = useState<string>('')
   const [symbol, setSymbol] = useState('')
   const [symbolName, setSymbolName] = useState('')
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
+  const [startDate, setStartDate] = useState(oneYearAgoStr())
+  const [endDate, setEndDate] = useState(todayStr())
   const [initialCapital, setInitialCapital] = useState('100000')
   const [rate, setRate] = useState('0.0003')
   const [slippage, setSlippage] = useState('0.0001')
@@ -72,16 +73,6 @@ export default function BacktestForm({ onClose = () => undefined, onSubmitSucces
       }
     })()
     return () => { mounted = false }
-  }, [])
-
-  // Set default dates (recent one year)
-  useEffect(() => {
-    const today = new Date()
-    const oneYearAgo = new Date()
-    oneYearAgo.setFullYear(today.getFullYear() - 1)
-    
-    setEndDate(today.toISOString().split('T')[0])
-    setStartDate(oneYearAgo.toISOString().split('T')[0])
   }, [])
 
   // Fetch strategies from DB

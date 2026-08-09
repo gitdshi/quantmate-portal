@@ -3,6 +3,7 @@ import { Layers, Play, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { marketDataAPI, queueAPI, strategiesAPI } from '../lib/api'
+import { oneYearAgoStr, todayStr } from '../lib/dateUtils'
 import SymbolSearch from './SymbolSearch'
 
 interface BulkBacktestFormProps {
@@ -43,8 +44,8 @@ export default function BulkBacktestForm({ onClose, onSubmitSuccess }: BulkBackt
   const queryClient = useQueryClient()
 
   const [strategyId, setStrategyId] = useState<string>('')
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
+  const [startDate, setStartDate] = useState(oneYearAgoStr())
+  const [endDate, setEndDate] = useState(todayStr())
   const [initialCapital, setInitialCapital] = useState('100000')
   const [rate, setRate] = useState('0.0003')
   const [slippage, setSlippage] = useState('0.0001')
@@ -95,15 +96,6 @@ export default function BulkBacktestForm({ onClose, onSubmitSuccess }: BulkBackt
       }
     })()
     return () => { mounted = false }
-  }, [])
-
-  // Default dates
-  useEffect(() => {
-    const today = new Date()
-    const oneYearAgo = new Date()
-    oneYearAgo.setFullYear(today.getFullYear() - 1)
-    setEndDate(today.toISOString().split('T')[0])
-    setStartDate(oneYearAgo.toISOString().split('T')[0])
   }, [])
 
   // Strategies

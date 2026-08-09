@@ -4,6 +4,7 @@ import { startTransition, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { aiAPI, backtestAPI, factorAPI, paperAccountAPI, paperTradingAPI, queueAPI, strategiesAPI, workbenchAPI } from '../lib/api'
+import { oneYearAgoStr, todayStr } from '../lib/dateUtils'
 
 type Stage = 'factor' | 'strategy' | 'backtest' | 'paper_trade'
 type SessionStatus = 'draft' | 'running_backtest' | 'paper_active' | 'archived'
@@ -115,8 +116,8 @@ const EMPTY_STATE: WorkbenchState = {
     summary: null,
     ai_report_id: null,
     symbol: '600519.SH',
-    start_date: '2023-01-01',
-    end_date: '2024-12-31',
+    start_date: oneYearAgoStr(),
+    end_date: todayStr(),
     benchmark: '000300.SH',
   },
   paper_trade: { account_id: null, mode: null, deployment_id: null, runtime_summary: null },
@@ -443,8 +444,8 @@ ${content}`
         strategy_id: draftState.strategy_draft.strategy_id,
         strategy_name: draftState.strategy_draft.name,
         symbol: draftState.backtest.symbol || '600519.SH',
-        start_date: draftState.backtest.start_date || '2023-01-01',
-        end_date: draftState.backtest.end_date || '2024-12-31',
+        start_date: draftState.backtest.start_date || oneYearAgoStr(),
+        end_date: draftState.backtest.end_date || todayStr(),
         benchmark: draftState.backtest.benchmark || '000300.SH',
       })
 
@@ -910,7 +911,7 @@ ${content}`
                     <label className="mb-1 block text-sm font-medium">{t('backtest.startDate')}</label>
                     <input
                       type="date"
-                      value={draftState.backtest.start_date || '2023-01-01'}
+                      value={draftState.backtest.start_date || oneYearAgoStr()}
                       onChange={(event) =>
                         setDraftState((prev) => ({
                           ...prev,
@@ -924,7 +925,7 @@ ${content}`
                     <label className="mb-1 block text-sm font-medium">{t('backtest.endDate')}</label>
                     <input
                       type="date"
-                      value={draftState.backtest.end_date || '2024-12-31'}
+                      value={draftState.backtest.end_date || todayStr()}
                       onChange={(event) =>
                         setDraftState((prev) => ({
                           ...prev,
