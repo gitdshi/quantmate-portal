@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
     BarChart3,
     BookOpen,
@@ -22,6 +22,7 @@ import DataTable, { type Column } from '../components/ui/DataTable'
 import Modal from '../components/ui/Modal'
 import TabPanel from '../components/ui/TabPanel'
 import { showToast } from '../components/ui/toast-service'
+import Pagination from '../components/Pagination'
 import { compositeBacktestAPI, compositeStrategiesAPI, templateAPI } from '../lib/api'
 import { oneYearAgoStr, todayStr } from '../lib/dateUtils'
 import type {
@@ -149,6 +150,10 @@ export default function CompositeStrategies() {
 
   // Detail view
   const [detailId, setDetailId] = useState<number | null>(null)
+
+  // Composites list pagination (server-driven)
+  const [compositesPage, setCompositesPage] = useState(1)
+  const [compositesPageSize, setCompositesPageSize] = useState(20)
 
   // Backtest state
   const [btModal, setBtModal] = useState(false)
@@ -308,14 +313,24 @@ export default function CompositeStrategies() {
 
   // ── Composites queries & mutations ─────────────────────
 
-  const { data: composites = [], isLoading: loadingComposites } = useQuery<CompositeStrategyListItem[]>({
-    queryKey: ['composite-strategies'],
-    queryFn: () => compositeStrategiesAPI.list().then((r) => {
+  const { data: compositesData, isLoading: loadingComposites } = useQuery<{
+    data: CompositeStrategyListItem[]
+    meta: { total: number }
+  }>({
+    queryKey: ['composite-strategies', compositesPage, compositesPageSize],
+    queryFn: () => compositeStrategiesAPI.list({
+      page: compositesPage,
+      page_size: compositesPageSize,
+    }).then((r) => {
       const d = r.data
-      return Array.isArray(d) ? d : d?.data ?? []
+      if (Array.isArray(d)) return { data: d, meta: { total: d.length } }
+      return { data: d?.data ?? [], meta: d?.meta ?? { total: (d?.data ?? []).length } }
     }),
     enabled: activeTab === 'composites',
+    placeholderData: keepPreviousData,
   })
+  const composites = compositesData?.data ?? []
+  const compositesTotal = compositesData?.meta.total ?? 0
 
   const { data: compositeDetail } = useQuery<CompositeStrategyDetail>({
     queryKey: ['composite-strategy-detail', detailId],
@@ -376,6 +391,8 @@ export default function CompositeStrategies() {
       showToast(tc('operationSuccess'), 'success')
       setDeleteCompositeId(null)
       if (detailId === deleteCompositeId) setDetailId(null)
+      // Step back a page if we removed the last item on a page beyond the first
+      if (composites.length === 1 && compositesPage > 1) setCompositesPage(compositesPage - 1)
       queryClient.invalidateQueries({ queryKey: ['composite-strategies'] })
     },
     onError: () => showToast(t('composites.deleteFailed'), 'error'),
@@ -428,7 +445,7 @@ export default function CompositeStrategies() {
 
   const { data: allComposites = [] } = useQuery<CompositeStrategyListItem[]>({
     queryKey: ['composite-strategies-for-bt'],
-    queryFn: () => compositeStrategiesAPI.list().then((r) => {
+    queryFn: () => compositeStrategiesAPI.list({ page_size: 100 }).then((r) => {
       const d = r.data
       return Array.isArray(d) ? d : d?.data ?? []
     }),
@@ -876,6 +893,13 @@ export default function CompositeStrategies() {
               columns={compositeCols}
               data={composites}
               emptyText={loadingComposites ? tc('loading') : t('composites.noComposites')}
+            />
+            <Pagination
+              page={compositesPage}
+              pageSize={compositesPageSize}
+              total={compositesTotal}
+              onPageChange={setCompositesPage}
+              onPageSizeChange={(size) => { setCompositesPageSize(size); setCompositesPage(1) }}
             />
 
             {/* Detail panel */}
